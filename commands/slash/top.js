@@ -116,7 +116,7 @@ async run(client, int, tools) {
         missing.forEach(id => resolvedMembers.set(id, fetched.get(id) ?? null))
     }
 
-    const buildContainer = async page => {
+    const buildContainer = async (page, disabled = false) => {
         const pageData = rankings.slice((page - 1) * pageSize, page * pageSize)
         const pageUserIds = pageData.map(entry => String(entry.id))
 
@@ -205,16 +205,17 @@ async run(client, int, tools) {
                 .setCustomId("top-prev")
                 .setLabel(`<< Página ${previousPage}`)
                 .setStyle(page <= 1 ? ButtonStyle.Secondary : ButtonStyle.Success)
-                .setDisabled(!canNavigate),
+                .setDisabled(!canNavigate || disabled),
             new ButtonBuilder()
                 .setCustomId("top-next")
                 .setLabel(`Página ${nextPage} >>`)
                 .setStyle(page >= totalPages ? ButtonStyle.Secondary : ButtonStyle.Success)
-                .setDisabled(!canNavigate),
+                .setDisabled(!canNavigate || disabled),
             new ButtonBuilder()
                 .setCustomId("top-toggle")
                 .setLabel(monthlyMode ? "Cambiar a top global" : "Cambiar a top mensual")
-                .setStyle(ButtonStyle.Primary),
+                .setStyle(ButtonStyle.Primary)
+                .setDisabled(disabled),
         ]
 
         const container = new ContainerBuilder()
@@ -250,45 +251,62 @@ async run(client, int, tools) {
         flags: MessageFlags.IsComponentsV2 | (isHidden ? MessageFlags.Ephemeral : 0)
     })
 
-    const sendPage = async page => {
-        const { container, pageUserIds } = await buildContainer(page)
+    const sendPage = async (page, editor, disabled = false) => {
+        const { container, pageUserIds } = await buildContainer(page, disabled)
 
         // Se incluye SIEMPRE a los usuarios de la página como mención real,
         // para que se resuelvan bien en cualquier dispositivo, pero con
         // SuppressNotifications para que no llegue push/sonido.
-        await int.editReply({
+        await editor.editReply({
             components: [container],
             flags: MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications,
             allowedMentions: { users: pageUserIds, parse: [] },
         })
     }
 
-    await sendPage(pageNumber)
+    await sendPage(pageNumber, int)
     const message = await int.fetchReply()
 
     let buttonPressed = false
-    const collector = message.createMessageComponentCollector()
+    const collector = message.createMessageComponentCollector({ time: 24 * 60 * 60 * 1000 })
     collector.on("collect", async button => {
         if (button.user.id !== int.user.id) return tools.buttonReply(button)
         if (buttonPressed) return
 
         buttonPressed = true
-        await button.deferUpdate()
-
-        if (button.customId === "top-prev") pageNumber = pageNumber <= 1 ? totalPages : pageNumber - 1
-        if (button.customId === "top-next") pageNumber = pageNumber >= totalPages ? 1 : pageNumber + 1
-        if (button.customId === "top-toggle") {
-            monthlyMode = !monthlyMode
-            rankings = buildRankings(monthlyMode)
-            pageNumber = 1
-            totalPages = Math.max(1, Math.ceil(rankings.length / pageSize))
-        }
-
         try {
-            await sendPage(pageNumber)
+            await button.deferUpdate()
+
+            if (button.customId === "top-prev") pageNumber = pageNumber <= 1 ? totalPages : pageNumber - 1
+            if (button.customId === "top-next") pageNumber = pageNumber >= totalPages ? 1 : pageNumber + 1
+            if (button.customId === "top-toggle") {
+                monthlyMode = !monthlyMode
+                rankings = buildRankings(monthlyMode)
+                pageNumber = 1
+                totalPages = Math.max(1, Math.ceil(rankings.length / pageSize))
+            }
+
+            // Se edita via el boton (token fresco en cada pulsacion): el token
+            // de la interaccion original caduca y con int.editReply los botones
+            // dejaban de responder al rato.
+            await sendPage(pageNumber, button)
+        } catch (error) {
+            console.warn(`Could not update top board for ${int.guild?.id}:`, error.message)
         } finally {
             buttonPressed = false
         }
+    })
+    collector.on("end", async () => {
+        // Pasadas 24h los botones se desactivan. Se edita via message.edit
+        // (token de bot, sin caducidad) porque el de la interaccion ya expiro.
+        try {
+            const { container, pageUserIds } = await buildContainer(pageNumber, true)
+            await message.edit({
+                components: [container],
+                flags: MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications,
+                allowedMentions: { users: pageUserIds, parse: [] },
+            })
+        } catch {}
     })
 
 }}

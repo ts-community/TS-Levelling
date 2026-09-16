@@ -276,8 +276,6 @@ class LevelUpMessage {
         if (!this.example && hasRealTrigger) {
             // Evita romper el bloque de codigo si el mensaje contiene ```
             const safeCode = quoted.replace(/```/g, "ˋˋˋ")
-            const timeTag = `<t:${this.variables.TIMESTAMP}:R>`
-
             contextLine = `${EMOJI.MESSAGES} **Mensaje de subida:**\n\`\`\`\n${safeCode}\n\`\`\``
         }
         if (contextLine) {
@@ -295,10 +293,11 @@ class LevelUpMessage {
 
         this.container = container
         this.files = files
-        // Mencion fuera del container (TextDisplay suelto): pingea igual con
-        // el allowedMentions pero no ocupa espacio dentro de la tarjeta.
-        // Con IsComponentsV2 el campo content va ignorado, asi que es la via.
-        const mentionLine = author?.id ? [new TextDisplayBuilder().setContent(`<@${author.id}>`)] : []
+        // Linea fuera del container (TextDisplay suelto, equivalente al content
+        // en V2 donde content va ignorado/rechazado): lleva la mencion + un
+        // minimo de contexto, que es lo que muestra la notificacion movil.
+        // Pingea igual con el allowedMentions. El container no se toca.
+        const mentionLine = author?.id ? [new TextDisplayBuilder().setContent(`<@${author.id}> ¡Nuevo rango! 🎉`)] : []
         this.msg = {
             components: [...mentionLine, container],
             flags: MessageFlags.IsComponentsV2,

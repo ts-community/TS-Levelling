@@ -103,9 +103,6 @@ function fetchMembersForMaintenance(guild) {
             batchCount++
             const batch = await guild.members.list({ limit: memberFetchBatchSize, after })
             batch.forEach((member, id) => members.set(id, member))
-            logImportant(
-                `Escaneo de **${guild.name}**: registrados **${members.size}** miembros hasta ahora.`
-            ).catch(() => {})
             client.emit("memberScanProgress", guild.id)
             if (batch.size < memberFetchBatchSize) break
 
@@ -118,10 +115,6 @@ function fetchMembersForMaintenance(guild) {
         lastMemberFetch = Date.now()
         state.timestamp = lastMemberFetch
         state.complete = members.size >= guild.memberCount
-        logImportant(
-            `Escaneo de **${guild.name}** completado: **${members.size}/${guild.memberCount}** miembros.`
-        ).catch(() => {})
-        console.info(`Maintenance member scan for ${guild.name}: ${members.size}/${guild.memberCount} members in ${batchCount} batches`)
         return members
     }).catch(error => {
         console.warn(`Could not fetch members for maintenance in ${guild.id}:`, error.message)
@@ -245,25 +238,6 @@ async function logMonthlyTop(guild, snapshot, period) {
     return results.every(result => result.status === "fulfilled")
 }
 
-async function logImportant(message) {
-    const thread = await client.channels.fetch(importantLogThreadId).catch(() => null)
-    if (!thread?.isThread() || !thread.isTextBased()) return
-    await thread.send({ content: `-# ${message}`, allowedMentions: { parse: [] } }).catch(() => {})
-}
-
-async function logCleanup(guild, message) {
-    const [channel, thread] = await Promise.all([
-        client.channels.fetch(importantLogThreadId).catch(() => null)
-    ])
-    const destinations = [channel, thread]
-        .filter(destination => destination?.guild?.id === guild.id && destination.isTextBased())
-        .filter((destination, index, all) => all.findIndex(item => item.id === destination.id) === index)
-    await Promise.allSettled(destinations.map(destination => destination.send({
-        content: `-# Limpieza de **${guild.name}**: ${message}`,
-        allowedMentions: { parse: [] }
-    })))
-}
-
 const monthlyMaintenanceLocks = new Set()
 async function processMonthlyMessages(guild, knownServer, knownMembers) {
     if (monthlyMaintenanceLocks.has(guild.id)) return
@@ -334,7 +308,6 @@ async function cleanZeroXpMembers(guild) {
     const memberScan = memberFetchState.get(guild.id)
     if (!memberScan?.complete) {
         console.warn(`Skipping cleanup for ${guild.id}: member scan was incomplete (${members.size}/${guild.memberCount})`)
-        await logCleanup(guild, `omitida por seguridad: escaneo incompleto (**${members.size}/${guild.memberCount}** miembros).`)
         return
     }
 
@@ -345,21 +318,9 @@ async function cleanZeroXpMembers(guild) {
     const zeroXpUsers = Object.entries(server.users)
         .filter(([userId, userData]) => !members.has(userId) && !hasRetainedProgress(userData, server.settings))
         .map(([userId]) => userId)
-    const preservedXpUsers = Object.entries(server.users)
-        .filter(([userId, userData]) => !members.has(userId) && hasRetainedProgress(userData, server.settings))
-        .length
-    const retentionXp = client.globalTools.xpForLevel(memberRetentionMinLevel, server.settings)
-
-    console.info(`Cleanup check for ${guild.name}: ${Object.keys(server.users).length} stored, ${members.size} current, ${zeroXpUsers.length} below ${retentionXp} XP, ${preservedXpUsers} absent users with XP preserved`)
-    if (zeroXpUsers.length) {
-        await logCleanup(guild, `encontrados **${zeroXpUsers.length}** registros ausentes con 0 XP; conservados **${preservedXpUsers}** ausentes con XP.`)
-    } else if (preservedXpUsers) {
-        await logCleanup(guild, `no hay registros ausentes con 0 XP; conservados **${preservedXpUsers}** usuarios ausentes con XP.`)
-    }
 
     if (memberFetchState.get(guild.id) !== memberScan) {
         console.warn(`Skipping cleanup for ${guild.id}: membership changed during scan`)
-        await logCleanup(guild, "omitida por seguridad: la pertenencia al servidor cambió durante el escaneo.")
         return
     }
 
@@ -369,13 +330,6 @@ async function cleanZeroXpMembers(guild) {
         await client.db.update(guild.id, { $unset: unsetUsers }).exec()
     }
 
-    if (zeroXpUsers.length) {
-        console.info(`Cleaned ${zeroXpUsers.length} zero-XP users from ${guild.name}`)
-        const remainingServer = await client.db.fetch(guild.id).exec()
-        const remaining = Object.entries(remainingServer?.users || {})
-            .filter(([userId, userData]) => !members.has(userId) && !hasRetainedProgress(userData, remainingServer.settings)).length
-        await logCleanup(guild, `eliminados **${zeroXpUsers.length}**; pendientes tras verificar: **${remaining}**.`)
-    }
 }
 
 let memberCleanupRunning = false
@@ -384,7 +338,6 @@ async function cleanAllGuilds() {
     memberCleanupRunning = true
 
     try {
-        await logImportant(`Inicio de limpieza: comprobando **${client.guilds.cache.size}** servidores.`)
         for (const guild of client.guilds.cache.values()) {
             try {
                 await cleanZeroXpMembers(guild)
@@ -466,7 +419,6 @@ client.on("guildMemberRemove", async member => {
         await client.db.update(member.guild.id, {
             $unset: { [`users.${member.id}`]: 1 }
         }).exec()
-        await logCleanup(member.guild, `eliminado **1** registro de **0 XP** tras salir el usuario.`)
     } catch (error) {
         console.warn(`Could not clean zero-XP data for ${member.id}:`, error)
     }
