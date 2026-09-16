@@ -1,6 +1,7 @@
+const LevelUpMessage = require("../../classes/LevelUpMessage.js")
+
 module.exports = {
-metadata: {
-    permission: "ManageGuild",
+metadata: {    permission: "ManageGuild",
     name: "addxp",
     description: "Add or remove XP from a member. (requires manage server permission)",
     args: [
@@ -59,8 +60,27 @@ async run(client, int, tools) {
     }
     let xpDiff = newXP - xp
 
-    client.db.update(int.guild.id, { $set: { [`users.${user.id}.xp`]: newXP } }).then(() => {
+    client.db.update(int.guild.id, { $set: { [`users.${user.id}.xp`]: newXP } }).then(async () => {
         int.reply(`${newXP > xp ? "⏫" : "⏬"} ${user.displayName} now has **${tools.commafy(newXP)}** XP${newLevel != level ? ` and is **level ${newLevel}**` : ""}! (previously ${tools.commafy(xp)}, ${xpDiff >= 0 ? "+" : ""}${tools.commafy(xpDiff)})`)
+
+        // level up card (sin mensaje origen: la cita se omite en ese caso)
+        if (newLevel > level && db.settings.levelUp.enabled) {
+            let useMultiple = (db.settings.levelUp.multiple > 1 && (db.settings.levelUp.multipleUntil == 0 || (newLevel < db.settings.levelUp.multipleUntil)))
+            if (!useMultiple || (newLevel % db.settings.levelUp.multiple == 0)) {
+                let pseudoMessage = {
+                    id: null, content: "",
+                    attachments: { size: 0 }, stickers: { size: 0 }, embeds: [],
+                    author: user, member, guild: int.guild, channel: int.channel, client,
+                }
+                // pasar el registro completo (mensajes incluidos), no solo xp,
+                // para que los contadores no salgan a 0 en la tarjeta
+                let lvlUserData = { ...(currentXP || {}), xp: newXP }
+                // todos los usuarios para poder calcular el TOP #rank
+                let allDb = await tools.fetchAll(int.guild.id).catch(() => null)
+                let lvlMessage = new LevelUpMessage(db.settings, pseudoMessage, { oldLevel: level, level: newLevel, userData: lvlUserData, allUsers: allDb?.users || null, client })
+                lvlMessage.send()
+            }
+        }
 }).catch((e) => {
     const msg = `Something went wrong while trying to modify XP! \`\`\`${e.message}\`\`\``;
     tools.warn(msg.length > 2000 ? msg.substring(0, 1997) + '...' : msg);

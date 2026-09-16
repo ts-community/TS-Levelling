@@ -74,13 +74,7 @@ module.exports = {
         let userRank = null
         let rankingsArr = null
         try {
-            const minLeaderboardXP = db.settings.leaderboard?.minLevel > 1
-                ? tools.xpForLevel(db.settings.leaderboard.minLevel, db.settings)
-                : 0
-
-            rankingsArr = tools.xpObjToArray(db.users || {})
-                .filter(u => !u.hidden && (u.xp || 0) > minLeaderboardXP)
-                .sort((a, b) => (b.xp || 0) - (a.xp || 0))
+            rankingsArr = tools.getLeaderboard(db.users || {}, db.settings)
 
             const idx = rankingsArr.findIndex(u => u.id === member.id)
             userRank = idx !== -1 ? idx + 1 : null

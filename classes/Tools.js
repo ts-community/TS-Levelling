@@ -296,6 +296,23 @@ class Tools {
             return rank + 1  // +1 porque el índice empieza en 0
         }
 
+        // leaderboard global filtrado+ordenado (misma regla en /rank, /top y level up):
+        // usuarios no ocultos por encima del XP minimo, de mayor a menor XP
+        this.getLeaderboard = function(users, settings) {
+            const minLeaderboardXP = settings.leaderboard?.minLevel > 1
+                ? this.xpForLevel(settings.leaderboard.minLevel, settings)
+                : 0
+            return this.xpObjToArray(users || {})
+                .filter(u => !u.hidden && (u.xp || 0) > minLeaderboardXP)
+                .sort((a, b) => (b.xp || 0) - (a.xp || 0))
+        }
+
+        // posicion 1-indexed de un usuario en el leaderboard global (null si no esta)
+        this.getRankPosition = function(users, userID, settings) {
+            const idx = this.getLeaderboard(users, settings).findIndex(u => u.id === String(userID))
+            return idx !== -1 ? idx + 1 : null
+        }
+
         // retorna datos para adelantar al siguiente usuario con más XP
         // devuelve: { targetUserID, targetXP, belowXP, myXP, xpNeeded }
         this.getXPToOvertake = async function(memberID, serverID=int.guild.id) {

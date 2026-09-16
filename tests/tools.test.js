@@ -119,6 +119,33 @@ test("xpObjToArray converts the stored object into an array with ids", () => {
     ])
 })
 
+test("getLeaderboard filters hidden and low-xp users, sorted desc", () => {
+    const lbSettings = { ...settings, leaderboard: { minLevel: 0 } }
+    const users = {
+        a: { xp: 100 },
+        b: { xp: 300, hidden: true },
+        c: { xp: 200 },
+        d: { xp: 0 },
+    }
+    assert.deepEqual(
+        tools.getLeaderboard(users, lbSettings).map(u => u.id),
+        ["c", "a"]
+    )
+})
+
+test("getRankPosition matches /rank ordering and returns null when absent", () => {
+    const lbSettings = { ...settings, leaderboard: { minLevel: 0 } }
+    const users = {
+        a: { xp: 100 },
+        b: { xp: 300, hidden: true },
+        c: { xp: 200 },
+    }
+    assert.equal(tools.getRankPosition(users, "c", lbSettings), 1)
+    assert.equal(tools.getRankPosition(users, "a", lbSettings), 2)
+    assert.equal(tools.getRankPosition(users, "b", lbSettings), null)
+    assert.equal(tools.getRankPosition(users, "zzz", lbSettings), null)
+})
+
 test("getLevel binary search matches the reference across many curves and xp values", () => {
     const curves = [
         { "1": 100, "2": 50, "3": 1 },

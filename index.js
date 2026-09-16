@@ -54,7 +54,7 @@ function getMemberScanStatus(guildId) {
 const client = new Discord.Client({
     allowedMentions: { parse: ["users"] },
     makeCache: Discord.Options.cacheWithLimits({ MessageManager: 0 }),
-    intents: ['Guilds', 'GuildMembers', 'GuildMessages', 'DirectMessages', 'GuildVoiceStates'].map(i => Discord.GatewayIntentBits[i]),
+    intents: ['Guilds', 'GuildMembers', 'GuildMessages', 'MessageContent', 'DirectMessages', 'GuildVoiceStates'].map(i => Discord.GatewayIntentBits[i]),
     partials: ['Channel'].map(p => Discord.Partials[p]),
     failIfNotExists: false
 })

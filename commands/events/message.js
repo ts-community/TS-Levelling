@@ -15,7 +15,8 @@ async run(client, message, tools) {
 
     // pass the full server document so monthly maintenance can compare
     // periods and snapshot all users without extra reads or spurious writes
-    await client.monthlyMaintenance(message.guild, await client.db.fetch(message.guild.id).exec())
+    const fullServer = await client.db.fetch(message.guild.id).exec()
+    await client.monthlyMaintenance(message.guild, fullServer)
     db = await tools.fetchSettings(author, message.guild.id)
 
     let settings = db.settings
@@ -83,11 +84,23 @@ async run(client, message, tools) {
         tools.syncLevelRoles(message.member, roleCheck).catch(() => {})
     }
 
-    // level up message
-    if (levelUp && settings.levelUp.enabled && settings.levelUp.message) {
+    // level up message (solo se muestra al conseguir nuevo rol: LevelUpMessage
+    // se marca invalido si el salto no da rol; el texto custom del dashboard
+    // ya no se renderiza)
+    if (levelUp && settings.levelUp.enabled) {
         let useMultiple = (settings.levelUp.multiple > 1 && (settings.levelUp.multipleUntil == 0 || (newLevel < settings.levelUp.multipleUntil)))
         if (!useMultiple || (newLevel % settings.levelUp.multiple == 0)) {
-            let lvlMessage = new LevelUpMessage(settings, message, { oldLevel, level: newLevel, userData })
+            // userData viene de antes del $inc de este mensaje: sumar 1 en
+            // memoria para que el contador salga correcto en la tarjeta
+            userData.messages = (userData.messages || 0) + 1
+            userData.monthlyMessages = (userData.monthlyMessages || 0) + 1
+            // ranking con datos frescos (igual que /rank): allUsers es previo
+            // al XP de este mensaje y al desocultado, parchearlo en memoria
+            let rankUsers = fullServer?.users || null
+            if (rankUsers) {
+                rankUsers = { ...rankUsers, [author]: { ...rankUsers[author], xp: userData.xp, hidden: false } }
+            }
+            let lvlMessage = new LevelUpMessage(settings, message, { oldLevel, level: newLevel, userData, allUsers: rankUsers, client })
             lvlMessage.send()
         }
     }

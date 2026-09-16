@@ -433,7 +433,8 @@ app.post("/api/sendexample", async function(req, res) {
     data.settings.levelUp.embed = !!req.body.embed
     data.settings.levelUp.message = req.body.message.slice(0, schemaData.settings.levelUp.message.maxlength)
 
-    let lvlMessage = new LevelUpMessage(data.settings, msgData, { level: currentLevel, roleList: guildData.roles, userData: { xp: currentXP }, example: true })
+    let storedPreviewUser = (data.users || [])[user.id] || {}
+    let lvlMessage = new LevelUpMessage(data.settings, msgData, { level: currentLevel, roleList: guildData.roles, userData: { messages: 0, monthlyMessages: 0, ...storedPreviewUser, xp: currentXP }, example: true })
     if (lvlMessage.invalid) return res.apiError("Embed is invalid!");
      
     let fetchedUser = await client.users.fetch(user.id)
