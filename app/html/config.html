@@ -12,38 +12,16 @@
     <meta name="theme-color" content="#00ff80">
     <meta name="twitter:card" content="summary">
     <meta name="robots" content="noindex">
-    <style>
-        #sidebar {
-            top: 68px;
-            height: calc(100% - 68px);
-        }
-    </style>
 </head>
 <body>
+
+    <div id="bgBlur"></div>
 
     <div class="topbar">
         <a class="topbarBrand" href="/">
             <img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt="">
             <span>TS Community Brawl</span>
         </a>
-        <div class="userMenu" id="userMenu">
-            <button class="userMenuButton" id="userMenuButton" type="button">
-                <img id="userAvatar" src="" alt="">
-                <span id="username"></span>
-                <span class="userRole">Administrador</span>
-                <svg viewBox="0 0 448 512" fill="currentColor"><path d="M201.4 342.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 274.7 86.6 137.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l160 160z"/></svg>
-            </button>
-            <div class="userDropdown" id="userDropdown">
-                <a href="/servers?showall">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.5"></rect><rect x="13" y="3" width="8" height="8" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="13" y="13" width="8" height="8" rx="1.5"></rect></svg>
-                    <span>Selector de servidores</span>
-                </a>
-                <a href="/logout">
-                    <svg viewBox="0 0 512 512" fill="currentColor"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"/></svg>
-                    <span>Cerrar sesión</span>
-                </a>
-            </div>
-        </div>
     </div>
 
     <h2 style="margin-top: 75px; width: 100%; position: absolute;" class="middleflex" id="loading">Cargando...</h2>
@@ -51,56 +29,80 @@
     <div id="everything" style="display: none; width: 1600px">
 
     <div id="sidebar">
-        <div tabindex="0" category="server" class="category" title="Info on each tab, plus some general server details.">
+        <div class="categoryList">
+        <div tabindex="0" category="server" class="category" title="Información de cada pestaña, además de datos generales del servidor.">
             <img class="serverIcon" style="border-radius: 420px">
-            <p>Home</p>
+            <p>Inicio</p>
         </div>
 
-        <div tabindex="0" category="xp" class="category" title="General levelling settings, such as XP per message and level scaling.">
+        <div tabindex="0" category="xp" class="category" title="Ajustes generales de niveles, como la XP por mensaje y el escalado de niveles.">
             <img src="/assets/categories/xp.svg">
-            <p>XP gain</p>
+            <p>Ganancia de XP</p>
         </div>
 
-        <div tabindex="0" category="rewardroles" class="category" title="Automatically grant roles when certain levels are reached.">
+        <div tabindex="0" category="rewardroles" class="category" title="Otorga roles automáticamente al alcanzar ciertos niveles.">
             <img src="/assets/categories/rewardroles.svg">
-            <p>Reward roles</p>
+            <p>Roles de recompensa</p>
         </div>
 
-        <div tabindex="0" category="levelup" class="category" title="Send a customizable message when a member levels up or reaches a milestone.">
+        <div tabindex="0" category="levelup" class="category" title="Envía un mensaje personalizable cuando un miembro sube de nivel o alcanza un hito.">
             <img src="/assets/categories/levelup.svg">
-            <p>Level up message</p>
+            <p>Mensaje de subida de nivel</p>
         </div>
 
-        <div tabindex="0" category="multipliers" class="category" title="Make certain roles/channels grant extra XP, or none at all.">
+        <div tabindex="0" category="multipliers" class="category" title="Haz que ciertos roles/canales otorguen XP extra, o ninguna.">
             <img src="/assets/categories/multipliers.svg">
-            <p>Multipliers</p>
+            <p>Multiplicadores</p>
         </div>
 
-        <div tabindex="0" category="rankcard" class="category" title="Tweak the info and details that should be displayed on rank cards.">
+        <div tabindex="0" category="rankcard" class="category" title="Ajusta la información y detalles que se muestran en las tarjetas de rango.">
             <img src="/assets/categories/rankcard.svg">
-            <p>Rank card</p>
+            <p>Tarjeta de rango</p>
         </div>
 
-        <div tabindex="0" category="leaderboard" class="category" title="Toggle the server's leaderboard, or tweak privacy settings.">
+        <div tabindex="0" category="leaderboard" class="category" title="Activa la clasificación del servidor, o ajusta su privacidad.">
             <img src="/assets/categories/leaderboard.svg">
-            <p>Leaderboard</p>
+            <p>Clasificación</p>
         </div>
 
-        <div tabindex="0" category="data" class="category" title="Import data from other bots, or download/clear existing settings.">
+        <div tabindex="0" category="data" class="category" title="Importa datos de otros bots, o descarga/borra los ajustes existentes.">
             <img src="/assets/categories/data.svg">
-            <p>Data</p>
+            <p>Datos</p>
         </div>
 
-        <div tabindex="0" category="advanced" class="category" title="Some extra advanced/experimental settings for finer customization.">
+        <div tabindex="0" category="advanced" class="category" title="Ajustes extra avanzados/experimentales para una personalización más fina.">
             <img src="/assets/categories/advanced.svg">
-            <p>Advanced</p>
+            <p>Avanzado</p>
+        </div>
+        </div>
+
+        <div class="lbSidebarUser">
+            <div class="userMenu" id="userMenu">
+                <button class="sidebarUserButton" id="userMenuButton" type="button">
+                    <img id="userAvatar" src="" alt="">
+                    <div class="sidebarUserInfo">
+                        <span id="username"></span>
+                        <span class="userRole">Administrador</span>
+                    </div>
+                </button>
+                <div class="userDropdown sidebarUserDropdown" id="userDropdown">
+                    <a href="/servers?showall">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.5"></rect><rect x="13" y="3" width="8" height="8" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="13" y="13" width="8" height="8" rx="1.5"></rect></svg>
+                        <span>Selector de servidores</span>
+                    </a>
+                    <a href="/logout">
+                        <svg viewBox="0 0 512 512" fill="currentColor"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"/></svg>
+                        <span>Cerrar sesión</span>
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
     <div id="unsavedWarning">
         <div class="unsavedBox">
-            <p>All done?</p>
-            <button style="background-color: var(--emojigreen)" id="saveChanges">Save</button>
+            <p>¿Todo listo?</p>
+            <button style="background-color: var(--emojigreen)" id="saveChanges">Guardar</button>
         </div>
     </div>
 
@@ -115,11 +117,11 @@
             </div>
             <div class="middleflex" style="position: absolute; top: 0px; right: 30px; height: 100%">
                 <a tabindex=-1 href="/servers?showall">
-                    <button style="font-size: 24px; height: 50px; width: 200px; margin-right: 25px; background-color: var(--emojiblue)">Change Server</button>
+                    <button style="font-size: 24px; height: 50px; width: 200px; margin-right: 25px; background-color: var(--emojiblue)">Cambiar servidor</button>
                 </a>
 
                 <a class="leaderboardLink" tabindex=-1 target="_blank" id="mainlbbutton">
-                    <button style="font-size: 24px; height: 50px; width: 200px; background-color: var(--emojipurple)">Leaderboard</button>
+                    <button style="font-size: 24px; height: 50px; width: 200px; background-color: var(--emojipurple)">Clasificación</button>
                 </a>
             </div>
         </div>
@@ -955,7 +957,7 @@
         else $('#desmosJumpscare').removeAttr("style").text("Looks like Desmos failed to load ¯\\_(ツ)_/¯")
 
         $('.serverName').text(data.guild.name)
-        $('.serverMembers').text(commafy(data.guild.members || "?") + " member" + (data.guild.members == 1 ? "" : "s"))
+        $('.serverMembers').text(commafy(data.guild.members || "?") + " miembro" + (data.guild.members == 1 ? "" : "s"))
         $('.serverIcon').attr('src', data.guild.icon || "/assets/avatar.png")
         $('#otherServers').append(data.ownedServers.map(x => `<option value="${x.id}">${x.name}</option>`))
 
@@ -1174,13 +1176,13 @@
 
         // extra info on home
         updateHomeInfo = function(data) {
-            $('p[cat="extra"][category="xp"]').text(data.enabled ? `Enabled! ${commafy(data["gain.min"])}${data["gain.min"] == data["gain.max"] ? "" : `-${commafy(data["gain.max"])}`} XP every ${commafy(data["gain.time"])}s` : "XP disabled!").css("color", data.enabled ? "var(--polarisgreen)" : "#ff6666")
-            $('p[cat="extra"][category="rewardroles"]').text(data.rewards.length ? addS(data.rewards.length, "reward role") : "No reward roles")
-            $('p[cat="extra"][category="levelup"]').text(data["levelUp.enabled"] && data["levelUp.message"] ? `Enabled!${data["levelUp.embed"] ? " (embedded)" : ""}` : "Disabled")
-            $('p[cat="extra"][category="multipliers"]').text(`${addS(data["multipliers.roles"].length, "role")}, ${addS(data["multipliers.channels"].length, "channel")}`)
-            $('p[cat="extra"][category="rankcard"]').text(`${data["rankCard.disabled"] ? "Disabled" : data["rankCard.ephemeral"] ? "Invisible" : "Enabled!"}`)
-            $('p[cat="extra"][category="leaderboard"]').text(`${data["leaderboard.disabled"] ? "Disabled" : data["leaderboard.private"] ? "Private" : "Enabled!"}${data["leaderboard.maxEntries"] ? ` (max ${commafy(data["leaderboard.maxEntries"])})` : ""}`)
-            $('p[cat="extra"][category="data"]').text(`Last saved: ${lastUpdated ? `${new Date(lastUpdated).toLocaleString([], {year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'})}` : "Never"}`)
+            $('p[cat="extra"][category="xp"]').text(data.enabled ? `¡Activado! ${commafy(data["gain.min"])}${data["gain.min"] == data["gain.max"] ? "" : `-${commafy(data["gain.max"])}`} XP cada ${commafy(data["gain.time"])}s` : "¡XP desactivada!").css("color", data.enabled ? "var(--polarisgreen)" : "#ff6666")
+            $('p[cat="extra"][category="rewardroles"]').text(data.rewards.length ? addEs(data.rewards.length, "rol de recompensa", "roles de recompensa") : "Sin roles de recompensa")
+            $('p[cat="extra"][category="levelup"]').text(data["levelUp.enabled"] && data["levelUp.message"] ? `¡Activado!${data["levelUp.embed"] ? " (embed)" : ""}` : "Desactivado")
+            $('p[cat="extra"][category="multipliers"]').text(`${addEs(data["multipliers.roles"].length, "rol", "roles")}, ${addEs(data["multipliers.channels"].length, "canal", "canales")}`)
+            $('p[cat="extra"][category="rankcard"]').text(`${data["rankCard.disabled"] ? "Desactivada" : data["rankCard.ephemeral"] ? "Invisible" : "¡Activada!"}`)
+            $('p[cat="extra"][category="leaderboard"]').text(`${data["leaderboard.disabled"] ? "Desactivada" : data["leaderboard.private"] ? "Privada" : "¡Activada!"}${data["leaderboard.maxEntries"] ? ` (máx. ${commafy(data["leaderboard.maxEntries"])})` : ""}`)
+            $('p[cat="extra"][category="data"]').text(`Guardado por última vez: ${lastUpdated ? `${new Date(lastUpdated).toLocaleString([], {year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'})}` : "Nunca"}`)
             $('#mainlbbutton').toggle(!data['leaderboard.disabled'])
         }
 
@@ -1596,6 +1598,10 @@
     // need these to be global, excellent programming i know
     let generateSaveJSON = function() { return {} }
     let updateHomeInfo = function() { return {} }
+
+    function addEs(amount, singular, plural) {
+        return `${commafy(amount)} ${amount == 1 ? singular : plural}`
+    }
 
     function addS(amount, str) {
         return `${commafy(amount)} ${str}${amount == 1 ? "" : "s"}`
