@@ -40,10 +40,16 @@ const discord_auth = discordAPI + `oauth2/authorize?client_id=${process.env.DISC
 const rest = new REST({ version: '9' }).setToken(process.env.DISCORD_TOKEN);
 
 // discord perms
-const manage_roles = Number(Discord.PermissionFlagsBits.ManageRoles)
-const manage_messages = Number(Discord.PermissionFlagsBits.ManageMessages)
-const manage_server = Number(Discord.PermissionFlagsBits.ManageGuild)
-const server_admin = Number(Discord.PermissionFlagsBits.Administrator)
+// kept as BigInt on purpose - guild.permissions can exceed Number.MAX_SAFE_INTEGER for users with lots of perms,
+// and converting to Number silently rounds it, corrupting the exact bits we're checking (like Administrator)
+const manage_roles = Discord.PermissionFlagsBits.ManageRoles
+const manage_messages = Discord.PermissionFlagsBits.ManageMessages
+const manage_server = Discord.PermissionFlagsBits.ManageGuild
+const server_admin = Discord.PermissionFlagsBits.Administrator
+
+function hasPerm(permissions, bit) {
+    return (BigInt(permissions || 0) & bit) !== 0n
+}
 
 // database
 let schema = new mongoose.Schema({
@@ -64,7 +70,7 @@ function sendRedirect(res, name) {
 
 function canManageServer(guild) {
     if (!guild) return false
-    return guild.owner || (guild.permissions & manage_server) || (guild.permissions & server_admin)
+    return guild.owner || hasPerm(guild.permissions, manage_server) || hasPerm(guild.permissions, server_admin)
 }
 
 function botIsPublic() {
@@ -90,6 +96,7 @@ function clearDeletedData(settings, roles, channels) {
 }
 
 app.use("/css", express.static(__dirname + '/app/css'));
+app.use("/assets", express.static(__dirname + '/app/assets'));
 app.use("/polaris.js", express.static(__dirname + '/app/js/extras.js'));
 
 app.use(function(req, res, next) {
@@ -103,10 +110,10 @@ app.use(function(req, res, next) {
 
 app.get("/servers", (req, res) => sendPage(res, "servers"))
 app.get("/settings/:id", (req, res) => sendPage(res, "config"))
-app.get("/leaderboard/:id", (req, res) => sendPage(res, "leaderboard"))
+app.get(["/leaderboard/:id", "/rank/:id", "/roles/:id", "/levels/:id", "/hidden/:id", "/records/:id"], (req, res) => sendPage(res, "leaderboard"))
 app.get("/", (req, res) => sendPage(res, "home"))
 
-app.get(["/settings", "/leaderboard", "/servers"], (req, res) => sendRedirect(res, "/servers"))
+app.get(["/settings", "/leaderboard", "/rank", "/roles", "/levels", "/hidden", "/records", "/servers"], (req, res) => sendRedirect(res, "/servers"))
 
 if (auth.supportURL) app.get("/support", (req, res) => res.redirect(auth.supportURL))
 if (auth.changelogURL) app.get("/changelog", (req, res) => res.redirect(auth.changelogURL))
@@ -136,7 +143,7 @@ app.get("/api/guilds", async function(req, res) {
     // find all servers that exist in the database + the user is currently in
     let guildList = guilds.map(x => x.id)
     let foundServers = await client.db.find({ "_id": { $in: guildList } }, "settings").catch(() => [])
-    let validServers = guilds.filter(x => x.owner || (x.permissions & manage_server) || foundServers.some(g => g._id == x.id)) // filter to just the servers above, OR manageable servers
+    let validServers = guilds.filter(x => x.owner || hasPerm(x.permissions, manage_server) || foundServers.some(g => g._id == x.id)) // filter to just the servers above, OR manageable servers
 
     let activeIDs = await client.shard.broadcastEval(async (cl, xd) => {
         return xd.ids.filter(x => cl.guilds.cache.has(x))
@@ -144,14 +151,13 @@ app.get("/api/guilds", async function(req, res) {
     activeIDs = activeIDs.flat()
 
     validServers = validServers.map(x => {
-        let p = x.permissions // check permissions
         let inServer = activeIDs.includes(x.id)
-        let admin = x.owner || !!(p & server_admin)
+        let admin = x.owner || hasPerm(x.permissions, server_admin)
         let perms = {
             owner: x.owner,
-            server: admin || !!(p & manage_server),
-            roles: admin || !!(p & manage_roles),
-            messages: admin || !!(p & manage_messages),
+            server: admin || hasPerm(x.permissions, manage_server),
+            roles: admin || hasPerm(x.permissions, manage_roles),
+            messages: admin || hasPerm(x.permissions, manage_messages),
         }
         let foundDB = foundServers.find(g => g._id == x.id)
         let xpEnabled = inServer && foundDB?.settings?.enabled  // if xp is enabled for this server
@@ -247,7 +253,9 @@ app.get("/api/settings/:id", async function(req, res) {
 
     let ownedServers = guilds.filter(x => x.owner && x.id != serverID).map(x => ({ name: x.name, id: x.id }))
 
-    return res.send({ guild: guildInfo, settings: serverData.settings, roles: guildData.roles, channels: guildData.channels, ownedServers, curvePresets })
+    let userData = { id: user.id, username: user.username, displayName: user.global_name, avatar: user.avatar, color: user.banner_color }
+
+    return res.send({ guild: guildInfo, settings: serverData.settings, roles: guildData.roles, channels: guildData.channels, ownedServers, curvePresets, user: userData })
 })
 
 function validateSetting(val, setting, guildData={}) {
@@ -675,6 +683,9 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
             if (foundUser && foundAsMember) userLevel = Object.assign(foundUser, foundAsMember)
             else userLevel = { missing: true, debug: { member: guildMembers.find(x => x.id == userInfo.id)?.id || "-", user: foundUser?.id || "-", info: userInfo?.id || "-" } }
         }
+
+        userLevel.banner = userInfo.banner ? `https://cdn.discordapp.com/banners/${userInfo.id}/${userInfo.banner}.${userInfo.banner.startsWith("a_") ? "gif" : "png"}?size=600` : null
+        userLevel.accentColor = userInfo.accent_color != null ? `#${userInfo.accent_color.toString(16).padStart(6, "0")}` : null
     }
     if (userLevel.partial) delete userLevel.missing
 
@@ -880,7 +891,17 @@ async function getDiscordInfo(req, userOnly) {
     let userData = await rest.get("/users/@me", options).catch(e => null)
     if (userOnly) return userData || null
 
-    let guilds = await rest.get("/users/@me/guilds", options).catch(e => null)
+    // /users/@me/guilds is paginated (200 max per request), so keep paging until we run out
+    // otherwise users in 200+ servers can be missing from this list, breaking their mod/owner status
+    let guilds = []
+    let after = null
+    while (true) {
+        let page = await rest.get(`/users/@me/guilds?limit=200${after ? `&after=${after}` : ""}`, options).catch(e => null)
+        if (!page || page.message || !Array.isArray(page)) { guilds = page; break } // propagate error as-is
+        guilds = guilds.concat(page)
+        if (page.length < 200 || guilds.length >= 2000) break // no more pages, or hit safety cap
+        after = page[page.length - 1].id
+    }
 
     if (!userData || !guilds || userData.message || guilds.message || !userData.id) return [null, null] // if discord sends error
     let discordRes = [userData, guilds] // return this as an array, so we can do "let [userData, guilds]"

@@ -3,44 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <link href="/css/polaris.css?v=1" type="text/css" rel="stylesheet">
-    <link rel="icon" href="/assets/polaris.svg">
-    <title>Leaderboard</title>
+    <link rel="icon" href="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless">
+    <title>Clasificación</title>
 
-    <meta property="og:title" content="Polaris">
-    <meta property="og:description" content="An open-source XP bot">
+    <meta property="og:title" content="TS Community">
+    <meta property="og:description" content="Clasificación de TS Community">
     <meta property="og:type" content="website">
     <meta name="theme-color" content="#00ff80">
     <meta name="twitter:card" content="summary">
     <meta name="robots" content="noindex">
+    <style>
+        body {
+            min-height: 100%;
+            padding-bottom: 40px;
+            background: var(--bg);
+        }
+
+        #bgBlur {
+            position: fixed;
+            inset: -160px;
+            background-image: url('https://cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?size=512');
+            background-size: cover;
+            background-position: center;
+            filter: blur(160px) saturate(0.9);
+            opacity: 0.14;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        #lbPageHeader {
+            padding: 46px 0px 26px 0px;
+            margin-bottom: 26px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        #serverName {
+            font-family: var(--opensans);
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--polarisgreen), var(--emojiblue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #serverMembers {
+            opacity: 75%;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 20px;
+            font-weight: 600;
+            margin-top: 10px !important;
+        }
+    </style>
 </head>
 <body>
-    <h2 class="middleflex" id="loading">Loading...</h2>
+    <div id="bgBlur"></div>
+    <div class="topbar">
+        <a class="topbarBrand" href="/">
+            <img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt="">
+            <span>TS Community Brawl</span>
+        </a>
+    </div>
+
+    <h2 class="middleflex" id="loading">Cargando...</h2>
 
     <div id="everything" style="display: none">
 
-    <div class="centerflex" style="margin-top: 10px; flex-direction: column;">
-        <h1 id="serverName" style="text-align: center"></h1>
-        <p id="serverMembers" style="margin-top: 2px"></p>
-
-        <h2 style="color: #ff5555; margin: 0px 0px 15px 0px; text-align: center; display: none" id="notInServerWarning">You're not in this server!</h2>
-        <button id="bigLoginBtn" onclick="loginButton()" style="display: none; background-color: var(--emojipurple); width: 350px; margin-bottom: 30px; margin-top: 10px; font-size: 22px; height: 50px">Log in to view personal stats!</button>
-
-        <div id="lbButtons" style="margin-bottom: 20px; margin-top: 2px">
-            <button class="selectedlb" box="leaderboard">Leaderboard</button><!--
-            --><button box="rank" id="yourrank">Your Rank</button><!--
-            --><button box="roles">Reward Roles</button><!--
-            --><button box="levels">All Levels</button><!--
-            --><button box="hidden" id="hiddenMemberTab" style="display: none">Hidden Members</button>
+    <div class="lbLayout">
+        <div class="lbSidebar">
+        <div class="lbSidebarNav">
+            <button class="lbNavItem selectedlb" box="leaderboard">
+                <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="12" width="5" height="9" rx="1.5"></rect><rect x="9.5" y="7" width="5" height="14" rx="1.5"></rect><rect x="16" y="3" width="5" height="18" rx="1.5"></rect></svg>
+                <span>Clasificación</span>
+            </button>
+            <button class="lbNavItem" box="rank" id="yourrank">
+                <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1c0-4.4 3.6-8 8-8s8 3.6 8 8v1H4z"></path></svg>
+                <span>Tu Rango</span>
+            </button>
+            <button class="lbNavItem" box="roles">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z"></path></svg>
+                <span>Roles de Recompensa</span>
+            </button>
+            <button class="lbNavItem" box="levels">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" stroke="none"></path><path d="M2 12l10 5 10-5"></path><path d="M2 17l10 5 10-5"></path></svg>
+                <span>Todos los Niveles</span>
+            </button>
+            <button class="lbNavItem" box="hidden" id="hiddenMemberTab" style="display: none">
+                <svg viewBox="0 0 640 512" fill="currentColor"><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c8.4-19.3 10.6-41.4 4.8-63.3c-11.1-41.5-47.8-69.4-88.6-71.1c-5.8-.2-9.9 5.4-8.1 10.9c3.1 9.3 4.8 19.3 4.8 29.7c0 5.4-.5 10.6-1.4 15.7l-96.4-75.9zM373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C173.5 443.2 238.2 480 319.9 480c47.4 0 89.1-12.4 125.2-31.4L373 389.9z"/></svg>
+                <span>Miembros Ocultos</span>
+            </button>
+            <button class="lbNavItem" box="records">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a5 5 0 0 1 5 5v1h2a1 1 0 0 1 1 1c0 2.4-1.6 4.4-3.8 4.9A5.03 5.03 0 0 1 13 16.9V19h3a1 1 0 0 1 0 2H8a1 1 0 0 1 0-2h3v-2.1a5.03 5.03 0 0 1-3.2-3 5.5 5.5 0 0 1-3.8-4.9 1 1 0 0 1 1-1h2V7a5 5 0 0 1 5-5zM5 9c.2 1.1.9 2 1.9 2.5A7 7 0 0 1 6.5 9H5zm12.5 0h-1.4a7 7 0 0 1-.4 2.5C16.6 11 17.3 10.1 17.5 9z"></path></svg>
+                <span>Récords</span>
+            </button>
         </div>
-    </div>
+
+            <div class="lbSidebarUser">
+                <div class="userMenu" id="userMenu" style="display: none">
+                    <button class="sidebarUserButton" id="userMenuButton" type="button">
+                        <img id="userAvatar" src="" alt="">
+                        <div class="sidebarUserInfo">
+                            <span id="username"></span>
+                            <span class="userRole" id="userRole"></span>
+                        </div>
+                    </button>
+                    <div class="userDropdown sidebarUserDropdown" id="userDropdown">
+                        <a href="/servers?showall" id="serverPickerLink" style="display: none">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.5"></rect><rect x="13" y="3" width="8" height="8" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="13" y="13" width="8" height="8" rx="1.5"></rect></svg>
+                            <span>Selector de servidores</span>
+                        </a>
+                        <a href="/logout">
+                            <svg viewBox="0 0 512 512" fill="currentColor"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"/></svg>
+                            <span>Cerrar sesión</span>
+                        </a>
+                    </div>
+                </div>
+                <a class="topbarLoginBtn" id="topbarLogin" href="#" onclick="loginButton(); return false" style="display: none; width: 100%; justify-content: center; box-sizing: border-box;">
+                    <svg viewBox="0 0 640 512" fill="currentColor"><path d="M524.5 69.8a1.5 1.5 0 0 0 -.8-.7A485.1 485.1 0 0 0 404.1 32a1.8 1.8 0 0 0 -1.9 .9 337.5 337.5 0 0 0 -14.9 30.6 447.8 447.8 0 0 0 -134.4 0 309.5 309.5 0 0 0 -15.1-30.6 1.9 1.9 0 0 0 -1.9-.9A483.7 483.7 0 0 0 116.1 69.1a1.7 1.7 0 0 0 -.8 .7C39.1 183.7 18.2 294.7 28.4 404.4a2 2 0 0 0 .8 1.4A487.7 487.7 0 0 0 176 479.9a1.9 1.9 0 0 0 2.1-.7A348.2 348.2 0 0 0 208.1 430.4a1.9 1.9 0 0 0 -1-2.6 321.2 321.2 0 0 1 -45.9-21.9 1.9 1.9 0 0 1 -.2-3.1c3.1-2.3 6.2-4.7 9.1-7.1a1.8 1.8 0 0 1 1.9-.3c96.2 43.9 200.4 43.9 295.5 0a1.8 1.8 0 0 1 1.9 .2c2.9 2.4 6 4.9 9.1 7.2a1.9 1.9 0 0 1 -.2 3.1 301.4 301.4 0 0 1 -45.9 21.8 1.9 1.9 0 0 0 -1 2.6 391.1 391.1 0 0 0 30 48.8 1.9 1.9 0 0 0 2.1 .7A486 486 0 0 0 610.7 405.7a1.9 1.9 0 0 0 .8-1.4C623.7 277.6 590.9 167.5 524.5 69.8zM222.5 337.6c-29 0-52.8-26.6-52.8-59.2S193.1 219.1 222.5 219.1c29.7 0 53.3 26.8 52.8 59.2C275.3 311 251.9 337.6 222.5 337.6zm195.4 0c-29 0-52.8-26.6-52.8-59.2S388.4 219.1 417.9 219.1c29.7 0 53.3 26.8 52.8 59.2C470.7 311 447.5 337.6 417.9 337.6z"/></svg>
+                    <span>Iniciar sesión</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="lbContent">
+        <div class="centerflex" id="lbPageHeader" style="flex-direction: column;">
+            <h1 id="serverName" style="text-align: center"></h1>
+            <p id="serverMembers" style="margin-top: 2px"></p>
+
+            <h2 style="color: #ff5555; margin: 0px 0px 15px 0px; text-align: center; display: none" id="notInServerWarning">¡No estás en este servidor!</h2>
+            <button id="bigLoginBtn" onclick="loginButton()" style="display: none; background: linear-gradient(135deg, var(--polarisgreen), var(--emojiblue)); color: #0b1210; width: 350px; margin-bottom: 30px; margin-top: 10px; font-size: 20px; height: 50px; border-radius: 999px;">Inicia sesión para ver tus estadísticas</button>
+        </div>
 
     <div id="leaderboard" box="leaderboard" class="leaderboardBox lbBox"></div>
     <h2 id="noXPYet" box="leaderboard" style="text-align: center; display: none" class="lbBox">Nobody in this server has any XP yet!</h2>
 
     <div id="pageInfo" box="leaderboard" class="middleflex lbBox" style="flex-direction: row; margin-top: 20px">
-        <button id="pageDown" onclick="setPage(page - 1)" disabled style="width: 50px; min-width: 50px; background-color: var(--emojipurple); margin-right: 20px;">&lt;-</button>
+        <button id="pageDown" onclick="setPage(page - 1)" disabled style="width: 44px; min-width: 44px; height: 44px; padding: 0px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); margin-right: 20px;">&lt;-</button>
         <p style="font-weight: bold; font-size: 22px">Page <input id="pageNumber" min="1" onchange="setPage(+$(this).val())" type="number" value="1" style="font-size: 22px; margin: 0px 5px; font-weight: bold; width: 50px; height: 32px; text-align: center"> of <span id="totalPages">1</span></p>
-        <button id="pageUp" onclick="setPage(page + 1)" style="width: 50px; min-width: 50px; background-color: var(--emojipurple); margin-left: 20px;">-&gt;</button>
+        <button id="pageUp" onclick="setPage(page + 1)" style="width: 44px; min-width: 44px; height: 44px; padding: 0px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); margin-left: 20px;">-&gt;</button>
     </div>
 
     <h2 box="roles" class="lbBox plsLogIn">Log in to view your progress towards reward roles!</h2>
@@ -59,60 +160,98 @@
     </div>
     <div id="hiddenMemberList" box="hidden" class="emptyLbBox lbBox middleflex centerflex" style="display: none"></div>
 
-    <h2 box="rank" class="lbBox plsLogIn">Log in to view your detailed rank info!</h2>
-    <h2 box="rank" class="lbBox" id="noRankInfo" style="text-align: center; display: none">You don't have any XP yet!</h2>
+    <div box="records" class="lbBox middleflex centerflex" style="display: none; flex-direction: column; min-height: 320px; text-align: center;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="height: 56px; width: 56px"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+        <h2 style="margin-top: 16px">Próximamente</h2>
+        <p style="opacity: 70%; margin-top: 4px">Estamos trabajando en esta función.</p>
+    </div>
+
+    <h2 box="rank" class="lbBox plsLogIn">¡Inicia sesión para ver la información detallada de tu rango!</h2>
+    <h2 box="rank" class="lbBox" id="noRankInfo" style="text-align: center; display: none">¡Aún no tienes XP!</h2>
     <div id="accountInfo" box="rank" class="leaderboardBox lbBox" style="display: none">
         <div id="accountPartial" style="display: none">
-            <h2 style="text-align: center; color: rgb(255, 85, 85); margin-bottom: 0px">There was an error fetching your server info!</h2>
-            <p style="text-align: center; color: rgb(255, 85, 85); margin-top: 2px">Information about roles could not be obtained.</p>
+            <h2 style="text-align: center; color: rgb(255, 85, 85); margin-bottom: 0px">Hubo un error al obtener tu información del servidor</h2>
+            <p style="text-align: center; color: rgb(255, 85, 85); margin-top: 2px">No se pudo obtener información sobre los roles.</p>
         </div>
-        <div class="accountBox centerflex" style="padding-top: 20px; flex-direction: column; overflow: hidden;">
-            <div class="middleflex" style="margin-bottom: 20px">
-                <img lb="pfp">
-                <div class="generalInfo">
-                    <p lb="name" style="font-weight: bold; font-size: 32px"></p>
-                    <p lb="level" style="font-size: 22px"></p>
+        <div class="accountBox" style="display: flex; flex-direction: column; align-items: center; padding-top: 0px;">
+            <div class="discordCard">
+                <div class="discordBanner" id="userBanner">
+                    <div class="rankBadge" id="rankBadge">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z"></path></svg>
+                        <span lb="rankBadge"></span>
+                        <span class="rankBadgeDivider"></span>
+                        <span lb="rankBadgePercent"></span>
+                    </div>
+                </div>
+                <img lb="pfp" class="discordAvatar">
+                <div class="discordHeader">
+                    <div class="generalInfo">
+                        <p lb="name" class="discordName"></p>
+                        <div class="discordStatusRow">
+                            <div class="discordStatusPill">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm0 5.5L18.5 19h-13L12 7.5z"></path></svg>
+                                <p lb="level"></p>
+                            </div>
+                            <div class="discordInlineXP">
+                                <div class="progressBar">
+                                    <div class="progress" lb="progress"></div>
+                                </div>
+                                <span lb="percent"></span>
+                            </div>
+                        </div>
+                        <p lb="xp" class="discordXPLine"></p>
+                    </div>
                 </div>
             </div>
 
-            <div class="progressBar" style="width: 75%; margin: auto">
-                <div class="progress" lb="progress"></div>
-            </div>
-
-            <div class="middleflex" style="margin-top: 7px">
-                <p lb="xp" style="font-weight: bold"></p>
-                <p lb="percent" style="margin-left: 10px"></p>
-            </div>
-            <p lb="ranking" style="font-size: 20px; margin-top: 0px"></p>
+            <p lb="ranking" style="font-size: 18px; margin: 0px 0px 16px 0px; display: none"></p>
 
             <hr noshade style="width: 85%; margin-bottom: 20px">
 
-            <div style="width: 100%; display: flex; flex-direction: row; flex-wrap: wrap; justify-content: space-around;">
+            <div class="statGrid">
                 <div class="statBox" stat="level">
-                    <p>Previous level:</p>
-                        <p style="color: lime" lb="prev"></p>
-                    <p>XP since previous:</p>
-                        <p style="color: lime" lb="sinceprev"></p>
-                    <p>XP to level up:</p>
-                        <p style="color: lime" lb="tonext"></p>
+                    <div class="statRow">
+                        <p class="statLabel">Nivel anterior</p>
+                        <p class="statValue accent-green" lb="prev"></p>
+                    </div>
+                    <div class="statRow">
+                        <p class="statLabel">XP desde el nivel anterior</p>
+                        <p class="statValue accent-green" lb="sinceprev"></p>
+                    </div>
+                    <div class="statRow">
+                        <p class="statLabel">XP para subir de nivel</p>
+                        <p class="statValue accent-green" lb="tonext"></p>
+                    </div>
                 </div>
-    
+
                 <div class="statBox" stat="roles">
-                    <p>Top reward role:</p>
-                        <p lb="toprole"></p>
-                    <p>Reward roles reached:</p>
-                        <p lb="totalroles"></p>
-                    <p>Multiplier:</p>
-                        <p lb="multiplier"></p>
+                    <div class="statRow">
+                        <p class="statLabel">Mejor rol de recompensa</p>
+                        <p class="statValue" lb="toprole"></p>
+                    </div>
+                    <div class="statRow">
+                        <p class="statLabel">Roles de recompensa alcanzados</p>
+                        <p class="statValue" lb="totalroles"></p>
+                    </div>
+                    <div class="statRow">
+                        <p class="statLabel">Multiplicador</p>
+                        <p class="statValue" lb="multiplier"></p>
+                    </div>
                 </div>
-    
+
                 <div class="statBox" stat="xp">
-                    <p>XP per message:</p>
-                        <p style="color: aqua" lb="xppermessage"></p>
-                    <p>Cooldown:</p>
-                        <p style="color: aqua" lb="cooldown"></p>
-                    <p>Messages to level up:</p>
-                        <p style="color: aqua" lb="messages"></p>
+                    <div class="statRow">
+                        <p class="statLabel">XP por mensaje</p>
+                        <p class="statValue accent-blue" lb="xppermessage"></p>
+                    </div>
+                    <div class="statRow">
+                        <p class="statLabel">Cooldown</p>
+                        <p class="statValue accent-blue" lb="cooldown"></p>
+                    </div>
+                    <div class="statRow">
+                        <p class="statLabel">Mensajes para subir de nivel</p>
+                        <p class="statValue accent-blue" lb="messages"></p>
+                    </div>
                 </div>
             </div>
 
@@ -130,20 +269,22 @@
                 <p lb="name" style="font-weight: bold; cursor: help"></p>
                 <div style="display: flex">
                     <p lb="level"></p>
-                    <p lb="warning" class="red" style="margin-left: 10px; display: none; opacity: 100%; text-decoration: unset !important; font-weight: bold !important;">Not in server!</p>
+                    <p lb="warning" class="red" style="margin-left: 10px; display: none; opacity: 100%; text-decoration: unset !important; font-weight: bold !important;">No está en el servidor</p>
                     <p lb="hideUser" class="red hideFromLeaderboard" style="margin-left: 12px; display: none; opacity: 80%; text-decoration: underline !important">Hide member</p>
                 </div>
             </div>
         </div>
 
         <div style="width: 48%; margin-right: 20px;">
-            <div class="progressBar">
-                <div class="progress" lb="progress"></div>
-                <div class="xpOverlay">
-                    <p><span lb="xp"></span><span lb="percent" style="font-weight: normal; margin-left: 10px; font-size: 16px"></span></p>
+            <div class="xpLabel">
+                <p><span lb="xp"></span><span lb="percent"></span></p>
+                <div class="xpLabelRight">
                     <p lb="multiplier" style="display: none"></p>
                     <img src="/assets/icons/pencil.svg" class="editIcon">
                 </div>
+            </div>
+            <div class="progressBar">
+                <div class="progress" lb="progress"></div>
             </div>
         </div>
     </div>
@@ -151,6 +292,12 @@
     <!-- role slot template -->
     <div class="leaderboardSlot" slot="role">
         <div class="mainInfo" style="width: 54%">
+            <div class="roleTierIcon" lb="icon">
+                <svg viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M12 1.3l7.7 3.08v6.2c0 5.44-3.4 10.06-7.7 11.92C7.7 20.64 4.3 16.02 4.3 10.58v-6.2z"></path>
+                    <path fill="white" fill-opacity="0.92" d="M12 6l1.6 3.24 3.58.52-2.59 2.52.61 3.56L12 14.15l-3.2 1.69.61-3.56-2.59-2.52 3.58-.52z"></path>
+                </svg>
+            </div>
             <div style="margin-left: 10px">
                 <p lb="role" style="font-weight: bold"></p>
                 <p lb="level"></p>
@@ -158,11 +305,9 @@
         </div>
 
         <div style="width: 60%; margin-right: 20px;">
+            <p lb="percent" class="xpLabel"></p>
             <div class="progressBar">
                 <div class="progress" lb="progress"></div>
-                <div class="xpOverlay">
-                    <p lb="percent"></p>
-                </div>
             </div>
         </div>
     </div>
@@ -177,11 +322,9 @@
         </div>
 
         <div style="width: 60%; margin-right: 20px;">
+            <p lb="percent" class="xpLabel"></p>
             <div class="progressBar">
                 <div class="progress" lb="progress"></div>
-                <div class="xpOverlay">
-                    <p lb="percent"></p>
-                </div>
             </div>
         </div>
     </div>
@@ -194,7 +337,10 @@
     </div>
     
     <div style="height: 40px"></div>
-    
+
+        </div>
+    </div>
+
     <!-- popups -->
     <div class="popup" id="addxp">
         <div class="popupbox">
@@ -231,7 +377,7 @@
     <div class="popup" id="confirmHide">
         <div class="popupbox">
             <div class="box">
-                <h2 style="font-size: 36px">Hide from Leaderboard?</h2>
+                <h2 style="font-size: 36px">¿Ocultar de la clasificación?</h2>
                 <p style="margin: 10px 0px">This member will be removed from the leaderboard, and skipped over when calculating rankings. <b>Their XP will not be reset, and they will be automatically unhidden upon gaining XP.</b></p>
                 <p style="opacity: 50%">(hold shift to skip this popup)</p>
 
@@ -251,7 +397,31 @@
 <script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag('js', new Date()); gtag('config', 'UA-135255146-1');</script>
 
 <script>
-let guildID = window.location.pathname.split("/").pop()
+const tabInfo = {
+    leaderboard: { slug: "leaderboard", label: "Clasificación" },
+    rank: { slug: "rank", label: "Tu Rango" },
+    roles: { slug: "roles", label: "Roles de Recompensa" },
+    levels: { slug: "levels", label: "Todos los Niveles" },
+    hidden: { slug: "hidden", label: "Miembros Ocultos" },
+    records: { slug: "records", label: "Récords" },
+}
+const slugToBox = Object.fromEntries(Object.entries(tabInfo).map(([box, info]) => [info.slug, box]))
+
+function updateHeaderTitle(box) {
+    if (box == "leaderboard") {
+        $('#serverName').text(guildName)
+        $('#serverMembers').show()
+    } else {
+        $('#serverName').text(tabInfo[box].label)
+        $('#serverMembers').hide()
+    }
+    document.title = guildName ? `${tabInfo[box].label} - ${guildName}` : tabInfo[box].label
+}
+
+let pathParts = window.location.pathname.split("/").filter(Boolean)
+let guildID = pathParts[pathParts.length - 1]
+let currentBox = (pathParts.length > 1 && slugToBox[pathParts[0]]) ? slugToBox[pathParts[0]] : "leaderboard"
+let guildName = ""
 let serverName = guildID
 let page = 1
 let totalPages = 1
@@ -268,6 +438,22 @@ addUhOh()
 
 $('.leaderboardSlot').remove()
 $('.hiddenMemberSlot').remove()
+
+if (currentBox !== "leaderboard") {
+    $('.selectedlb').removeClass('selectedlb')
+    $(`.lbNavItem[box=${currentBox}]`).addClass('selectedlb')
+    $('.lbBox').hide()
+    $(`[box=${currentBox}]`).show()
+    $('#lbPageHeader').css('display', currentBox == 'rank' ? 'none' : 'flex')
+}
+updateHeaderTitle(currentBox)
+
+$('#userMenuButton').on('click', function(e) {
+    e.stopPropagation()
+    $('#userMenu').toggleClass('open')
+})
+$('#userDropdown').on('click', function(e) { e.stopPropagation() })
+$(document).on('click', function() { $('#userMenu').removeClass('open') })
 
 function commafy(num) {
     if (isNaN(num)) return 0
@@ -338,11 +524,26 @@ function roleCol(col, defaultCol="white") {
     return col == "#000000" ? defaultCol : col
 }
 
+function getTierColor(name) {
+    name = (name || "").toLowerCase()
+    if (name.includes("bronce")) return "#c97b3d"
+    if (name.includes("plata")) return "#b8bec4"
+    if (name.includes("oro")) return "#f2c14e"
+    if (name.includes("platino")) return "#4fd3c4"
+    if (name.includes("diamante")) return "#5ec8f2"
+    if (name.includes("esmeralda")) return "#4fd17a"
+    if (name.includes("zafiro")) return "#5a7dff"
+    if (name.includes("rub")) return "#ff5c5c"
+    if (name.includes("maestro")) return "#b06bff"
+    if (name.includes("leyenda")) return "#ff8a3d"
+    return "#9aa0a6"
+}
+
 Fetch(`/api/leaderboard/${guildID}`).then(data => {
 
     console.log(data)
-    document.title = `Leaderboard for ${data.guild.name}`
-    $('#serverName').text(`Leaderboard for ${data.guild.name}`)
+    guildName = data.guild.name
+    updateHeaderTitle(currentBox)
     updateRankedCount(data)
 
     pageCache[data.pageInfo.page] = data
@@ -354,6 +555,16 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
     }
 
     let loggedIn = !data.user.noLogin
+
+    if (loggedIn) {
+        let avatarURL = data.user.avatar || `https://cdn.discordapp.com/embed/avatars/0.png`
+        $('#username').text(data.user.nickname || data.user.displayName || data.user.username || "Tu cuenta")
+        $('#userAvatar').attr("src", avatarURL)
+        $('#userRole').text(data.moderator ? "Administrador" : "Miembro")
+        if (data.moderator) $('#serverPickerLink').show()
+        $('#userMenu').show()
+    }
+    else $('#topbarLogin').show()
 
     if (loggedIn) $('.plsLogIn').remove()
     else {
@@ -381,7 +592,10 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
     let userMultiplier = getMultiplier(data.user.roles, data.settings, data.roles)
 
     function updateRankedCount(dat) {
-        $('#serverMembers').html(`${commafy(dat.guild.members)} member${dat.guild.members == 1 ? "" : "s"} &nbsp; • &nbsp; ${commafy(dat.guild.totalRanked)}${dat.guild.totalPartial ? "+" : ""} ranked`)
+        let rankedLabel = dat.guild.totalPartial
+            ? `Top ${commafy(dat.guild.totalRanked)} clasificados`
+            : `${commafy(dat.guild.totalRanked)} clasificado${dat.guild.totalRanked == 1 ? "" : "s"}`
+        $('#serverMembers').html(`${commafy(dat.guild.members)} miembro${dat.guild.members == 1 ? "" : "s"} &nbsp;•&nbsp; ${rankedLabel}`)
     }
 
     // leaderboard, function so that this supports multiple pages
@@ -391,6 +605,7 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
             let userSlot = leaderboardSlot.clone()
             let userXP = getLevel(x.xp, data.settings)
             let multiplier = getMultiplier(x.roles, data.settings, data.roles)
+            if (x.rank <= 3) userSlot.addClass('rank-' + x.rank)
             if (x.missing) {
                 userSlot.addClass('notInServer')
                 userSlot.find("[lb=warning]").show()
@@ -403,10 +618,10 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
             }
             if (x.id == data.user.id) userSlot.addClass('isSelf')
             userSlot.find("[lb=rank]").text("#" + commafy(x.rank)).css("font-size", x.rank > 999 ? "18px" : x.rank > 99 ? "20px" : "22px")
-            userSlot.find("[lb=name]").text(x.nickname || x.displayName || `<@${x.id}>`).attr("title", x.missing ? "Not in server!" : `${x.displayName} (@${x.username})`)
-            userSlot.find("[lb=level]").text(`Level ${commafy(userXP.level)}`)
+            userSlot.find("[lb=name]").text(x.nickname || x.displayName || `<@${x.id}>`).attr("title", x.missing ? "No está en el servidor" : `${x.displayName} (@${x.username})`)
+            userSlot.find("[lb=level]").text(`Nivel ${commafy(userXP.level)}`)
             userSlot.find("[lb=pfp]").attr("src", x.avatar || "/assets/avatar.png")
-            userSlot.find("[lb=progress]").css("background-color", x.missing ? "rgba(118, 126, 137, 0.5)" : roleCol(x.color || "white")).css("width", userXP.percentage + "%")
+            userSlot.find("[lb=progress]").css("background-color", x.missing ? "rgba(118, 126, 137, 0.5)" : "").css("width", userXP.percentage + "%")
             userSlot.find("[lb=xp]").html(`${commafy(x.xp)} / ${commafy(userXP.xpRequired)} XP${data.settings.rankCard.relativeLevel ? ` &nbsp • &nbsp; ${commafy(x.xp - userXP.previousLevel)} / ${commafy(userXP.xpRequired - userXP.previousLevel)}` : ""}`)
             userSlot.find("[lb=percent]").text(`(${+userXP.percentage.toFixed(2)}%)`)
 
@@ -447,7 +662,7 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         else {
             $('#leaderboard').remove();
             $('#noXPYet').show()
-            if (data.settings.leaderboard.minLevel > 0) $('#noXPYet').html(`Nobody in this server is on the leaderboard yet!<br><span style="opacity: 66%; font-size: 18px; line-height: 46px">(level ${commafy(data.settings.leaderboard.minLevel)} required)</span>`)
+            if (data.settings.leaderboard.minLevel > 0) $('#noXPYet').html(`Nobody in this server is on the leaderboard yet!<br><span style="opacity: 66%; font-size: 18px; line-height: 46px">(nivel ${commafy(data.settings.leaderboard.minLevel)} requerido)</span>`)
         }
     }
     appendLeaderboard(data.leaderboard)
@@ -462,9 +677,10 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         let reachedRole = roleProgress >= 100
         let hasRole = loggedIn && data.user.id && data.user.roles.includes(r.id)
         rSlot.find("[lb=role]").text(role.name).css("color", roleColor)
-        rSlot.find("[lb=level]").text("Level " + commafy(r.level)).css("color", reachedRole ? roleColor : "#bbbbbb")
-        rSlot.find("[lb=percent]").text(!loggedIn ? `${commafy(roleXP)} XP` : reachedRole ? (hasRole ? "Obtained!" : "Reached!") : `${+roleProgress.toFixed(2)}% reached (${commafy(data.user.xp || 0)} / ${commafy(roleXP)} XP)`)
-        rSlot.find("[lb=progress]").css("width", Math.min(roleProgress, 100) + "%").css("background-color", roleColor)
+        rSlot.find("[lb=level]").text("Nivel " + commafy(r.level)).css("color", reachedRole ? roleColor : "#bbbbbb")
+        rSlot.find("[lb=icon]").css("color", getTierColor(role.name)).css("opacity", reachedRole ? "100%" : "45%")
+        rSlot.find("[lb=percent]").text(!loggedIn ? `${commafy(roleXP)} XP` : reachedRole ? (hasRole ? "¡Obtenido!" : "¡Conseguido!") : `${+roleProgress.toFixed(2)}% conseguido (${commafy(data.user.xp || 0)} / ${commafy(roleXP)} XP)`)
+        rSlot.find("[lb=progress]").css("width", Math.min(roleProgress, 100) + "%")
         $('#roleList').append(rSlot)
     })
     if (data.settings.rewards.length) $('#noRewardRoles').remove()
@@ -472,7 +688,7 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         $('#roleList').remove()
         if (data.settings.leaderboard.hideRoles) {
             $('#noRewardRoles').text("Reward roles are hidden for this server!")
-            $('#lbButtons').find("button[box='roles']").hide()
+            $('.lbSidebar').find("button[box='roles']").hide()
         }
     }
 
@@ -481,13 +697,15 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         let lvlSlot = progressSlot.clone()
         let lvlXP = xpForLevel(i, data.settings)
         let lvlProgress = !loggedIn ? 0 : data.user.xp ? data.user.xp / lvlXP * 100 : 0
-        let lvlHue = i * 360 / 100
+        let reached = userLevel.level >= i
+        let isNext = i == userLevel.level + 1
+        let lvlColor = reached ? "var(--polarisgreen)" : isNext ? "var(--emojiblue)" : "rgba(255, 255, 255, 0.55)"
 
-        if (i == userLevel.level + 1) lvlSlot.addClass('highlightedSlot')
-        lvlSlot.find("[lb=level]").text("Level " + commafy(i)).css("color", userLevel.level >= i ? `hsl(${lvlHue}, 90%, 70%)` : `hsl(${lvlHue}, 70%, 90%)`)
-        lvlSlot.find("[lb=xp]").text(commafy(lvlXP) + " XP").css("color", userLevel.level >= i ? `hsl(${lvlHue}, 90%, 70%)` : `hsl(${lvlHue}, 70%, 90%)`)
-        lvlSlot.find("[lb=percent]").text(`${Number(Math.min(100, lvlProgress).toFixed(2))}% reached${lvlProgress >= 100.5 ? ` (${commafy(Math.round(lvlProgress))}%)` : ""}`)
-        lvlSlot.find("[lb=progress]").css("background-color", `hsl(${lvlHue}, 100%, 50%)`).css("width", Math.min(lvlProgress, 100) + "%")
+        if (isNext) lvlSlot.addClass('highlightedSlot')
+        lvlSlot.find("[lb=level]").text("Nivel " + commafy(i)).css("color", lvlColor)
+        lvlSlot.find("[lb=xp]").text(commafy(lvlXP) + " XP").css("color", lvlColor)
+        lvlSlot.find("[lb=percent]").text(`${Number(Math.min(100, lvlProgress).toFixed(2))}% alcanzado${lvlProgress >= 100.5 ? ` (${commafy(Math.round(lvlProgress))}%)` : ""}`)
+        lvlSlot.find("[lb=progress]").css("background-color", reached ? "var(--polarisgreen)" : "var(--emojiblue)").css("width", Math.min(lvlProgress, 100) + "%")
         $('#progress').append(lvlSlot)
 
         if (i % 50 == 0 && lvlProgress < 1 && i > 50) break; // stop loop if less than 1% and level is multiple of 50
@@ -503,15 +721,26 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
 
         // account info
         $('#accountInfo [lb=pfp]').attr('src', data.user.avatar)
-        $('#accountInfo [lb=name]').text(data.user.nickname || data.user.displayName).css("color", userColor)
-        $('#accountInfo [lb=level]').text(`Level ${commafy(userLevel.level)}`).css("color", userColor)
-        $('#accountInfo [lb=progress]').css('background-color', userColor).css('width', userLevel.percentage + "%")
+        if (data.user.banner) $('#userBanner').removeClass('noBanner').css('background-image', `url(${data.user.banner})`)
+        else $('#userBanner').addClass('noBanner').css('background-image', '')
+        $('#accountInfo [lb=name]').text(data.user.nickname || data.user.displayName)
+        $('#accountInfo [lb=level]').text(`Nivel ${commafy(userLevel.level)}`)
+        $('#accountInfo [lb=progress]').css('width', userLevel.percentage + "%")
         $('#accountInfo [lb=xp]').text(`${commafy(data.user.xp)} / ${commafy(userLevel.xpRequired)} XP`).css("color", userColor)
         $('#accountInfo [lb=percent]').text(`(${+userLevel.percentage.toFixed(2)}%)`).css("color", userColor)
-        $('#accountInfo [lb=ranking]').text(data.user.hidden ? `Hidden from server leaderboard. Gain XP to be automatically unhidden!` : `Ranked #${data.user.rank} in ${data.guild.name}`)
+        if (data.user.hidden) {
+            $('#accountInfo [lb=ranking]').text(`Oculto de la clasificación del servidor. ¡Gana XP para que se muestre automáticamente!`).css('display', 'block')
+            $('#rankBadge').css('display', 'none')
+        }
+        else {
+            $('#accountInfo [lb=ranking]').css('display', 'none')
+            $('#rankBadge [lb=rankBadge]').text(`#${commafy(data.user.rank)}`)
+            $('#rankBadge [lb=rankBadgePercent]').text(`${+userLevel.percentage.toFixed(2)}%`)
+            $('#rankBadge').css('display', 'flex')
+        }
         $('#accountInfo [lb=prev]').text(commafy(userLevel.previousLevel) + " XP")
         $('#accountInfo [lb=sinceprev]').text(commafy(data.user.xp - userLevel.previousLevel) + " XP")
-        $('#accountInfo [lb=tonext]').text(userLevel.level >= data.settings.maxLevel ? "Max level! 🎉" : commafy(Math.max(0, userLevel.xpRequired - data.user.xp)) + " XP")
+        $('#accountInfo [lb=tonext]').text(userLevel.level >= data.settings.maxLevel ? "¡Nivel máximo! 🎉" : commafy(Math.max(0, userLevel.xpRequired - data.user.xp)) + " XP")
 
         let obtainedRoles = data.settings.rewards.filter(x => x.level <= userLevel.level).sort((a, b) => b.level - a.level)
         let topRole = obtainedRoles[0] ? data.roles.find(x => x.id == obtainedRoles[0].id) : null
@@ -519,7 +748,7 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         let minXP = Math.round(data.settings.gain.min * userMultiplier.boost)
         let maxXP = Math.round(data.settings.gain.max * userMultiplier.boost)
 
-        $('#accountInfo [lb=toprole]').text(topRole ? topRole.name : "(none)").css("color", roleCol((topRole || {}).color))
+        $('#accountInfo [lb=toprole]').text(topRole ? topRole.name : "(ninguno)").css("color", roleCol((topRole || {}).color))
         $('#accountInfo [lb=totalroles]').text(`${commafy(obtainedRoles.length)} / ${commafy(data.settings.rewards.length)}`).css("color", roleCol((topRole || {}).color))
         $('#accountInfo [lb=xppermessage]').text((minXP == maxXP ? commafy(minXP) : `${commafy(minXP)} - ${commafy(maxXP)}`) + (data.settings.hideMultipliers ? "?" : ""))
         $('#accountInfo [lb=cooldown]').text(timeStr(data.settings.gain.time * 1000, 1))
@@ -536,7 +765,7 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
             }
             else $('#accountInfo [lb=multiplier]').text(`${userMultiplier.roles.length} roles (${userMultiplier.boost}x XP)`)
         }
-        else $('#accountInfo [lb=multiplier]').text(data.settings.hideMultipliers ? "Hidden" : "None (1x XP)")
+        else $('#accountInfo [lb=multiplier]').text(data.settings.hideMultipliers ? "Oculto" : "Ninguno (1x XP)")
     }
     else if (loggedIn && !data.user.xp) {
         $('#accountInfo').remove()
@@ -589,8 +818,8 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         $('#addtype').val("addxp")
         $('#addamount').val(defaultAdd)
 
-        $('#oldxp').text(`${commafy(foundUser.xp)} (Level ${commafy(oldLevel.level)})`)
-        $('#newxp').text(`${commafy(newXP)} (Level ${commafy(newLevel.level)})`)
+        $('#oldxp').text(`${commafy(foundUser.xp)} (Nivel ${commafy(oldLevel.level)})`)
+        $('#newxp').text(`${commafy(newXP)} (Nivel ${commafy(newLevel.level)})`)
 
         $('#addxp').show()
 
@@ -616,7 +845,7 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
             if (newXP > 1e12) newXP = (1e12 - 1)
 
             let newNewLevel = getLevel(newXP, data.settings)
-            $('#newxp').text(`${commafy(newXP)} (Level ${commafy(newNewLevel.level)})`)
+            $('#newxp').text(`${commafy(newXP)} (Nivel ${commafy(newNewLevel.level)})`)
         })
 
         $('#addtype').off("change")
@@ -732,7 +961,7 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
             dat.hiddenMembers.forEach(x => {
                 let hidSlot = hiddenSlot.clone()
                 hidSlot.find("[lb=id]").text(`ID: ${x.id}`)
-                hidSlot.find("[lb=xp]").html(`Level ${commafy(getLevel(x.xp, dat.settings).level)} &nbsp; • &nbsp; ${commafy(x.xp)} XP`)
+                hidSlot.find("[lb=xp]").html(`Nivel ${commafy(getLevel(x.xp, dat.settings).level)} &nbsp; • &nbsp; ${commafy(x.xp)} XP`)
                 hidSlot.find("[lb=unhide]").attr("userID", x.id)
                 $('#hiddenMemberList').append(hidSlot)
             })
@@ -764,7 +993,7 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
             break;
 
         case "leaderboardDisabled":
-            $('#errorheader').text("Leaderboard disabled!")
+            $('#errorheader').text("¡Clasificación desactivada!")
             $('#errorfooter').text("This server has disabled the leaderboard.")
             break;
 
@@ -782,12 +1011,29 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
     $('#uhoh').show()
 })
 
-$('#lbButtons button').click(function() {
+$('.lbNavItem').click(function() {
     let box = $(this).attr('box')
+    currentBox = box
     $('.selectedlb').removeClass('selectedlb')
     $(this).addClass('selectedlb')
     $('.lbBox').hide()
     $(`[box=${box}]`).show()
+    $('#lbPageHeader').css('display', box == 'rank' ? 'none' : 'flex')
+    updateHeaderTitle(box)
+
+    history.pushState({ box }, "", `/${tabInfo[box].slug}/${guildID}`)
+})
+
+window.addEventListener('popstate', function() {
+    let pathParts = window.location.pathname.split("/").filter(Boolean)
+    let box = (pathParts.length > 1 && slugToBox[pathParts[0]]) ? slugToBox[pathParts[0]] : "leaderboard"
+    currentBox = box
+    $('.selectedlb').removeClass('selectedlb')
+    $(`.lbNavItem[box=${box}]`).addClass('selectedlb')
+    $('.lbBox').hide()
+    $(`[box=${box}]`).show()
+    $('#lbPageHeader').css('display', box == 'rank' ? 'none' : 'flex')
+    updateHeaderTitle(box)
 })
 
 let isUpdating = false

@@ -1,45 +1,164 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <link href="/css/polaris.css" type="text/css" rel="stylesheet">
-    <link rel="icon" href="/assets/polaris.svg">
-    <title>Polaris</title>
-    <meta property="og:title" content="Polaris">
-    <meta property="og:description" content="An open-source XP bot">
+    <link rel="icon" href="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless">
+    <title>TS Community</title>
+    <meta property="og:title" content="TS Community">
+    <meta property="og:description" content="Servidores de TS Community">
     <meta property="og:type" content="website">
     <meta name="theme-color" content="#00ff80">
     <meta name="twitter:card" content="summary">
+    <style>
+        body {
+            min-height: 100%;
+            padding-bottom: 40px;
+            background:
+                radial-gradient(circle at 15% 0%, rgba(0, 255, 128, 0.10), transparent 40%),
+                radial-gradient(circle at 85% 10%, rgba(59, 136, 195, 0.12), transparent 40%),
+                var(--bg);
+        }
+
+        .pageHeader {
+            text-align: center;
+            padding: 46px 20px 8px 20px;
+        }
+
+        .pageHeader h1 {
+            font-family: var(--opensans);
+            font-weight: 800;
+            font-size: 32px;
+            margin: 0px 0px 8px 0px;
+        }
+
+        .pageHeader h1 span {
+            background: linear-gradient(135deg, var(--polarisgreen), var(--emojiblue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .pageHeader p {
+            opacity: 70%;
+            font-size: 17px;
+            margin: 0px 0px;
+        }
+
+        .serverGrid {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            padding: 30px 20px 20px 20px;
+        }
+
+        .serverBreak {
+            height: 4px;
+        }
+
+        .serverOption {
+            height: auto;
+            min-height: 90px;
+            width: 90%;
+            max-width: 720px;
+            min-width: unset;
+            background: rgba(255, 255, 255, 0.035);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 16px;
+            margin: 0px;
+            padding: 14px 18px;
+            transition-duration: 0.15s;
+            transition-property: background, border-color, transform;
+        }
+
+        .serverOption:hover, .serverOption:focus-visible {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: rgba(0, 255, 128, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .serverOption img[sv=icon] {
+            height: 56px;
+            width: 56px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .serverOption p[sv=name] {
+            font-size: 20px !important;
+            margin-bottom: 4px !important;
+        }
+
+        .serverOption .serverIcons {
+            gap: 4px;
+        }
+
+        .serverOption .serverIcons a {
+            display: none;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 9px !important;
+        }
+
+        .serverOption .serverIcons a:hover, .serverOption .serverIcons a:focus-visible {
+            background: rgba(0, 255, 128, 0.15);
+            transform: scale(1.08);
+        }
+
+        .serverOption .serverIcons img {
+            height: 20px !important;
+        }
+    </style>
 </head>
 <body>
-    <h2 class="middleflex" id="loading">Loading...</h2>
+    <div class="topbar">
+        <a class="topbarBrand" href="./">
+            <img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt="">
+            <span>TS Community Brawl</span>
+        </a>
+        <div class="userMenu" id="userMenu">
+            <button class="userMenuButton" id="userMenuButton" type="button">
+                <img id="userAvatar" src="" alt="">
+                <span id="username"></span>
+                <svg viewBox="0 0 448 512" fill="currentColor"><path d="M201.4 342.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 274.7 86.6 137.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l160 160z"/></svg>
+            </button>
+            <div class="userDropdown" id="userDropdown">
+                <a href="./logout">
+                    <svg viewBox="0 0 512 512" fill="currentColor"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"/></svg>
+                    <span>Cerrar sesión</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="loadingWrap" id="loading">
+        <div class="spinner"></div>
+        <p style="margin: 0px 0px; opacity: 70%">Cargando...</p>
+    </div>
 
     <div id="everything" style="display: none">
-        <div class="centerflex" style="flex-direction: column">
-            <h2 style="font-size: 30px">Welcome back, <span id="username"></span></h2>
-            <p style="font-size: 20px; margin-top: 4px; margin-bottom: 25px">Select a server to manage</p>
+        <div class="pageHeader">
+            <h1>Bienvenido de nuevo, <span id="usernameHeader"></span></h1>
+            <p>Selecciona un servidor para gestionar</p>
         </div>
 
-        <div id="serverList" style="padding-bottom: 20px"></div>
-
-        <div class="middleflex" style="padding-bottom: 30px">
-            <a tabindex="-1" href="./logout"><button class="boringbutton" style="font-size: 22px; text-align: center; text-decoration: underline;">Log out</button></a>
-        </div>
+        <div id="serverList" class="serverGrid"></div>
 
         <!-- server option template -->
         <div class="serverOption canfocus" tabindex="0">
             <div class="middleflex" style="width: 10px; justify-content: flex-start">
-                <img sv="icon">
+                <img sv="icon" style="margin-right: 18px">
                 <div>
-                    <p style="font-size: 22px"><b sv="name"></b></p>
-                    <p sv="status"></p>
+                    <p sv="name" style="font-size: 22px"><b sv="name"></b></p>
+                    <p sv="status" class="statusPill"></p>
                 </div>
             </div>
             <div class="serverIcons" style="display: flex; align-items: center;">
-                <a class="canfocus" sv="leaderboard" title="Leaderboard"><img src="./assets/icons/podium.svg"></a>
-                <a class="canfocus" sv="settings" title="Settings"><img src="./assets/icons/cog.svg"></a>
-                <a class="canfocus" sv="downloaddata" title="Download data"><img src="./assets/icons/download.svg"></a>
-                <a class="canfocus" sv="invite" title="Invite to server!"><img src="./assets/icons/plus.svg"></a>
+                <a class="canfocus" sv="leaderboard" title="Clasificación"><img src="./assets/icons/podium.svg"></a>
+                <a class="canfocus" sv="settings" title="Ajustes"><img src="./assets/icons/cog.svg"></a>
+                <a class="canfocus" sv="downloaddata" title="Descargar datos"><img src="./assets/icons/download.svg"></a>
+                <a class="canfocus" sv="invite" title="¡Invitar al servidor!"><img src="./assets/icons/plus.svg"></a>
             </div>
         </div>
     </div>
@@ -57,8 +176,21 @@ addUhOh()
 let serverSlot = $('.serverOption').first().clone()
 $('.serverOption').remove()
 
+$('#userMenuButton').on('click', function(e) {
+    e.stopPropagation()
+    $('#userMenu').toggleClass('open')
+})
+$('#userDropdown').on('click', function(e) { e.stopPropagation() })
+$(document).on('click', function() { $('#userMenu').removeClass('open') })
+
 Fetch(`./api/guilds`).then(data => {
-    $('#username').text(data.user.displayName).css("color", data.user.color)
+    let avatarURL = data.user.avatar
+        ? `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.png?size=128`
+        : `https://cdn.discordapp.com/embed/avatars/${Number((BigInt(data.user.id) >> 22n) % 6n)}.png`
+
+    $('#username').text(data.user.displayName)
+    $('#usernameHeader').text(data.user.displayName).css("color", data.user.color)
+    $('#userAvatar').attr("src", avatarURL)
 
     let sortedGuilds = data.guilds.sort((a, b) => {
         return (!!b.inServer - !!a.inServer)
@@ -70,21 +202,35 @@ Fetch(`./api/guilds`).then(data => {
         || a.name.localeCompare(b.name)
     })
 
+    // if there's only one server to actually manage/view, skip the picker and go straight there
+    if (!window.location.search.includes("showall")) {
+        let manageable = sortedGuilds.filter(x => x.inServer && (x.permissions.server || x.leaderboard))
+        if (manageable.length == 1) {
+            let target = manageable[0]
+            let dest = target.permissions.server ? `./settings/${target.id}` : `./leaderboard/${target.id}`
+            return window.location.replace(dest)
+        }
+    }
+
     let breaks = {}
     sortedGuilds.forEach((x, y) => {
         let slot = serverSlot.clone()
         slot.find('[sv=icon]').attr("src", x.icon ? `https://cdn.discordapp.com/icons/${x.id}/${x.icon}.png` : "./assets/avatar.png")
-        slot.find('[sv=name]').text(x.name).attr("title", x.name).css("color", x.xp ? "#00ff80" : "white")
-        slot.find('[sv=status]').text(x.permissions.owner ? "Server owner" : x.permissions.server ? "Moderator" : "Member")
+        slot.find('b[sv=name]').text(x.name).attr("title", x.name).css("color", x.xp ? "#00ff80" : "white")
+
+        let status = x.permissions.owner ? { text: "Propietario", cls: "pill-owner" }
+            : x.permissions.server ? { text: "Moderador", cls: "pill-mod" }
+            : { text: "Miembro", cls: "pill-member" }
+        slot.find('p[sv=status]').text(status.text).addClass(status.cls)
 
         if (x.inServer) {
-            if (x.permissions.server) slot.find('[sv=settings]').css("display", "block").attr("href", `./settings/${x.id}`)
-            if (x.leaderboard) slot.find('[sv=leaderboard]').css("display", "block").attr("href", `./leaderboard/${x.id}`)
+            if (x.permissions.server) slot.find('[sv=settings]').css("display", "flex").attr("href", `./settings/${x.id}`)
+            if (x.leaderboard) slot.find('[sv=leaderboard]').css("display", "flex").attr("href", `./leaderboard/${x.id}`)
         }
 
         else if (x.permissions.server && (x.hasData || data.botPublic)) {
-            if (x.hasData) slot.find('[sv=downloaddata]').css("display", "block").on("click", function(e) { e.preventDefault(); e.stopImmediatePropagation(); downloadServerData(x) })
-            if (data.botPublic) slot.find('[sv=invite]').css("display", "block").attr("onclick", `window.open('./invite/${x.id}', 'popup', 'width=500,height=750'); return false`)
+            if (x.hasData) slot.find('[sv=downloaddata]').css("display", "flex").on("click", function(e) { e.preventDefault(); e.stopImmediatePropagation(); downloadServerData(x) })
+            if (data.botPublic) slot.find('[sv=invite]').css("display", "flex").attr("onclick", `window.open('./invite/${x.id}', 'popup', 'width=500,height=750'); return false`)
         }
 
         else return;
@@ -135,7 +281,7 @@ Fetch(`./api/guilds`).then(data => {
         $('#errorfooter').text(e.message)
         $('#errorhelp').show()
     }
-    
+
     $('#loading').hide()
     $('#uhoh').show()
 })
@@ -151,7 +297,7 @@ function downloadServerData(server) {
                 alert(`Error! ${x.message}`);
             }).catch(e => alert("Error downloading data!"))
         }
-        
+
         else res.blob().then(blob => {
             let downloader = document.createElement('a');
             downloader.href = URL.createObjectURL(blob)

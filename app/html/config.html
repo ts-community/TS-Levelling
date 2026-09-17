@@ -3,19 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <link href="/css/polaris.css?v=3" type="text/css" rel="stylesheet">
-    <link rel="icon" href="/assets/polaris.svg">
-    <title>Polaris</title>
+    <link rel="icon" href="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless">
+    <title>TS Community</title>
 
-    <meta property="og:title" content="Polaris">
-    <meta property="og:description" content="An open-source XP bot">
+    <meta property="og:title" content="TS Community">
+    <meta property="og:description" content="Configuración de niveles de TS Community">
     <meta property="og:type" content="website">
     <meta name="theme-color" content="#00ff80">
     <meta name="twitter:card" content="summary">
     <meta name="robots" content="noindex">
+    <style>
+        #sidebar {
+            top: 68px;
+            height: calc(100% - 68px);
+        }
+    </style>
 </head>
 <body>
 
-    <h2 style="margin-top: 75px; width: 100%; position: absolute;" class="middleflex" id="loading">Loading...</h2>
+    <div class="topbar">
+        <a class="topbarBrand" href="/">
+            <img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt="">
+            <span>TS Community Brawl</span>
+        </a>
+        <div class="userMenu" id="userMenu">
+            <button class="userMenuButton" id="userMenuButton" type="button">
+                <img id="userAvatar" src="" alt="">
+                <span id="username"></span>
+                <span class="userRole">Administrador</span>
+                <svg viewBox="0 0 448 512" fill="currentColor"><path d="M201.4 342.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 274.7 86.6 137.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l160 160z"/></svg>
+            </button>
+            <div class="userDropdown" id="userDropdown">
+                <a href="/servers?showall">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.5"></rect><rect x="13" y="3" width="8" height="8" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="13" y="13" width="8" height="8" rx="1.5"></rect></svg>
+                    <span>Selector de servidores</span>
+                </a>
+                <a href="/logout">
+                    <svg viewBox="0 0 512 512" fill="currentColor"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"/></svg>
+                    <span>Cerrar sesión</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <h2 style="margin-top: 75px; width: 100%; position: absolute;" class="middleflex" id="loading">Cargando...</h2>
 
     <div id="everything" style="display: none; width: 1600px">
 
@@ -83,7 +114,7 @@
                 </div>
             </div>
             <div class="middleflex" style="position: absolute; top: 0px; right: 30px; height: 100%">
-                <a tabindex=-1 href="/servers">
+                <a tabindex=-1 href="/servers?showall">
                     <button style="font-size: 24px; height: 50px; width: 200px; margin-right: 25px; background-color: var(--emojiblue)">Change Server</button>
                 </a>
 
@@ -858,6 +889,13 @@
 <script>
     addUhOh()
 
+    $('#userMenuButton').on('click', function(e) {
+        e.stopPropagation()
+        $('#userMenu').toggleClass('open')
+    })
+    $('#userDropdown').on('click', function(e) { e.stopPropagation() })
+    $(document).on('click', function() { $('#userMenu').removeClass('open') })
+
     let guildID = window.location.pathname.split("/").pop().split("-")[0]
     let serverName = guildID
     let lastUpdated = 0
@@ -920,6 +958,14 @@
         $('.serverMembers').text(commafy(data.guild.members || "?") + " member" + (data.guild.members == 1 ? "" : "s"))
         $('.serverIcon').attr('src', data.guild.icon || "/assets/avatar.png")
         $('#otherServers').append(data.ownedServers.map(x => `<option value="${x.id}">${x.name}</option>`))
+
+        if (data.user) {
+            let avatarURL = data.user.avatar
+                ? `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.png?size=128`
+                : `https://cdn.discordapp.com/embed/avatars/${Number((BigInt(data.user.id) >> 22n) % 6n)}.png`
+            $('#username').text(data.user.displayName)
+            $('#userAvatar').attr("src", avatarURL)
+        }
         
         // fill in inputs with current values
         $('input[db], select[db]').each(function() {

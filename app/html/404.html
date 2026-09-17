@@ -1,89 +1,155 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <link href="/css/polaris.css" type="text/css" rel="stylesheet">
-    <link rel="icon" href="/assets/polaris.svg">
-    <title>Nowhere</title>
+    <link rel="icon" href="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless">
+    <title>Página no encontrada</title>
+    <meta property="og:title" content="TS Community">
+    <meta property="og:description" content="Esta página no existe">
+    <meta property="og:type" content="website">
     <meta name="theme-color" content="#00ff80">
+    <meta name="twitter:card" content="summary">
+    <meta name="robots" content="noindex">
     <style>
-        #fumo {
-           user-select: none;
-           -webkit-user-select: none;
-           -webkit-user-drag: none;
-           -webkit-tap-highlight-color: rgba(255, 255, 255, 0); 
-           -moz-user-drag: none;
-           -moz-user-select: none;
+        body {
+            height: 100%;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(0, 255, 128, 0.16), transparent 45%),
+                radial-gradient(circle at 80% 75%, rgba(59, 136, 195, 0.18), transparent 45%),
+                var(--bg);
         }
-  
-        #noThoughts {
-           width: fit-content;
-           margin: auto;
-           cursor: pointer;
-           transform: scale(0.94);
+
+        .heroWrap {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
         }
-  
-        #noThoughts:hover {
-           animation: brrr 0.2s;
-           animation-iteration-count: infinite;
-           transition-duration: 0.05s;
+
+        .heroBgLogo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 900px;
+            height: 900px;
+            object-fit: cover;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            filter: blur(90px);
+            opacity: 30%;
+            pointer-events: none;
+            user-select: none;
+            z-index: 0;
         }
-  
-        #noThoughts:active, .hell {
-           animation: hyperbrrr 0.06s !important;
-           animation-iteration-count: infinite !important;
-           filter: saturate(200%) blur(1.5px) !important;
+
+        .heroCard {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 55px 65px;
+            max-width: 560px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            backdrop-filter: blur(18px);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
         }
-  
-        .headEmpty {
-           position: absolute;
-           bottom: 0px;
-           height: 200%;
-           width: 42%;
+
+        .heroLogoWrap {
+            padding: 4px;
+            border-radius: 50%;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, var(--polarisgreen), var(--emojiblue));
+            box-shadow: 0 0 40px rgba(0, 255, 128, 0.35);
         }
-  
-        .mirror {
-           transform: scaleX(-1);
+
+        .heroLogoWrap img {
+            display: block;
+            height: 100px;
+            width: 100px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 4px solid var(--bg);
+            user-select: none;
         }
-  
-        @keyframes brrr {
-           0% { transform: translate(1px, 1px) rotate(0deg); }
-           10% { transform: translate(-1px, -2px) rotate(-1deg); }
-           20% { transform: translate(-3px, 0px) rotate(1deg); }
-           30% { transform: translate(3px, 2px) rotate(0deg); }
-           40% { transform: translate(1px, -1px) rotate(1deg); }
-           50% { transform: translate(-1px, 2px) rotate(-1deg); }
-           60% { transform: translate(-3px, 1px) rotate(0deg); }
-           70% { transform: translate(3px, 1px) rotate(-1deg); }
-           80% { transform: translate(-1px, -1px) rotate(1deg); }
-           90% { transform: translate(1px, 2px) rotate(0deg); }
-           100% { transform: translate(1px, -2px) rotate(-1deg); }
+
+        .errorCode {
+            font-family: var(--opensans);
+            font-weight: 800;
+            font-size: 72px;
+            line-height: 1;
+            margin: 0px 0px 8px 0px;
+            background: linear-gradient(135deg, var(--polarisgreen), var(--emojiblue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
-        @keyframes hyperbrrr {
-           0% { transform: scale(1.07) translate(6px, 3px) rotate(0deg); }
-           10% { transform: scale(1.07) translate(-6px, -6px) rotate(-5deg); }
-           20% { transform: scale(1.07) translate(-12, 0px) rotate(5deg); }
-           30% { transform: scale(1.07) translate(12, 6px) rotate(0deg); }
-           40% { transform: scale(1.07) translate(6px, -6px) rotate(5deg); }
-           50% { transform: scale(1.07) translate(-6px, 6px) rotate(-5deg); }
-           60% { transform: scale(1.07) translate(-12, 3px) rotate(0deg); }
-           70% { transform: scale(1.07) translate(12, 3px) rotate(-5deg); }
-           80% { transform: scale(1.07) translate(-6px, -6px) rotate(5deg); }
-           90% { transform: scale(1.07) translate(6px, 6px) rotate(0deg); }
-           100% { transform: scale(1.07) translate(6px, -6px) rotate(-5deg); }
+
+        .heroTitle {
+            font-family: var(--opensans);
+            font-weight: 800;
+            font-size: 26px;
+            margin: 0px 0px 12px 0px;
+            color: white;
         }
-     </style>
+
+        .heroSubtitle {
+            font-size: 16px;
+            line-height: 26px;
+            margin: 0px 0px 32px 0px;
+            opacity: 70%;
+        }
+
+        .gradientButton {
+            font-family: var(--opensans);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            height: 52px;
+            min-width: 170px;
+            padding: 0px 26px;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 700;
+            color: #0b1210;
+            text-decoration: none !important;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--polarisgreen), #00c48c);
+            box-shadow: 0 10px 25px rgba(0, 255, 128, 0.25);
+            transition-duration: 0.2s;
+            transition-property: transform, box-shadow, filter;
+        }
+
+        .gradientButton:hover, .gradientButton:focus-visible {
+            transform: translateY(-2px);
+            filter: brightness(110%);
+        }
+
+        .gradientButton:active {
+            transform: translateY(0px);
+        }
+    </style>
 </head>
-
 <body>
-
-    <div class="headEmpty" id="left"></div>
-    <div class="headEmpty" id="right" style="right: 0px"></div>
-
-    <div class="middleflex" style="height: 100%; flex-direction: column">
-        <h1>this page does not exist</h1>
-        <div id="noThoughts" style="margin-top: 60px; margin-bottom: 60px">
-            <img id="fumo" src="/assets/fumo.png" style="height: 250px"></div>
+    <div class="heroWrap middleflex">
+        <img class="heroBgLogo" src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt="">
+        <div class="heroCard">
+            <div class="heroLogoWrap">
+                <img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt="Logo de TS Community">
+            </div>
+            <p class="errorCode">404</p>
+            <h1 class="heroTitle">Esta página no existe</h1>
+            <p class="heroSubtitle">Puede que el enlace esté roto o que la página se haya movido.</p>
+            <a href="/">
+                <button class="gradientButton">Volver al inicio</button>
+            </a>
         </div>
     </div>
 </body>
@@ -92,13 +158,5 @@
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.js"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=UA-135255146-1"></script>
 <script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag('js', new Date()); gtag('config', 'UA-135255146-1');</script>
-
-<script>
-
-$('#left').hover(function() { $('#fumo').removeClass("mirror"); $('#left').hide(); $('#right').show() })
-$('#right').hover(function() { $('#fumo').addClass("mirror");   $('#left').show(); $('#right').hide() })
-if (mobile) { $('#fumo').click(function() { $('#fumo').toggleClass("hell") }) }
-
-</script>
 
 </html>
