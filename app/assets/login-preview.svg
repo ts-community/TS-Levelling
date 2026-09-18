@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <radialGradient id="glow" cx="25%" cy="20%" r="75%">
+      <stop offset="0" stop-color="#00e6a0" stop-opacity=".25"/>
+      <stop offset="1" stop-color="#101719" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="border" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00e6a0"/>
+      <stop offset="1" stop-color="#3b88c3"/>
+    </linearGradient>
+    <linearGradient id="button" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#00e6a0"/>
+      <stop offset="1" stop-color="#67d9f5"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="24" stdDeviation="22" flood-color="#000" flood-opacity=".45"/>
+    </filter>
+    <filter id="blur"><feGaussianBlur stdDeviation="70"/></filter>
+  </defs>
+  <rect width="1200" height="630" fill="#101719"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <circle cx="970" cy="540" r="250" fill="#3b88c3" opacity=".13" filter="url(#blur)"/>
+  <g filter="url(#shadow)">
+    <rect x="325" y="66" width="550" height="498" rx="28" fill="#182224" fill-opacity=".94" stroke="#ffffff" stroke-opacity=".12"/>
+    <circle cx="600" cy="190" r="76" fill="url(#border)"/>
+    <circle cx="600" cy="190" r="68" fill="#101719"/>
+    <circle cx="600" cy="190" r="58" fill="#00e6a0"/>
+    <text x="600" y="315" fill="#ffffff" font-family="Arial, sans-serif" font-size="42" font-weight="700" text-anchor="middle">TS Community</text>
+    <text x="600" y="355" fill="#b9c8c9" font-family="Arial, sans-serif" font-size="20" text-anchor="middle">Panel de niveles de TS Community</text>
+    <rect x="455" y="408" width="290" height="62" rx="31" fill="url(#button)"/>
+    <text x="600" y="448" fill="#071614" font-family="Arial, sans-serif" font-size="21" font-weight="700" text-anchor="middle">Iniciar sesión con Discord</text>
+    <text x="600" y="515" fill="#7f999a" font-family="Arial, sans-serif" font-size="16" text-anchor="middle">Sube de nivel. Descubre tu progreso.</text>
+  </g>
+</svg>
