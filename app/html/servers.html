@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <link href="/css/polaris.css" type="text/css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="/css/polaris.css?v=9" type="text/css" rel="stylesheet">
     <link rel="icon" href="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless">
     <title>TS Community</title>
     <meta property="og:title" content="TS Community">
@@ -117,7 +118,7 @@
             <img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt="">
             <span>TS Community Brawl</span>
         </a>
-        <div class="userMenu" id="userMenu">
+        <div class="userMenu" id="userMenu" style="display: none">
             <button class="userMenuButton" id="userMenuButton" type="button">
                 <img id="userAvatar" src="" alt="">
                 <span id="username"></span>
@@ -191,6 +192,7 @@ Fetch(`./api/guilds`).then(data => {
     $('#username').text(data.user.displayName)
     $('#usernameHeader').text(data.user.displayName).css("color", data.user.color)
     $('#userAvatar').attr("src", avatarURL)
+    $('#userMenu').show()
 
     let sortedGuilds = data.guilds.sort((a, b) => {
         return (!!b.inServer - !!a.inServer)
@@ -202,8 +204,16 @@ Fetch(`./api/guilds`).then(data => {
         || a.name.localeCompare(b.name)
     })
 
-    // if there's only one server to actually manage/view, skip the picker and go straight there
+    // this dashboard is really just for TS Community Brawl - if the user is in it, skip the picker and go straight there
+    const mainGuildID = "1093864130030612521"
     if (!window.location.search.includes("showall")) {
+        let mainGuild = sortedGuilds.find(x => x.id == mainGuildID && x.inServer)
+        if (mainGuild) {
+            let dest = mainGuild.permissions.server ? `./settings/${mainGuild.id}` : `./leaderboard/${mainGuild.id}`
+            return window.location.replace(dest)
+        }
+
+        // otherwise, if there's only one other server to actually manage/view, skip the picker and go straight there too
         let manageable = sortedGuilds.filter(x => x.inServer && (x.permissions.server || x.leaderboard))
         if (manageable.length == 1) {
             let target = manageable[0]

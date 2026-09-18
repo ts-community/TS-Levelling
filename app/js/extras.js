@@ -36,7 +36,7 @@ function addUhOh() {
     $('body').append(`<div id="uhoh" class="centerflex" style="display: none; flex-direction: column;">
     <h2 id="errorheader">Error :(</h2>
     <p id="errorfooter"></p>
-    <button id="loginbutton" onclick="loginButton()">Log in</button>
+    <button id="loginbutton" onclick="loginButton()">Iniciar sesión</button>
     </div>`)
 }
 

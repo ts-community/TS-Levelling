@@ -70,7 +70,7 @@ function sendRedirect(res, name) {
 
 function canManageServer(guild) {
     if (!guild) return false
-    return guild.owner || hasPerm(guild.permissions, manage_server) || hasPerm(guild.permissions, server_admin)
+    return guild.owner || hasPerm(guild.permissions, server_admin)
 }
 
 function botIsPublic() {
@@ -110,10 +110,10 @@ app.use(function(req, res, next) {
 
 app.get("/servers", (req, res) => sendPage(res, "servers"))
 app.get("/settings/:id", (req, res) => sendPage(res, "config"))
-app.get(["/leaderboard/:id", "/rank/:id", "/roles/:id", "/levels/:id", "/hidden/:id", "/records/:id"], (req, res) => sendPage(res, "leaderboard"))
+app.get(["/leaderboard/:id", "/rank/:id", "/roles/:id", "/levels/:id", "/records/:id"], (req, res) => sendPage(res, "leaderboard"))
 app.get("/", (req, res) => sendPage(res, "home"))
 
-app.get(["/settings", "/leaderboard", "/rank", "/roles", "/levels", "/hidden", "/records", "/servers"], (req, res) => sendRedirect(res, "/servers"))
+app.get(["/settings", "/leaderboard", "/rank", "/roles", "/levels", "/records", "/servers"], (req, res) => sendRedirect(res, "/servers"))
 
 if (auth.supportURL) app.get("/support", (req, res) => res.redirect(auth.supportURL))
 if (auth.changelogURL) app.get("/changelog", (req, res) => res.redirect(auth.changelogURL))
@@ -155,7 +155,7 @@ app.get("/api/guilds", async function(req, res) {
         let admin = x.owner || hasPerm(x.permissions, server_admin)
         let perms = {
             owner: x.owner,
-            server: admin || hasPerm(x.permissions, manage_server),
+            server: admin,
             roles: admin || hasPerm(x.permissions, manage_roles),
             messages: admin || hasPerm(x.permissions, manage_messages),
         }

@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <link href="/css/polaris.css?v=3" type="text/css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="/css/polaris.css?v=9" type="text/css" rel="stylesheet">
     <link rel="icon" href="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless">
     <title>TS Community</title>
 
@@ -18,15 +19,25 @@
     <div id="bgBlur"></div>
 
     <div class="topbar">
-        <a class="topbarBrand" href="/">
-            <img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt="">
-            <span>TS Community Brawl</span>
+        <div class="topbarLeft">
+            <button id="sidebarToggle" class="hamburgerBtn" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+            <a class="topbarBrand" href="/">
+                <img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt="">
+                <span>TS Community Brawl</span>
+            </a>
+        </div>
+        <a class="leaderboardLink previewToggleBtn" tabindex="-1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            <span>Vista de miembro</span>
         </a>
     </div>
+    <div class="sidebarBackdrop" id="sidebarBackdrop"></div>
 
     <h2 style="margin-top: 75px; width: 100%; position: absolute;" class="middleflex" id="loading">Cargando...</h2>
 
-    <div id="everything" style="display: none; width: 1600px">
+    <div id="everything" style="display: none; width: 100%; max-width: 1600px; box-sizing: border-box">
 
     <div id="sidebar">
         <div class="categoryList">
@@ -42,12 +53,12 @@
 
         <div tabindex="0" category="rewardroles" class="category" title="Otorga roles automáticamente al alcanzar ciertos niveles.">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z"></path></svg>
-            <p>Roles de recompensa</p>
+            <p>Recompensas</p>
         </div>
 
         <div tabindex="0" category="levelup" class="category" title="Envía un mensaje personalizable cuando un miembro sube de nivel o alcanza un hito.">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4.5V17H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path></svg>
-            <p>Mensaje de subida de nivel</p>
+            <p>Mensajes</p>
         </div>
 
         <div tabindex="0" category="multipliers" class="category" title="Haz que ciertos roles/canales otorguen XP extra, o ninguna.">
@@ -107,21 +118,21 @@
     </div>
 
     <div class="configboxes" tab="server" style="display: none" id="serverInfo">
-        <div class="settingBox box fulllength" style="padding: 15px 20px; position: relative">
-            <div class="centerflex">
-                <img class="serverIcon" style="border-radius: 420px; height: 75px">
+        <div class="settingBox box fulllength" style="padding: 15px 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; box-sizing: border-box">
+            <div class="centerflex" style="min-width: 0px">
+                <img class="serverIcon" style="border-radius: 420px; height: 75px; flex-shrink: 0">
                 <div style="margin-left: 18px; overflow: hidden;">
                     <h1 class="serverName" style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; margin-bottom: 0px"></h1>
                     <p class="serverMembers" style="margin-top: 0px"></p>
                 </div>
             </div>
-            <div class="middleflex" style="position: absolute; top: 0px; right: 30px; height: 100%">
+            <div class="middleflex" style="flex-wrap: wrap; gap: 16px">
                 <a tabindex=-1 href="/servers?showall">
-                    <button style="font-size: 19px; height: 50px; width: 200px; white-space: nowrap; margin-right: 25px; background-color: var(--emojiblue)">Cambiar servidor</button>
+                    <button class="serverSwitchButton" style="font-size: 19px; height: 50px; width: 200px; white-space: nowrap">Cambiar servidor</button>
                 </a>
 
                 <a class="leaderboardLink" tabindex=-1 target="_blank" id="mainlbbutton">
-                    <button style="font-size: 19px; height: 50px; width: 200px; white-space: nowrap; background-color: var(--emojipurple)">Clasificación</button>
+                    <button class="rankingButton" style="font-size: 19px; height: 50px; width: 200px; white-space: nowrap">Clasificación</button>
                 </a>
             </div>
         </div>
@@ -140,11 +151,11 @@
 
     <div class="configboxes" tab="xp" style="display: none">
         <div class="settingBox box fulllength">
-            <h1>XP Gain</h1>
-            <p>Whenever a member sends a message, they gain a random amount of XP (experience points) and trigger a short cooldown. When the cooldown finishes, they can gain more XP. Congratulations! You just learned how XP bots work.</p>
+            <h1>Ganancia de XP</h1>
+            <p>Cada vez que un miembro envía un mensaje, gana una cantidad aleatoria de XP (puntos de experiencia) y activa un breve cooldown. Cuando el cooldown termina, puede volver a ganar XP. ¡Enhorabuena! Así es como funcionan los bots de niveles.</p>
 
-            <h2>Enable XP</h2>
-            <p class="details">When enabled, members will be able to gain XP. This is the whole point of the bot.</p>
+            <h2>Activar XP</h2>
+            <p class="details">Cuando está activado, los miembros podrán ganar XP. Esto es la base del bot.</p>
             <label style="margin-top: 5px"; class="slider">
                 <input db="enabled" id="enableLevelUp" type="checkbox" saveName="db">
                 <span class="sliderspan"></span>
@@ -152,18 +163,18 @@
         </div>
 
         <div class="settingBox box fulllength">
-            <h1>Basic Settings</h1>
-            <p>Customize the amount of XP earned, as well as how often it can be gained. Easy enough.</p>
+            <h1>Ajustes básicos</h1>
+            <p>Personaliza la cantidad de XP ganada, y con qué frecuencia se puede obtener. Fácil.</p>
 
             <div class="simpleflex">
                 <div class="sideoption">
-                    <h2>XP per message</h2>
-                    <p class="details">Amount is randomly picked between the min and max value</p>
+                    <h2>XP por mensaje</h2>
+                    <p class="details">La cantidad se elige aleatoriamente entre el valor mínimo y el máximo</p>
                     <div class="field">
                         <div class="centerflex spacedflex">
-                            <p>Between</p>
+                            <p>Entre</p>
                             <input updatecurve="true" id="num_min" style="width: 75px" type="number" min="0" max="5000" default="50" db="gain.min" saveName="db">
-                            <p> and </p>
+                            <p> y </p>
                             <input updatecurve="true" id="num_max" style="width: 75px" type="number" min="0" max="5000" default="50" db="gain.max" saveName="db">
                         </div>
                     </div>
@@ -171,11 +182,11 @@
 
                 <div class="sideoptions">
                     <h2>Cooldown</h2>
-                    <p class="details">Members must wait this many seconds before they can gain XP again</p>
+                    <p class="details">Los miembros deben esperar esta cantidad de segundos antes de poder volver a ganar XP</p>
                     <div class="field">
                         <div class="centerflex spacedflex">
                             <input updatecurve="true" id="num_time" style="width: 100px" type="number" decimals="4" min="0" max="31536000" default="60" db="gain.time" saveName="db">
-                            <p>seconds</p>
+                            <p>segundos</p>
                             <p id="cooldownunit" style="opacity: 70%; display: none"></p>
                         </div>
                     </div>
@@ -184,18 +195,18 @@
         </div>
 
         <div class="settingBox box fulllength">
-            <h1>Level Scaling</h1>
-            <p>By gaining enough XP, members can level up and earn special roles or bragging rights.
-                The amount of XP required scales with each level - early levels only need a couple thousand points but later levels need millions.</p>
-            
-            <p>You can adjust the level scaling to change how many more points are required with each level.
-                A smaller curve makes it easier to level up and a larger curve makes it much more difficult.</p>
+            <h1>Escalado de niveles</h1>
+            <p>Al ganar suficiente XP, los miembros pueden subir de nivel y ganar roles especiales o presumir de nivel.
+                La cantidad de XP necesaria aumenta con cada nivel: los primeros niveles solo necesitan un par de miles de puntos, pero los niveles más altos necesitan millones.</p>
+
+            <p>Puedes ajustar el escalado de niveles para cambiar cuántos puntos más se necesitan en cada nivel.
+                Una curva más pequeña facilita subir de nivel, y una curva más grande lo hace mucho más difícil.</p>
 
 
             <div class="simpleflex">
                 <div class="sideoption">
-                    <h2 id="curveStuff">Curve formula</h2>
-                    <p class="details">Cubic function that determines how much XP is needed for each level</p>
+                    <h2 id="curveStuff">Fórmula de la curva</h2>
+                    <p class="details">Función cúbica que determina cuánta XP se necesita para cada nivel</p>
                     <div class="field">
                         <div class="centerflex curvefield">
                             <input updatecurve="true" id="num_curve3" style="width: 65px" type="number" min="0" max="100" decimals="10" default="0" db="curve.3" saveName="db">
@@ -206,25 +217,25 @@
                             <p>x</p>
                         </div>
                     </div>
-                    <p>Difficulty rating: <b id="scaleDifficulty" style="color: aqua"></b></p>
+                    <p>Nivel de dificultad: <b id="scaleDifficulty" style="color: aqua"></b></p>
                 </div>
 
                 <div class="sideoption">
-                    <h2>Rounding</h2>
-                    <p class="details">Rounds the required XP to a nicer number, e.g. 791 XP -> 800 XP</p>
+                    <h2>Redondeo</h2>
+                    <p class="details">Redondea la XP necesaria a un número más agradable, ej. 791 XP -> 800 XP</p>
                     <div class="centerflex spacedflex">
-                        <p>Round to nearest</p>
+                        <p>Redondear al más cercano a</p>
                         <input updatecurve="true" id="num_round" style="width: 80px" type="number" min="1" max="1000" default="1" db="rounding" saveName="db">
                     </div>
                 </div>
             </div>
-            
+
             <div class="simpleflex">
                 <div>
-                    <h2 style="margin-bottom: 12px">Preview</h2>
+                    <h2 style="margin-bottom: 12px">Vista previa</h2>
                     <div class="simpleflex flexTable" id="curvePreview"></div>
-    
-                    <button style="margin-top: 16px; width: 140px" id="showMoreCurveInfo">More info</button>
+
+                    <button style="margin-top: 16px; width: 140px" id="showMoreCurveInfo">Más info</button>
                 </div>
 
                 <div style="margin-left: 40px; margin-top: 68px">
@@ -234,31 +245,31 @@
             </div>
 
             <div id="fullPreviewSection" style="display: none">
-                <h2 style="margin-bottom: 12px">Full Table</h2>
+                <h2 style="margin-bottom: 12px">Tabla completa</h2>
                 <div class="simpleflex flexTable" id="fullCurvePreview"></div>
 
-                <button style="margin-top: 16px; width: 140px; background-color: var(--emojipurple)" onclick="$('#fullPreviewSection').hide()">Hide</button>
+                <button style="margin-top: 16px; width: 140px; background-color: var(--emojipurple)" onclick="$('#fullPreviewSection').hide()">Ocultar</button>
             </div>
         </div>
 
         <div class="settingBox box fulllength">
             <h1>Presets</h1>
-            <p>Balancing is hard. Here's some presets to pick from!</p>
+            <p>Equilibrar la dificultad es difícil. ¡Aquí tienes algunos presets para elegir!</p>
 
             <div class="simpleflex">
-                <div style="width: 750px">
-                    <h2>View preset</h2>
-                    <p class="details">No settings will be changed until you click "apply"</p>
+                <div style="width: 750px; max-width: 100%; box-sizing: border-box">
+                    <h2>Ver preset</h2>
+                    <p class="details">No se cambiará ningún ajuste hasta que pulses "aplicar"</p>
                     <select id="curvePresets"></select>
 
-                    <p id="presetDesc" style="margin-bottom: 8px; font-style: italic;">Curve description</p>
+                    <p id="presetDesc" style="margin-bottom: 8px; font-style: italic;">Descripción de la curva</p>
                     <div class="curveInfo">
-                        <p>- <b>Curve:</b> <span id="presetCurve"></span></p>
-                        <p>- <b>Difficulty:</b> <span id="presetDifficulty"></span></p>
-                        <p>- <b>Rounding:</b> <span id="presetRound"></span></p>
-                        <p>- <b>XP per message:</b> <span id="presetXP"></span></p>
+                        <p>- <b>Curva:</b> <span id="presetCurve"></span></p>
+                        <p>- <b>Dificultad:</b> <span id="presetDifficulty"></span></p>
+                        <p>- <b>Redondeo:</b> <span id="presetRound"></span></p>
+                        <p>- <b>XP por mensaje:</b> <span id="presetXP"></span></p>
                     </div>
-                    <button id="applyPreset" style="margin-top: 12px;">Apply Preset</button>
+                    <button id="applyPreset" style="margin-top: 12px;">Aplicar preset</button>
                 </div>
             </div>
         </div>
@@ -267,21 +278,21 @@
 
     <div class="configboxes" tab="rewardroles" style="display: none">
         <div class="settingBox box fulllength">
-            <h1>Reward Roles</h1>
-            <p style="margin-bottom: 3px">Automatically give roles to members when they reach certain levels. For free.</p>
-            <p class="details">Imagine if I tried to capitalize off a couple extra lines of code, haha that would be absolutely crazy</p>
+            <h1>Recompensas</h1>
+            <p style="margin-bottom: 3px">Otorga roles automáticamente a los miembros cuando alcancen ciertos niveles. Gratis.</p>
+            <p class="details">Imagínate que intentase cobrar por un par de líneas de código extra, jaja qué locura sería eso</p>
 
-            <h2>Add role</h2>
+            <h2>Añadir rol</h2>
 
             <div style="margin-top:10px" class="centerflex spacedflex">
-                <p>Reward</p>
+                <p>Recompensa</p>
                 <select id="rewardRoleSelect"></select>
-                <p>at level</p>
+                <p>en el nivel</p>
                 <input id="rewardLevel" type="number" style="width: 90px" min="1" max="1000">
             </div>
 
             <div class="centerflex spacedflex">
-                <p>Remove this role when a higher role is obtained</p>
+                <p>Quitar este rol al obtener uno superior</p>
                 <label style="margin-top: 5px"; class="slider">
                     <input id="rewardKeep" type="checkbox" checked>
                     <span class="sliderspan"></span>
@@ -289,38 +300,38 @@
             </div>
 
             <div class="centerflex spacedflex excludeMode">
-                <p>Advanced: Exclude this role when syncing roles</p>
+                <p>Avanzado: Excluir este rol al sincronizar roles</p>
                 <label style="margin-top: 5px"; class="slider">
                     <input id="rewardExclude" type="checkbox">
                     <span class="sliderspan"></span>
                 </label>
             </div>
 
-            <button style="margin-top: 10px" id="addRewardRole">Add</button>
+            <button style="margin-top: 10px" id="addRewardRole">Añadir</button>
 
-            <h2 style="margin-top: 50px; margin-bottom: 15px">Current rewards (<span id="rewardCount">0</span>)</h2>
+            <h2 style="margin-top: 50px; margin-bottom: 15px">Recompensas actuales (<span id="rewardCount">0</span>)</h2>
 
             <div class="simpleflex flexTable" id="rewards"></div>
         </div>
 
         <div class="settingBox box fulllength">
-            <h1>Reward Syncing</h1>
-            <p>By default, the bot will automatically sync level roles by adding missing ones and removing incorrect ones. Feel free to tweak this behaviour a little.</p>
+            <h1>Sincronización de recompensas</h1>
+            <p>Por defecto, el bot sincronizará automáticamente los roles de nivel, añadiendo los que falten y quitando los incorrectos. Puedes ajustar este comportamiento un poco.</p>
 
             <div class="simpleflex">
                 <div class="sideoption">
-                    <h2>Automatic syncing</h2>
-                    <p class="details">Choose when the bot should automatically sync level roles</p>
+                    <h2>Sincronización automática</h2>
+                    <p class="details">Elige cuándo debe sincronizar el bot los roles de nivel automáticamente</p>
                     <select db="rewardSyncing.sync" saveName="db">
-                        <option value="level">On level up</option>
-                        <option value="xp">On XP gain (slower)</option>
-                        <option value="never">Never</option>
+                        <option value="level">Al subir de nivel</option>
+                        <option value="xp">Al ganar XP (más lento)</option>
+                        <option value="never">Nunca</option>
                     </select>
                 </div>
 
                 <div class="sideoptions">
-                    <h2>Manual syncing</h2>
-                    <p class="details">If members should be able to manually sync their roles whenever they want</p>
+                    <h2>Sincronización manual</h2>
+                    <p class="details">Si los miembros deberían poder sincronizar sus roles manualmente cuando quieran</p>
 
                     <label style="margin-top: 5px"; class="slider">
                         <input type="checkbox" tabindex="0" db="rewardSyncing.noManual" invert="true" saveName="db">
@@ -331,8 +342,8 @@
 
             <div class="simpleflex" style="margin-top: 40px">
                 <div class="sideoption">
-                    <h2>Show sync warning</h2>
-                    <p class="details">Displays a warning message in /rank if a member's roles aren't synced properly</p>
+                    <h2>Mostrar aviso de sincronización</h2>
+                    <p class="details">Muestra un mensaje de aviso en /rank si los roles de un miembro no están bien sincronizados</p>
 
                     <label style="margin-top: 5px"; class="slider">
                         <input type="checkbox" tabindex="0" db="rewardSyncing.noWarning" invert="true" saveName="db">
@@ -341,9 +352,9 @@
                 </div>
 
                 <div class="sideoptions">
-                    <h2>Advanced: Exclude roles</h2>
-                    <p class="details">Prevent certain roles from being re-added or removed when syncing.</p>
-        
+                    <h2>Avanzado: Excluir roles</h2>
+                    <p class="details">Evita que ciertos roles se vuelvan a añadir o se quiten al sincronizar.</p>
+
                     <label style="margin-top: 5px"; class="slider">
                         <input type="checkbox" tabindex="0" id="excludeRewardToggle">
                         <span class="sliderspan"></span>
@@ -356,11 +367,11 @@
 
     <div class="configboxes" tab="levelup" style="display: none">
         <div class="settingBox box fulllength">
-            <h1>Level up message</h1>
-            <p>Send an automatic message in the chat when a member levels up. How fun!</p>
+            <h1>Mensajes</h1>
+            <p>Envía un mensaje automático en el chat cuando un miembro sube de nivel. ¡Qué divertido!</p>
 
-            <h2>Enable message</h2>
-            <p class="details">When enabled, a message or DM will be sent whenever anyone levels up.</p>
+            <h2>Activar mensaje</h2>
+            <p class="details">Cuando está activado, se enviará un mensaje o MD cada vez que alguien suba de nivel.</p>
             <label style="margin-top: 5px"; class="slider">
                 <input db="levelUp.enabled" type="checkbox" saveName="db" onchange="$('.ifmessageenabled').toggle($(this).prop('checked'))">
                 <span class="sliderspan"></span>
@@ -371,103 +382,103 @@
         <div class="settingBox box fulllength ifmessageenabled">
 
             <div id="regularMessage">
-                <h1>Message</h1>                  
-                <p>The message to send upon levelling up.</p>
-                <textarea class="lvlTextbox" id="lvlUpMessage" style="width: 800px" placeholder="(no message)" saveName="levelUp.message"></textarea>
+                <h1>Mensaje</h1>
+                <p>El mensaje a enviar al subir de nivel.</p>
+                <textarea class="lvlTextbox" id="lvlUpMessage" style="width: 800px; max-width: 100%; box-sizing: border-box" placeholder="(sin mensaje)" saveName="levelUp.message"></textarea>
             </div>
 
             <div id="embedMessage">
-                <h1>Embed</h1>                  
-                <p>The embedded message to send upon levelling up.</p>
-                <p><b>Step 1: </b> <a target="_blank" href="https://discohook.org/?data=eyJtZXNzYWdlcyI6W3siZGF0YSI6eyJjb250ZW50IjpudWxsLCJlbWJlZHMiOlt7InRpdGxlIjoi4pyoIExldmVsIHVwISIsImRlc2NyaXB0aW9uIjoiKipbW1VTRVJOQU1FXV0qKiBoYXMgcmVhY2hlZCBsZXZlbCAqKltbTEVWRUxdXSoqISBDb25ncmF0dWxhdGlvbnMhIiwiY29sb3IiOjE2NzQ0NDQ4LCJmb290ZXIiOnsidGV4dCI6IlRoZXkgbm93IGhhdmUgW1tYUF1dIFhQIn19XSwiYXR0YWNobWVudHMiOltdfX1dfQ">Generate an embed here!</a></p>
-                <p><b>Step 2: </b> Open the JSON data by pressing 'JSON Data Editor' at the bottom of the site</p>
-                <p><b>Step 3: </b> Copy the text and paste it in the box below</p>
-                <p class="details" style="margin-bottom: 15px">*All variables (e.g. [[USERNAME]]) still work in embeds!</p>
-                <textarea class="lvlTextbox codeArea" id="lvlUpEmbed" style="width: 800px" placeholder="(no embed)" saveName="levelUp.message"></textarea>
-                <p id="invalidLevelUpEmbed" class="red" style="display: none"><b>Warning: </b>Invalid embed JSON data! This embed will not work.</p>
+                <h1>Embed</h1>
+                <p>El mensaje embebido a enviar al subir de nivel.</p>
+                <p><b>Paso 1: </b> <a target="_blank" href="https://discohook.org/?data=eyJtZXNzYWdlcyI6W3siZGF0YSI6eyJjb250ZW50IjpudWxsLCJlbWJlZHMiOlt7InRpdGxlIjoi4pyoIExldmVsIHVwISIsImRlc2NyaXB0aW9uIjoiKipbW1VTRVJOQU1FXV0qKiBoYXMgcmVhY2hlZCBsZXZlbCAqKltbTEVWRUxdXSoqISBDb25ncmF0dWxhdGlvbnMhIiwiY29sb3IiOjE2NzQ0NDQ4LCJmb290ZXIiOnsidGV4dCI6IlRoZXkgbm93IGhhdmUgW1tYUF1dIFhQIn19XSwiYXR0YWNobWVudHMiOltdfX1dfQ">¡Genera un embed aquí!</a></p>
+                <p><b>Paso 2: </b> Abre el editor de datos JSON pulsando 'Editor de datos JSON' al final de la página</p>
+                <p><b>Paso 3: </b> Copia el texto y pégalo en el cuadro de abajo</p>
+                <p class="details" style="margin-bottom: 15px">*¡Todas las variables (ej. [[USERNAME]]) también funcionan en embeds!</p>
+                <textarea class="lvlTextbox codeArea" id="lvlUpEmbed" style="width: 800px; max-width: 100%; box-sizing: border-box" placeholder="(sin embed)" saveName="levelUp.message"></textarea>
+                <p id="invalidLevelUpEmbed" class="red" style="display: none"><b>Aviso: </b>¡Datos JSON del embed no válidos! Este embed no funcionará.</p>
             </div>
 
             <div class="simpleflex">
-                <div class="sideoption"> 
+                <div class="sideoption">
                     <h2>Variables</h2>
-                    <p class="details">Spice up your message with dynamic variables!</p>
+                    <p class="details">¡Dale vida a tu mensaje con variables dinámicas!</p>
 
                     <div id="lvlUpMessageVariables" class="varList">
                         <select>
                             <option value="x" selected disabled>XP</option>
-                            <option value="[[LEVEL]]">Level (e.g. 10)</option>
-                            <option value="[[OLD_LEVEL]]">Previous level (e.g. 9)</option>
-                            <option value="[[XP]]">XP (e.g. 10,000)</option>
-                            <option value="[[NEXT_LEVEL]]">Next level (e.g. 11)</option>
-                            <option value="[[NEXT_XP]]">XP to next level (e.g. 1,000)</option>
+                            <option value="[[LEVEL]]">Nivel (ej. 10)</option>
+                            <option value="[[OLD_LEVEL]]">Nivel anterior (ej. 9)</option>
+                            <option value="[[XP]]">XP (ej. 10.000)</option>
+                            <option value="[[NEXT_LEVEL]]">Siguiente nivel (ej. 11)</option>
+                            <option value="[[NEXT_XP]]">XP para el siguiente nivel (ej. 1.000)</option>
                         </select>
-        
+
                         <select>
-                            <option value="x" selected disabled>Member</option>
-                            <option value="[[@]]">@mention (e.g. @Polaris)</option>
-                            <option value="[[DISPLAYNAME]]">Display Name (e.g. Polaris)</option>
-                            <option value="[[USERNAME]]">Username (e.g. polaris)</option>
-                            <option value="[[ID]]">ID (e.g. 98341916...)</option>
-                            <option value="[[NICKNAME]]">Nickname</option>
-                            <option value="[[AVATAR]]">Avatar URL</option>
+                            <option value="x" selected disabled>Miembro</option>
+                            <option value="[[@]]">@mención (ej. @Polaris)</option>
+                            <option value="[[DISPLAYNAME]]">Nombre visible (ej. Polaris)</option>
+                            <option value="[[USERNAME]]">Nombre de usuario (ej. polaris)</option>
+                            <option value="[[ID]]">ID (ej. 98341916...)</option>
+                            <option value="[[NICKNAME]]">Apodo</option>
+                            <option value="[[AVATAR]]">URL del avatar</option>
                         </select>
-        
+
                         <select>
-                            <option value="x" selected disabled>Server</option>
-                            <option value="[[SERVER]]">Server name</option>
-                            <option value="[[SERVER_ICON]]">Server icon URL</option>
-                            <option value="[[SERVER_ID]]">Server ID</option>
-                            <option value="[[CHANNEL]]">Channel tag (e.g. #channel)</option>
-                            <option value="[[CHANNEL_NAME]]">Channel name (e.g. channel)</option>
-                            <option value="[[CHANNEL_ID]]">Channel ID</option>
+                            <option value="x" selected disabled>Servidor</option>
+                            <option value="[[SERVER]]">Nombre del servidor</option>
+                            <option value="[[SERVER_ICON]]">URL del icono del servidor</option>
+                            <option value="[[SERVER_ID]]">ID del servidor</option>
+                            <option value="[[CHANNEL]]">Etiqueta del canal (ej. #canal)</option>
+                            <option value="[[CHANNEL_NAME]]">Nombre del canal (ej. canal)</option>
+                            <option value="[[CHANNEL_ID]]">ID del canal</option>
                         </select>
-        
+
                         <select>
-                            <option value="x" selected disabled>Advanced</option>
+                            <option value="x" selected disabled>Avanzado</option>
                             <!-- <option value="[[DISCRIM]]">Account Discriminator (e.g. 6880)</option> -->
-                            <option value="[[LEVEL]][[NTH]]">Nth (1st, 2nd, 3rd, etc)</option>
-                            <option value="<t:[[TIMESTAMP]]>">Timestamp</option>
-                            <option value="[[EMBEDTIMESTAMP]]">Embed Timestamp</option>
-                            <option value="[[CHOOSE | Message 1 | Message 2 | Message 3... ]]">Random pick</option>
-                            <option value="[[CHOOSE | Normal message | <2> 2x as likely to appear | <0.5> 0.5x as likely to appear... ]]">Random pick (weighted)</option>
-                            <option value="[[IFLEVEL = 10 | Only appears on level 10 (can also use >, >=, <, <=, !=, or /) ]]">Level condition</option>
-                            <option value="[[IFROLE | Only appears upon gaining a role. You now have [[ROLE]] / [[ROLE_NAME]]! ]]">Reward role condition</option>
+                            <option value="[[LEVEL]][[NTH]]">Ordinal (1º, 2º, 3º, etc)</option>
+                            <option value="<t:[[TIMESTAMP]]>">Marca de tiempo</option>
+                            <option value="[[EMBEDTIMESTAMP]]">Marca de tiempo del embed</option>
+                            <option value="[[CHOOSE | Mensaje 1 | Mensaje 2 | Mensaje 3... ]]">Elección aleatoria</option>
+                            <option value="[[CHOOSE | Mensaje normal | <2> 2x más probable | <0.5> 0.5x más probable... ]]">Elección aleatoria (ponderada)</option>
+                            <option value="[[IFLEVEL = 10 | Solo aparece en el nivel 10 (también puedes usar >, >=, <, <=, != o /) ]]">Condición de nivel</option>
+                            <option value="[[IFROLE | Solo aparece al obtener un rol. ¡Ahora tienes [[ROLE]] / [[ROLE_NAME]]! ]]">Condición de rol de recompensa</option>
                         </select>
 
                         <select style="margin-top: 7px; display: none" id="roleVariables">
-                            <option value="x" selected disabled>Role</option>
-                            <option value="[[ROLE]]">Reward role (e.g. @Legendary)</option>
-                            <option value="[[ROLE_NAME]]">Reward role name (e.g. Legendary)</option>
+                            <option value="x" selected disabled>Rol</option>
+                            <option value="[[ROLE]]">Rol de recompensa (ej. @Legendario)</option>
+                            <option value="[[ROLE_NAME]]">Nombre del rol de recompensa (ej. Legendario)</option>
                         </select>
                     </div>
                 </div>
 
-                <div class="sideoption"> 
-                    <h2>Example</h2>
-                    <p class="exampleP details" id="exampleInfo">Send a test message to see if everything is working correctly</p>
-                    <p class="details" id="sendingExample" style="display: none">Sending...</p>
-                    <p class="exampleP details" id="exampleSent" style="opacity: 100%; display: none; color: lime">Example sent! Check your DMs.</p>
-                    <p class="exampleP details" id="exampleError" style="opacity: 100%; display: none; color: red">Error sending example! Are your DMs enabled?</p>
+                <div class="sideoption">
+                    <h2>Ejemplo</h2>
+                    <p class="exampleP details" id="exampleInfo">Envía un mensaje de prueba para ver si todo funciona correctamente</p>
+                    <p class="details" id="sendingExample" style="display: none">Enviando...</p>
+                    <p class="exampleP details" id="exampleSent" style="opacity: 100%; display: none; color: lime">¡Ejemplo enviado! Revisa tus MDs.</p>
+                    <p class="exampleP details" id="exampleError" style="opacity: 100%; display: none; color: red">¡Error al enviar el ejemplo! ¿Tienes los MDs activados?</p>
                     <div style="display: flex" class="spacedflex">
-                        <button id="sendExample" style="background-color: var(--emojipurple)">Send example in DMs</button>
-                        <input id="exampleLevel" type="number" min="1" max="1000" placeholder="Level" style="height: 37px; width: 70px">
+                        <button id="sendExample" style="background-color: var(--emojipurple)">Enviar ejemplo por MD</button>
+                        <input id="exampleLevel" type="number" min="1" max="1000" placeholder="Nivel" style="height: 37px; width: 70px">
                     </div>
                 </div>
             </div>
 
             <div class="simpleflex" style="margin-top: 15px">
-                <div class="sideoption"> 
-                    <h2>Channel</h2>
-                    <p class="details">Which channel should the message be sent in?</p>
+                <div class="sideoption">
+                    <h2>Canal</h2>
+                    <p class="details">¿En qué canal se debería enviar el mensaje?</p>
                     <select id="lvlMessageSelect" saveName="levelUp.channel">
-                        <option value="current">Current channel</option>
-                        <option value="dm">Send in DMs</option>
+                        <option value="current">Canal actual</option>
+                        <option value="dm">Enviar por MD</option>
                     </select>
                 </div>
 
-                <div class="sideoption"> 
-                    <h2>Embed mode</h2>
-                    <p class="details">Send a fancy embed instead of a normal message (advanced!)</p>
+                <div class="sideoption">
+                    <h2>Modo embed</h2>
+                    <p class="details">Envía un embed más vistoso en vez de un mensaje normal (¡avanzado!)</p>
                     <label style="margin-top: 5px"; class="slider">
                         <input id="toggleLvlUpEmbed" type="checkbox" tabindex="0" db="levelUp.embed" saveName="db">
                         <span class="sliderspan"></span>
@@ -476,39 +487,39 @@
             </div>
         </div>
         <div class="settingBreak"></div>
-        
+
         <div class="settingBox box fulllength ifmessageenabled">
-            <h1>Interval</h1>
-            <p class=>How often the message should be sent (e.g. every 3rd level)</p>
+            <h1>Intervalo</h1>
+            <p class=>Con qué frecuencia se debe enviar el mensaje (ej. cada 3 niveles)</p>
 
             <div class="simpleflex" style="margin-bottom: 25px">
                 <div class="sideoption">
-                    <h2>Multiple</h2>
-                    <p class="details">Level up messages will only send when reaching a multiple of this number<br>(e.g. a multiple of 5 will send on levels 5, 10, 15, 20, 25, ...)</p>
+                    <h2>Múltiplo</h2>
+                    <p class="details">Los mensajes de subida de nivel solo se enviarán al alcanzar un múltiplo de este número<br>(ej. un múltiplo de 5 se enviará en los niveles 5, 10, 15, 20, 25, ...)</p>
                     <div class="field">
                         <div class="centerflex spacedflex">
-                            <p>Every</p>
+                            <p>Cada</p>
                             <input id="num_levelinterval" style="width: 100px" type="number" min="1" max="1000" default="1" db="levelUp.multiple" saveName="db">
-                            <p>level(s)</p>
+                            <p>nivel(es)</p>
                         </div>
                     </div>
                 </div>
 
                 <div class="sideoptions" style="width: 600px">
-                    <h2>Use multiple until</h2>
-                    <p class="details">Once a member reaches this level, the multiple is no longer used and a level up message will be posted for every level (set to 0 to disable)</p>
+                    <h2>Usar múltiplo hasta</h2>
+                    <p class="details">Cuando un miembro alcance este nivel, el múltiplo dejará de usarse y se enviará un mensaje de subida de nivel para cada nivel (pon 0 para desactivar)</p>
                     <div class="field">
                         <div class="centerflex spacedflex">
-                            <p>Level</p>
+                            <p>Nivel</p>
                             <input id="num_levelinterval" style="width: 100px" type="number" min="0" max="1000" default="0" db="levelUp.multipleUntil" saveName="db">
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="sideoption"> 
-                <h2>Reward roles only</h2>
-                <p class="details">Only send the level up message when obtaining a new reward role</p>
+            <div class="sideoption">
+                <h2>Solo roles de recompensa</h2>
+                <p class="details">Solo envía el mensaje de subida de nivel al obtener un nuevo rol de recompensa</p>
                 <label style="margin-top: 5px"; class="slider">
                     <input type="checkbox" tabindex="0" db="levelUp.rewardRolesOnly" saveName="db" onchange="$('#roleVariables').toggle($(this).prop('checked'))">
                     <span class="sliderspan"></span>
@@ -519,90 +530,90 @@
 
     <div class="configboxes" tab="multipliers" style="display: none">
         <div class="settingBox box fulllength" style="padding-bottom: 15px">
-            <h1>Multipliers</h1>
-            <p style="margin-bottom: 3px">Make certain roles/channels grant extra XP, or none at all.</p>
-            <p class="details">2x multiplier grants double XP, 0x multiplier disables XP gain, etc</p>
+            <h1>Multiplicadores</h1>
+            <p style="margin-bottom: 3px">Haz que ciertos roles/canales otorguen XP extra, o ninguna.</p>
+            <p class="details">Un multiplicador de 2x otorga el doble de XP, uno de 0x desactiva la ganancia de XP, etc</p>
         </div>
         <div class="settingBreak"></div>
 
         <div class="settingBox box">
-            <h2>Add a role multiplier</h2>
-            <p class="details" style="padding-right: 30px">Members with a multiplier role will have their XP gain from messages multiplied by the value set below</p>
+            <h2>Añadir multiplicador de rol</h2>
+            <p class="details" style="padding-right: 30px">A los miembros con un rol multiplicador se les multiplicará la XP ganada por mensajes según el valor indicado abajo</p>
 
             <div style="margin-top:10px" class="centerflex spacedflex">
                 <select id="roleMultiplierSelect"></select>
-                <p>grants</p>
+                <p>otorga</p>
                 <input id="roleMultiplierAmount" type="number" decimals="4" style="width: 70px; margin-right: 2px" min="0" max="100">
                 <p>⨯ XP</p>
             </div>
 
-            <button style="margin-top: 10px" id="addRoleMultiplier">Add</button>
+            <button style="margin-top: 10px" id="addRoleMultiplier">Añadir</button>
 
-            <h2 style="margin-top: 50px; margin-bottom: 15px">Role multipliers (<span id="roleMultiplierCount">0</span>)</h2>
+            <h2 style="margin-top: 50px; margin-bottom: 15px">Multiplicadores de rol (<span id="roleMultiplierCount">0</span>)</h2>
 
             <div class="simpleflex flexTable" id="roleMultipliers"></div>
 
-            <h2 style="margin-top: 40px">Role priority</h2>
-            <p class="details">If a member has multiple roles, which one should take priority?<br>(0x multipliers will always prioritized regardless of this setting)</p>
+            <h2 style="margin-top: 40px">Prioridad de rol</h2>
+            <p class="details">Si un miembro tiene varios roles, ¿cuál debería tener prioridad?<br>(los multiplicadores de 0x siempre tendrán prioridad, sin importar este ajuste)</p>
             <select db="multipliers.rolePriority" id="rolePriority" desc="role" class="multiplierSelect" saveName="db">
-                <option value="largest">Largest multiplier</option>
-                <option value="smallest">Smallest multiplier</option>
-                <option value="highest">Highest role</option>
-                <option value="add">Add them together</option>
-                <option value="combine">COMBINE THEM ALL!!! (bad idea)</option>
+                <option value="largest">Multiplicador más alto</option>
+                <option value="smallest">Multiplicador más bajo</option>
+                <option value="highest">Rol más alto</option>
+                <option value="add">Sumarlos entre sí</option>
+                <option value="combine">¡¡¡COMBINARLOS TODOS!!! (mala idea)</option>
             </select>
-            <p class="details multiplierDescription" id="roleMultiplierDescription">If you have 2.0x and 3.0x role multipliers, they will be multiplied to 6.0x. Scales absurdly fast</p>
+            <p class="details multiplierDescription" id="roleMultiplierDescription">Si tienes multiplicadores de rol de 2.0x y 3.0x, se multiplicarán a 6.0x. Escala absurdamente rápido</p>
         </div>
 
         <div class="settingBox box">
-            <h2>Add a channel multiplier</h2>
-            <p class="details">Category multipliers will only apply to channels that do not have a more specific multiplier set. Threads without a multiplier will default to their parent channel.</p>
+            <h2>Añadir multiplicador de canal</h2>
+            <p class="details">Los multiplicadores de categoría solo se aplicarán a los canales que no tengan un multiplicador más específico. Los hilos sin multiplicador usarán el de su canal padre por defecto.</p>
 
             <div style="margin-top:10px" class="centerflex spacedflex">
                 <select id="channelMultiplierSelect"></select>
-                <p>grants</p>
+                <p>otorga</p>
                 <input id="channelMultiplierAmount" type="number" decimals="4" style="width: 70px; margin-right: 2px" min="0" max="100">
                 <p>⨯ XP</p>
             </div>
 
-            <button style="background-color: var(--emojipurple); margin-top: 10px" id="addChannelMultiplier">Add</button>
+            <button style="background-color: var(--emojipurple); margin-top: 10px" id="addChannelMultiplier">Añadir</button>
 
-            <h2 style="margin-top: 50px; margin-bottom: 15px">Channel multipliers (<span id="channelMultiplierCount">0</span>)</h2>
+            <h2 style="margin-top: 50px; margin-bottom: 15px">Multiplicadores de canal (<span id="channelMultiplierCount">0</span>)</h2>
 
             <div class="simpleflex flexTable" id="channelMultipliers"></div>
 
-            <h2 style="margin-top: 40px">Stacking</h2>
-            <p class="details">What should be done if a member also has a multiplier role?<br>(XP gain will always be if either multiplier is 0x)</p>
+            <h2 style="margin-top: 40px">Acumulación</h2>
+            <p class="details">¿Qué debería pasar si un miembro también tiene un rol multiplicador?<br>(la ganancia de XP siempre será 0 si alguno de los multiplicadores es 0x)</p>
             <select db="multipliers.channelStacking" id="channelStacking" desc="channel" class="multiplierSelect" saveName="db">
-                <option value="multiply">Multiply together with role</option>
-                <option value="add">Add together with role</option>
-                <option value="largest">Use the higher multiplier</option>
-                <option value="channel">Always use the channel multiplier</option>
-                <option value="role">Always use the role multiplier</option>
+                <option value="multiply">Multiplicar junto con el rol</option>
+                <option value="add">Sumar junto con el rol</option>
+                <option value="largest">Usar el multiplicador más alto</option>
+                <option value="channel">Usar siempre el multiplicador de canal</option>
+                <option value="role">Usar siempre el multiplicador de rol</option>
             </select>
-            <p class="details multiplierDescription" id="channelMultiplierDescription">If you have 2.0x and 3.0x role multipliers, they will be multiplied to 6.0x. Scales absurdly fast</p>
+            <p class="details multiplierDescription" id="channelMultiplierDescription">Si tienes multiplicadores de rol de 2.0x y 3.0x, se multiplicarán a 6.0x. Escala absurdamente rápido</p>
         </div>
 
     </div>
 
     <div class="configboxes" tab="rankcard" style="display: none">
         <div class="settingBox box fulllength">
-            <h1>Rank Card</h1>
-            <p>Tweak the details shown on rank cards.<br>Some settings may also apply to the online leaderboard.</p>
-            <a class="leaderboardLink" tabindex=-1 target="_blank"><button style="background-color: var(--emojipurple)">Visit leaderboard</button></a>
+            <h1>Tarjeta de rango</h1>
+            <p>Ajusta los detalles que se muestran en las tarjetas de rango.<br>Algunos ajustes también pueden aplicarse a la clasificación online.</p>
+            <a class="leaderboardLink" tabindex=-1 target="_blank"><button style="background-color: var(--emojipurple)">Ver clasificación</button></a>
 
-            <h2>Enable rank cards</h2>
-            <p class="details">Allows members to check their XP with /rank. Disabling this will also hide most info in /calculate.</p>
+            <h2>Activar tarjetas de rango</h2>
+            <p class="details">Permite a los miembros consultar su XP con /rank. Desactivar esto también ocultará la mayoría de la información en /calculate.</p>
             <label style="margin-top: 5px"; class="slider">
                 <input type="checkbox" tabindex="0" db="rankCard.disabled" invert="true" saveName="db" onchange="$('.ifrankenabled').toggle($(this).prop('checked'))">
                 <span class="sliderspan"></span>
             </label>
         </div>
         <div class="settingBreak"></div>
-        
+
         <div class="settingBox box ifrankenabled">
-            <h2>Hide cooldown</h2>
-            <p class="details">Prevents members from viewing the amount of time until they can gain XP again.</p>
+            <h2>Ocultar cooldown</h2>
+            <p class="details">Evita que los miembros vean el tiempo restante hasta que puedan volver a ganar XP.</p>
             <label style="margin-top: 5px"; class="slider">
                 <input type="checkbox" tabindex="0" db="rankCard.hideCooldown" saveName="db">
                 <span class="sliderspan"></span>
@@ -610,8 +621,8 @@
         </div>
 
         <div class="settingBox box">
-            <h2>Hide multipliers</h2>
-            <p class="details">Prevents members from viewing which roles have multipliers. (except 0x)</p>
+            <h2>Ocultar multiplicadores</h2>
+            <p class="details">Evita que los miembros vean qué roles tienen multiplicadores. (excepto los de 0x)</p>
             <label style="margin-top: 5px"; class="slider">
                 <input type="checkbox" tabindex="0" db="hideMultipliers" saveName="db">
                 <span class="sliderspan"></span>
@@ -619,8 +630,8 @@
         </div>
 
         <div class="settingBox box ifrankenabled" style="height: 171px">
-            <h2>Force hidden</h2>
-            <p class="details">Forces usages of /rank to always be hidden (ephemeral), meaning that only the member who typed the command can see the message.<br></p>
+            <h2>Forzar oculto</h2>
+            <p class="details">Fuerza a que los usos de /rank sean siempre ocultos (efímeros), es decir, que solo el miembro que escribió el comando pueda ver el mensaje.<br></p>
             <label style="margin-top: 5px"; class="slider">
                 <input type="checkbox" tabindex="0" db="rankCard.ephemeral" saveName="db">
                 <span class="sliderspan"></span>
@@ -628,8 +639,8 @@
         </div>
 
         <div class="settingBox box ifrankenabled" style="height: 171px">
-            <h2>Relative XP</h2>
-            <p class="details">Changes the 'next level' section of /rank to start at 0 and only include XP from that level. e.g. If level 10 requires 2000 XP and level 11 requires 3000, it will display "500/1000 XP until level 11" for a member with 2500 XP.</p>
+            <h2>XP relativa</h2>
+            <p class="details">Cambia la sección de 'siguiente nivel' de /rank para que empiece en 0 y solo incluya la XP de ese nivel. Ej. Si el nivel 10 requiere 2000 XP y el nivel 11 requiere 3000, se mostrará "500/1000 XP hasta el nivel 11" para un miembro con 2500 XP.</p>
             <label style="margin-top: 5px"; class="slider">
                 <input type="checkbox" tabindex="0" db="rankCard.relativeLevel" saveName="db">
                 <span class="sliderspan"></span>
@@ -637,20 +648,20 @@
         </div>
 
         <div class="settingBox box ifrankenabled">
-            <h2>Rank card customization</h2>
-            <p class="details">Not my problem anymore lol</p>
+            <h2>Personalización de la tarjeta de rango</h2>
+            <p class="details">Ya no es mi problema jaja</p>
         </div>
 
     </div>
 
     <div class="configboxes" tab="leaderboard" style="display: none">
         <div class="settingBox box fulllength">
-            <h1>Leaderboard</h1>
-            <p>Tweak some leaderboard-related settings. Good for privacy.</p>
-            <a class="leaderboardLink" tabindex=-1 target="_blank"><button style="background-color: var(--emojipurple)">Visit leaderboard</button></a>
+            <h1>Clasificación</h1>
+            <p>Ajusta algunas opciones relacionadas con la clasificación. Útil para la privacidad.</p>
+            <a class="leaderboardLink" tabindex=-1 target="_blank"><button style="background-color: var(--emojipurple)">Ver clasificación</button></a>
 
-            <h2>Enable leaderboard</h2>
-            <p class="details">Allows members to view and compare their ranks on a big leaderboard.</p>
+            <h2>Activar clasificación</h2>
+            <p class="details">Permite a los miembros ver y comparar sus rangos en una gran clasificación.</p>
             <label style="margin-top: 5px"; class="slider">
                 <input type="checkbox" tabindex="0" db="leaderboard.disabled" invert="true" saveName="db" onchange="$('.iflbenabled').toggle($(this).prop('checked'))">
                 <span class="sliderspan"></span>
@@ -659,8 +670,8 @@
         <div class="settingBreak"></div>
 
         <div class="settingBox box ifrankenabled">
-            <h2>Force hidden</h2>
-            <p class="details">Forces usages of /top to always be hidden (ephemeral).<br></p>
+            <h2>Forzar oculto</h2>
+            <p class="details">Fuerza a que los usos de /top sean siempre ocultos (efímeros).<br></p>
             <label style="margin-top: 5px"; class="slider">
                 <input type="checkbox" tabindex="0" db="leaderboard.ephemeral" saveName="db">
                 <span class="sliderspan"></span>
@@ -668,8 +679,8 @@
         </div>
 
         <div class="settingBox box iflbenabled">
-            <h2>Hide reward roles</h2>
-            <p class="details">Disables viewing the list of reward roles through the online leaderboard.</p>
+            <h2>Ocultar roles de recompensa</h2>
+            <p class="details">Desactiva la visualización de la lista de roles de recompensa en la clasificación online.</p>
             <label style="margin-top: 5px"; class="slider">
                 <input type="checkbox" tabindex="0" db="leaderboard.hideRoles" saveName="db">
                 <span class="sliderspan"></span>
@@ -677,24 +688,24 @@
         </div>
 
         <div class="settingBox box iflbenabled">
-            <h2>Minimum level</h2>
-            <p class="details">Restricts the leaderboard to members that have reached a certain level. Displays every server member if set to 0.</p>
+            <h2>Nivel mínimo</h2>
+            <p class="details">Restringe la clasificación a los miembros que hayan alcanzado cierto nivel. Muestra a todos los miembros del servidor si se pone en 0.</p>
             <div class="centerflex spacedflex">
                 <input id="maxEntries" style="width: 100px" type="number" min="0" max="1000" placeholder="0" default="0" db="leaderboard.minLevel" saveName="db">
             </div>
         </div>
 
         <div class="settingBox box iflbenabled">
-            <h2>Maximum members</h2>
-            <p class="details">Only allow viewing the top X members on the leaderboard. Displays every server member if set to 0.</p>
+            <h2>Miembros máximos</h2>
+            <p class="details">Solo permite ver los X miembros con mejor puesto en la clasificación. Muestra a todos los miembros del servidor si se pone en 0.</p>
             <div class="centerflex spacedflex">
                 <input id="maxEntries" style="width: 100px" type="number" min="0" max="1000000" placeholder="0" default="0" db="leaderboard.maxEntries" saveName="db">
             </div>
         </div>
 
         <div class="settingBox box iflbenabled">
-            <h2>Private leaderboard</h2>
-            <p class="details">Restricts the online leaderboard so only members of the server can access it.<br>(requires signing in)</p>
+            <h2>Clasificación privada</h2>
+            <p class="details">Restringe la clasificación online para que solo los miembros del servidor puedan acceder a ella.<br>(requiere iniciar sesión)</p>
             <label style="margin-top: 5px"; class="slider">
                 <input type="checkbox" tabindex="0" db="leaderboard.private" saveName="db">
                 <span class="sliderspan"></span>
@@ -706,63 +717,63 @@
 
     <div class="configboxes" tab="data" style="display: none">
         <div class="settingBox box fulllength" style="padding-bottom: 15px">
-            <h1>Data</h1>
-            <p>Settings related to the server's data.</p>
+            <h1>Datos</h1>
+            <p>Ajustes relacionados con los datos del servidor.</p>
         </div>
         <div class="settingBreak"></div>
 
         <div class="settingBox box fulllength">
-            <h2>Download XP</h2>
-            <p class="details" style="margin-bottom: 10px">Exports everyone's XP into a single file (only contains user ID and XP)<br><b>Download all data if you wish to import your settings into an open-source fork of Polaris.</b></p>
-            <button class="exportXP" format="everything" style="background-color: var(--emojipurple);">Download all data</button>
-            <button class="exportXP" format="json" style="margin-left: 10px">Download as .json</button>
-            <button class="exportXP" format="csv" style="margin-left: 10px">Download as .csv</button>
-            <button class="exportXP" format="txt" style="margin-left: 10px">Download as .txt</button>
+            <h2>Descargar XP</h2>
+            <p class="details" style="margin-bottom: 10px">Exporta la XP de todos a un solo archivo (solo contiene el ID de usuario y la XP)<br><b>Descarga todos los datos si quieres importar tus ajustes a un fork de código abierto de Polaris.</b></p>
+            <button class="exportXP" format="everything" style="background-color: var(--emojipurple);">Descargar todos los datos</button>
+            <button class="exportXP" format="json" style="margin-left: 10px">Descargar como .json</button>
+            <button class="exportXP" format="csv" style="margin-left: 10px">Descargar como .csv</button>
+            <button class="exportXP" format="txt" style="margin-left: 10px">Descargar como .txt</button>
         </div>
         <div class="settingBreak"></div>
 
         <div class="settingBox box">
-            <h2>Clear all XP</h2>
-            <p class="details">Delete everyone's XP and start fresh. All XP will be reset to 0, but reward roles will not be removed unless done manually. <b>This cannot be undone!</b></p>
-            <button style="background-color: var(--emojired)" onclick="$('.confirmReset').toggle(); $('.confirmConfirmReset').hide()">Reset!</button>
-            <button class="hideOnLoad confirmReset" style="margin-left: 10px; background-color: var(--emojiblue); display: none;" onclick="$('.confirmConfirmReset').toggle()">Are you sure?</button>
-            <button class="hideOnLoad confirmConfirmReset" style="margin-left: 10px; background-color: var(--emojipurple); display: none;" id="resetXP">Positive?</button>
+            <h2>Borrar toda la XP</h2>
+            <p class="details">Elimina la XP de todos y empieza de cero. Toda la XP se reiniciará a 0, pero los roles de recompensa no se quitarán a menos que se haga manualmente. <b>¡Esto no se puede deshacer!</b></p>
+            <button style="background-color: var(--emojired)" onclick="$('.confirmReset').toggle(); $('.confirmConfirmReset').hide()">¡Reiniciar!</button>
+            <button class="hideOnLoad confirmReset" style="margin-left: 10px; background-color: var(--emojiblue); display: none;" onclick="$('.confirmConfirmReset').toggle()">¿Estás seguro?</button>
+            <button class="hideOnLoad confirmConfirmReset" style="margin-left: 10px; background-color: var(--emojipurple); display: none;" id="resetXP">¿Seguro del todo?</button>
         </div>
 
         <div class="settingBox box">
-            <h2>Reset settings</h2>
-            <p class="details">Restores the defaults for all configurable settings such as the curve, reward roles, multipliers, level up message, etc. XP will not be cleared. <b>This cannot be undone!</b></p>
-            <button style="background-color: var(--emojired)" onclick="$('.confirmResetSettings').toggle()">Reset!</button>
-            <button class="hideOnLoad confirmResetSettings" style="margin-left: 10px; background-color: var(--emojiblue); display: none;" id="resetSettings">Are you sure?</button>
+            <h2>Restablecer ajustes</h2>
+            <p class="details">Restaura los valores por defecto de todos los ajustes configurables, como la curva, roles de recompensa, multiplicadores, mensaje de subida de nivel, etc. La XP no se borrará. <b>¡Esto no se puede deshacer!</b></p>
+            <button style="background-color: var(--emojired)" onclick="$('.confirmResetSettings').toggle()">¡Reiniciar!</button>
+            <button class="hideOnLoad confirmResetSettings" style="margin-left: 10px; background-color: var(--emojiblue); display: none;" id="resetSettings">¿Estás seguro?</button>
         </div>
         <div class="settingBreak"></div>
 
         <div class="settingBox box">
-            <h2>Prune Members</h2>
-            <p class="details">Deletes the data of everyone who has less than a certain amount of XP. Might speed up load times. <b>This cannot be undone!</b></p>
+            <h2>Podar miembros</h2>
+            <p class="details">Elimina los datos de todos los que tengan menos de cierta cantidad de XP. Puede acelerar los tiempos de carga. <b>¡Esto no se puede deshacer!</b></p>
             <div class="centerflex spacedflex">
-                <p>Less than: </p>
+                <p>Menos de: </p>
                 <input id="prune_amt" style="width: 150px" type="number" min="1" default="100" value="100">
-                <button id="confirmPrune" style="background-color: var(--emojired)">Prune!</button>
+                <button id="confirmPrune" style="background-color: var(--emojired)">¡Podar!</button>
             </div>
         </div>
 
         <div class="settingBox box fulllength" id="importBotSection">
             <div class="spacedflex centerflex" style="margin-top: 15px; margin-bottom: 5px">
-                <h2 style="margin: 0px 0px">Import settings and XP from</h2>
+                <h2 style="margin: 0px 0px">Importar ajustes y XP de</h2>
                 <select id="importfrom" style="margin-left: 8px; width: 250px; font-weight: bold;" onchange="$('.importdiv').hide(); $(`.importdiv[importtype='${$(this).val()}']`).show()">
-                    <option value="json">.json file</option>
-                    <option value="polaris">Another server</option>
+                    <option value="json">archivo .json</option>
+                    <option value="polaris">Otro servidor</option>
                 </select>
             </div>
 
             <div class="importdiv" importtype="json">
-                <p class="details">Copies XP and settings from another server using this bot. <b>Requires server owner</b></p>
-                <p class="details">The expected .json format is the same as when you press "download all data" at the top of this</p>
-                
+                <p class="details">Copia la XP y los ajustes de otro servidor que use este bot. <b>Requiere ser el propietario del servidor</b></p>
+                <p class="details">El formato .json esperado es el mismo que al pulsar "descargar todos los datos" al principio de esto</p>
+
                 <div class="centerflex spacedflex">
-                    <p>Import from:</p>
-                    <input type="file" id="importJSONFile" accept="application/json" style="padding-top: 15px; width: 500px; margin: 10px 0px"></select>
+                    <p>Importar de:</p>
+                    <input type="file" id="importJSONFile" accept="application/json" style="padding-top: 15px; width: 500px; max-width: 100%; box-sizing: border-box; margin: 10px 0px">
                 </div>
 
                 <div class="centerflex spacedflex">
@@ -770,7 +781,7 @@
                         <input class="importSetting" option="xp" type="checkbox" checked>
                         <span class="sliderspan"></span>
                     </label>
-                    <p>Import XP (overwrites existing members!)</p>
+                    <p>Importar XP (¡sobrescribe a los miembros existentes!)</p>
                 </div>
 
                 <div class="centerflex spacedflex">
@@ -778,15 +789,15 @@
                         <input class="importSetting forDevs" option="settings" type="checkbox" disabled>
                         <span class="sliderspan"></span>
                     </label>
-                    <p>Import settings (cooldown, curve, level up message, etc) <b>[requires bot owner for security reasons]</b></p>
+                    <p>Importar ajustes (cooldown, curva, mensaje de subida de nivel, etc) <b>[requiere ser el propietario del bot por seguridad]</b></p>
                 </div>
             </div>
 
             <div class="importdiv" importtype="polaris" style="display: none">
-                <p class="details">Copies XP and settings from another server using this bot. <b>Requires server owner</b></p>
-                <p class="details"><b>Note:</b> Since you are transferring from another server, reward roles and multipliers cannot be copied</p>
+                <p class="details">Copia la XP y los ajustes de otro servidor que use este bot. <b>Requiere ser el propietario del servidor</b></p>
+                <p class="details"><b>Nota:</b> Al transferir desde otro servidor, los roles de recompensa y multiplicadores no se pueden copiar</p>
                 <div class="centerflex spacedflex">
-                    <p>Import from:</p>
+                    <p>Importar de:</p>
                     <select class="importSetting" option="serverID" id="otherServers"></select>
                 </div>
 
@@ -795,7 +806,7 @@
                         <input class="importSetting" option="xp" type="checkbox" checked>
                         <span class="sliderspan"></span>
                     </label>
-                    <p>Import XP (overwrites existing members!)</p>
+                    <p>Importar XP (¡sobrescribe a los miembros existentes!)</p>
                 </div>
 
                 <div class="centerflex spacedflex">
@@ -803,33 +814,33 @@
                         <input class="importSetting" option="settings" type="checkbox" checked>
                         <span class="sliderspan"></span>
                     </label>
-                    <p>Import settings (cooldown, curve, level up message, etc)</p>
+                    <p>Importar ajustes (cooldown, curva, mensaje de subida de nivel, etc)</p>
                 </div>
             </div>
 
             <div style="height: 60px" id="botimporting">
-                <button style="margin-top: 15px; background-color: var(--emojigreen)" onclick="$('#confirmBotImport').toggle()">Import!</button>
-                <button class="hideOnLoad" style="margin-left: 10px; background-color: var(--emojiblue); display: none;" id="confirmBotImport">Are you sure?</button>
+                <button style="margin-top: 15px; background-color: var(--emojigreen)" onclick="$('#confirmBotImport').toggle()">¡Importar!</button>
+                <button class="hideOnLoad" style="margin-left: 10px; background-color: var(--emojiblue); display: none;" id="confirmBotImport">¿Estás seguro?</button>
             </div>
 
             <div style="display: none" id="botimportloading">
-                <p><b>Working on it...</b></p>
+                <p><b>Trabajando en ello...</b></p>
             </div>
-            
+
         </div>
-        
+
     </div>
 
     <div class="configboxes" tab="advanced" style="display: none">
 
         <div class="settingBox box fulllength" style="padding-bottom: 15px">
-            <h1>Advanced Settings</h1>
-            <p>Some extra fancy or experimental options.</p>
+            <h1>Ajustes avanzados</h1>
+            <p>Algunas opciones extra vistosas o experimentales.</p>
         </div>
 
         <div class="settingBox box" style="height: 171px">
-            <h2>Ignore Permissions</h2>
-            <p class="details">Allows <b>anyone</b> to run moderator commands (e.g. /addxp or /clear) even if they don't have the Manage Server permission. Useful if you want to set custom slash command permissions for the server.</p>
+            <h2>Ignorar permisos</h2>
+            <p class="details">Permite que <b>cualquiera</b> ejecute comandos de moderador (ej. /addxp o /clear) aunque no tengan el permiso de Gestionar servidor. Útil si quieres configurar permisos personalizados de comandos slash para el servidor.</p>
             <label style="margin-top: 5px"; class="slider">
                 <input type="checkbox" tabindex="0" db="manualPerms" saveName="db">
                 <span class="sliderspan"></span>
@@ -837,16 +848,16 @@
         </div>
 
         <div class="settingBox box" style="height: 171px">
-            <h2>Maximum Level</h2>
-            <p class="details">The highest level that members can reach. They can still gain XP past this.<br>To disable XP gain after reaching the max level, use a reward role with a 0x multiplier.</p>
+            <h2>Nivel máximo</h2>
+            <p class="details">El nivel más alto que pueden alcanzar los miembros. Aún podrán ganar XP después de esto.<br>Para desactivar la ganancia de XP tras alcanzar el nivel máximo, usa un rol de recompensa con un multiplicador de 0x.</p>
             <div class="centerflex spacedflex" style="margin-top: 10px">
                 <input style="width: 80px" type="number" min="0" max="1000" placeholder="1000" default="1000" db="maxLevel" saveName="db">
             </div>
         </div>
 
         <div class="settingBox box" style="height: 145px">
-            <h2>Custom /rank Embed Color</h2>
-            <p class="details">Changes the embed color when using /rank.<br>Uses the member's role/profile color by default.</p>
+            <h2>Color de embed personalizado para /rank</h2>
+            <p class="details">Cambia el color del embed al usar /rank.<br>Por defecto usa el color de rol/perfil del miembro.</p>
             <div class="centerflex" style="height: 45px">
                 <label style="margin-top: 5px"; class="slider">
                     <input type="checkbox" tabindex="0" id="useCustomEmbedColRank" onchange="$('#customEmbedColRankConfig').toggle($(this).prop('checked')); checkUnsavedChanges()">
@@ -862,8 +873,8 @@
         </div>
 
         <div class="settingBox box" style="height: 145px">
-            <h2>Custom /top Embed Color</h2>
-            <p class="details">Changes the embed color when using /top.<br>Uses Polaris' green by default.</p>
+            <h2>Color de embed personalizado para /top</h2>
+            <p class="details">Cambia el color del embed al usar /top.<br>Por defecto usa el verde de Polaris.</p>
             <div class="centerflex" style="height: 45px">
                 <label style="margin-top: 5px"; class="slider">
                     <input type="checkbox" tabindex="0" id="useCustomEmbedColTop" onchange="$('#customEmbedColTopConfig').toggle($(this).prop('checked')); checkUnsavedChanges()">
@@ -898,25 +909,39 @@
     $('#userDropdown').on('click', function(e) { e.stopPropagation() })
     $(document).on('click', function() { $('#userMenu').removeClass('open') })
 
+    $('#sidebarToggle').on('click', function(e) {
+        e.stopPropagation()
+        $('#sidebar').toggleClass('open')
+        $('#sidebarBackdrop').toggleClass('open')
+    })
+    $('#sidebarBackdrop').on('click', function() {
+        $('#sidebar').removeClass('open')
+        $(this).removeClass('open')
+    })
+    $(document).on('click', '.category', function() {
+        $('#sidebar').removeClass('open')
+        $('#sidebarBackdrop').removeClass('open')
+    })
+
     let guildID = window.location.pathname.split("/").pop().split("-")[0]
     let serverName = guildID
     let lastUpdated = 0
 
     const multiplierDescriptions = {
         role: {
-            largest: "If you have 0.5x and 2.0x role multipliers, 2.0x will be picked.",
-            smallest: "If you have 0.5x and 2.0x role multipliers, 0.5x will be picked.",
-            highest: "If you have multiple role multipliers, the highest listed role will be picked.",
-            add: "If you have 1.5x, 2.0x, and 0.75x role multipliers, they will be summed together as to 2.25x. (add n-1 from each)",
-            combine: "If you have 2.0x and 3.0x role multipliers, they will be multiplied to 6.0x. Scales absurdly fast."
+            largest: "Si tienes multiplicadores de rol de 0.5x y 2.0x, se elegirá el 2.0x.",
+            smallest: "Si tienes multiplicadores de rol de 0.5x y 2.0x, se elegirá el 0.5x.",
+            highest: "Si tienes varios multiplicadores de rol, se elegirá el del rol más alto en la lista.",
+            add: "Si tienes multiplicadores de rol de 1.5x, 2.0x y 0.75x, se sumarán entre sí hasta 2.25x. (se suma n-1 de cada uno)",
+            combine: "Si tienes multiplicadores de rol de 2.0x y 3.0x, se multiplicarán a 6.0x. Escala absurdamente rápido."
         },
 
         channel: {
-            multiply: "If your role is 2.0x and the channel is 3.0x, final multiplier is 6.0x.",
-            add: "If your role is 2.0x and the channel is 1.5x, they will be summed together to 2.5x. (add n-1 from each)",
-            largest: "If your role is 2.0x and the channel is 1.5x, 2.0x will be picked because it's higher.",
-            channel: "If the channel has any multiplier (including 1.0x), always use it instead of the role.",
-            role: "If you have any role multiplier (including 1.0x), always use it instead of the channel."
+            multiply: "Si tu rol es 2.0x y el canal es 3.0x, el multiplicador final es 6.0x.",
+            add: "Si tu rol es 2.0x y el canal es 1.5x, se sumarán entre sí hasta 2.5x. (se suma n-1 de cada uno)",
+            largest: "Si tu rol es 2.0x y el canal es 1.5x, se elegirá el 2.0x por ser más alto.",
+            channel: "Si el canal tiene algún multiplicador (incluyendo 1.0x), se usará siempre en vez del rol.",
+            role: "Si tienes algún multiplicador de rol (incluyendo 1.0x), se usará siempre en vez del canal."
         }
     }
 
@@ -926,7 +951,7 @@
 
         let db = data.settings
         serverName = data.guild.name
-        document.title = "Settings for " + serverName
+        document.title = "Ajustes de " + serverName
         lastUpdated = data.guild.lastUpdate || 0
 
         // curve graph ft. desmos
@@ -936,8 +961,8 @@
             invertedColors: true,
             advancedStyling: true,
             restrictGridToFirstQuadrant: true,
-            xAxisLabel: "Level",
-            yAxisLabel: "XP Required",
+            xAxisLabel: "Nivel",
+            yAxisLabel: "XP necesaria",
             backgroundColor: "#202020",
         }
 
@@ -954,7 +979,7 @@
             desmosGraph.setMathBounds(desmosBounds)
             desmosGraph.setDefaultState(desmosGraph.getState())
         }
-        else $('#desmosJumpscare').removeAttr("style").text("Looks like Desmos failed to load ¯\\_(ツ)_/¯")
+        else $('#desmosJumpscare').removeAttr("style").text("Parece que Desmos no ha podido cargar ¯\\_(ツ)_/¯")
 
         $('.serverName').text(data.guild.name)
         $('.serverMembers').text(commafy(data.guild.members || "?") + " miembro" + (data.guild.members == 1 ? "" : "s"))
@@ -1019,7 +1044,7 @@
         let presets = data.curvePresets.presets
         presets.unshift({
             "name": data.guild.name,
-            "desc": "The custom settings that your server currently uses.",
+            "desc": "Los ajustes personalizados que usa tu servidor actualmente.",
             "curve": db.curve,
             "round": db.rounding,
             "bestRange": [db.gain.min, db.gain.max]
@@ -1089,13 +1114,13 @@
             }
 
             let columns = [
-                {name: "Level", id: "level"},
+                {name: "Nivel", id: "level"},
                 {name: "XP", id: "xp", extra: true},
-                {name: "Messages", id: "msgs", extra: true},
-                {name: "Cooldown Time", id: "time", extra: true},
-                {name: "Total XP", id: "cum_xp"},
-                {name: "Total Messages", id: "cum_msgs"},
-                {name: "Total Cooldown", id: "cum_time"}
+                {name: "Mensajes", id: "msgs", extra: true},
+                {name: "Tiempo de cooldown", id: "time", extra: true},
+                {name: "XP total", id: "cum_xp"},
+                {name: "Mensajes totales", id: "cum_msgs"},
+                {name: "Cooldown total", id: "cum_time"}
             ]
 
             if (!extra) columns = columns.filter(x => !x.extra)
@@ -1198,11 +1223,11 @@
             let excludeEnabled = $('#excludeRewardToggle').prop('checked')
             rewards = rewards.sort((a, b) => a.level - b.level)
             $('#rewards').html(`
-                <div col="lvl" style="width: 100px"><p><b>Level</b></p></div>
-                <div col="role" style="width: 400px"><p><b>Role</b></p></div>
-                <div col="keep" style="width: 100px"><p><b>Keep</b></p></div>
-                <div col="exclude" style="width: 100px${!excludeEnabled ? "; display: none" : ""}"><p><b>Sync</b></p></div>
-                <div col="delete" style="width: 80px"><p><b>Delete</b></p></div>
+                <div col="lvl" style="width: 100px"><p><b>Nivel</b></p></div>
+                <div col="role" style="width: 400px"><p><b>Rol</b></p></div>
+                <div col="keep" style="width: 100px"><p><b>Mantener</b></p></div>
+                <div col="exclude" style="width: 100px${!excludeEnabled ? "; display: none" : ""}"><p><b>Sincronizar</b></p></div>
+                <div col="delete" style="width: 80px"><p><b>Eliminar</b></p></div>
             `)
 
             rewards.forEach(reward => {
@@ -1212,8 +1237,8 @@
 
                 $('#rewards div[col="lvl"]').append(`<p class="rewardLevel numberinput" tabindex="-1" roleID="${reward.id}" min="1" max="1000" default="10" contenteditable>${reward.level}</p>`)
                 $('#rewards div[col="role"]').append(`<p class="longname" style="color: ${foundRole.color == "#000000" ? "var(--defaultrolecol)" : foundRole.color}">${foundRole.name}</p>`)
-                $('#rewards div[col="keep"]').append(`<p class="toggleRow" tr="keep" tabindex="0" roleID="${reward.id}" style="color: ${reward.keep ? "lime" : "nah"}">${reward.keep ? "Yes" : "No"}${reward.noSync && !excludeEnabled ? "*" : ""}</p>`)
-                $('#rewards div[col="exclude"]').append(`<p class="toggleRow" tr="noSync" tabindex="0" roleID="${reward.id}" style="color: ${reward.noSync ? "red" : "lime"}">${reward.noSync ? "No" : "Yes"}</p>`)
+                $('#rewards div[col="keep"]').append(`<p class="toggleRow" tr="keep" tabindex="0" roleID="${reward.id}" style="color: ${reward.keep ? "lime" : "nah"}">${reward.keep ? "Sí" : "No"}${reward.noSync && !excludeEnabled ? "*" : ""}</p>`)
+                $('#rewards div[col="exclude"]').append(`<p class="toggleRow" tr="noSync" tabindex="0" roleID="${reward.id}" style="color: ${reward.noSync ? "red" : "lime"}">${reward.noSync ? "No" : "Sí"}</p>`)
                 $('#rewards div[col="delete"]').append(`<p class="deleteRow deleteReward" tabindex="0" roleID="${reward.id}">🗑️</p>`)
             })
             $('#rewardCount').html(rewards.length)
@@ -1225,13 +1250,13 @@
             let option = roleOption.clone()
             let roleSelect = $(element)
             if (hideCondition) option.prop("hidden", true)
-            if (!roleSelect.children().length) roleSelect.append("<option value='none' selected disabled>(role)</option>")
+            if (!roleSelect.children().length) roleSelect.append("<option value='none' selected disabled>(rol)</option>")
 
             if (onlyGrantable && !role.grantable) {
                 if (option.val() == data.guild.id) return
                 option.css("color", "")
                 option.prop("disabled", true)
-                option.html(option.html() + " -- too high to grant!")
+                option.html(option.html() + " -- demasiado alto para otorgar!")
             }
 
             return roleSelect.append(option)
@@ -1248,7 +1273,7 @@
 
         let channelPrefixes = { channel: "#", category: "&gt; ", vc: "🔊 ", thread: "└─ ", forum: "💬 "}
         let chMultiplierChannels = data.channels.map(x => `<option ${x.type == "category" ? `style="font-weight: bold"` : ""} value="${x.id}">${channelPrefixes[x.type] || "* "}${x.name}</option>`)
-        $('#channelMultiplierSelect').append("<option value='none' selected disabled>(channel)</option>").append(chMultiplierChannels)
+        $('#channelMultiplierSelect').append("<option value='none' selected disabled>(canal)</option>").append(chMultiplierChannels)
 
 
         // add new reward role
@@ -1322,9 +1347,9 @@
         function buildRoleMultiplerTable() {
             roleMultipliers = roleMultipliers.sort((a, b) => a.boost - b.boost)
             $('#roleMultipliers').html(`
-                <div col="boost" style="width: 140px"><p><b>Multiplier</b></p></div>
-                <div col="role" style="width: 380px"><p><b>Role</b></p></div>
-                <div col="delete" style="width: 80px"><p><b>Delete</b></p></div>
+                <div col="boost" style="width: 140px"><p><b>Multiplicador</b></p></div>
+                <div col="role" style="width: 380px"><p><b>Rol</b></p></div>
+                <div col="delete" style="width: 80px"><p><b>Eliminar</b></p></div>
             `)
 
             roleMultipliers.forEach(boost => {
@@ -1381,9 +1406,9 @@
             .sort((a, b) => data.channels.findIndex(c => c.id == a.id) - data.channels.findIndex(c => c.id == b.id))
 
             $('#channelMultipliers').html(`
-                <div col="boost" style="width: 140px"><p><b>Multiplier</b></p></div>
-                <div col="channel" style="width: 380px"><p><b>Channel</b></p></div>
-                <div col="delete" style="width: 80px"><p><b>Delete</b></p></div>
+                <div col="boost" style="width: 140px"><p><b>Multiplicador</b></p></div>
+                <div col="channel" style="width: 380px"><p><b>Canal</b></p></div>
+                <div col="delete" style="width: 80px"><p><b>Eliminar</b></p></div>
             `)
 
             channelMultipliers.forEach(boost => {
@@ -1481,7 +1506,7 @@
 
         $('.multiplierSelect').change(function() {
             let mType = $(this).attr('desc')
-            let desc = multiplierDescriptions[mType][$(this).val()] || "i am error"
+            let desc = multiplierDescriptions[mType][$(this).val()] || "soy un error"
             $(`#${mType}MultiplierDescription`).text(desc)
         })
         $('.multiplierSelect').trigger('change')
@@ -1569,13 +1594,13 @@
         $('#errorheader').css('margin-top', '70px')
         if (e.apiError) switch (e.code) {
             case "noPerms":
-                $('#errorheader').text("No permission!")
-                $('#errorfooter').text("You don't have permission to manage this server.")
+                $('#errorheader').text("¡Sin permiso!")
+                $('#errorfooter').text("No tienes permiso para gestionar este servidor.")
                 break;
 
             case "login":
-                $('#errorheader').text("Not logged in!")
-                $('#errorfooter').text("Please log in to manage this server.")
+                $('#errorheader').text("¡No has iniciado sesión!")
+                $('#errorfooter').text("Inicia sesión para gestionar este servidor.")
                 $('#loginbutton').show()
                 break;
 
@@ -1706,7 +1731,7 @@
     $('#saveChanges').click(function() {
         if (requestInProgress || $('#unsavedWarning.activeWarning').length < 1) return
         let lvlEmbedEnabled = $('#toggleLvlUpEmbed').prop('checked')
-        if (lvlEmbedEnabled && !validateEmbedJSON()) return alert("Invalid level up embed data! Please fix it or remove it before saving.")
+        if (lvlEmbedEnabled && !validateEmbedJSON()) return alert("¡Datos del embed de subida de nivel no válidos! Corrígelos o elimínalos antes de guardar.")
         else requestInProgress = true
         $('#saveChanges').html("...")
         let savejson = compareSaveJSON()
@@ -1718,7 +1743,7 @@
         })
         .done(function(res) {
             requestInProgress = false
-            $('#saveChanges').html("Save")
+            $('#saveChanges').html("Guardar")
             let newSave = generateSaveJSON()
             lastUpdated = Date.now()
             updateHomeInfo(newSave)
@@ -1727,15 +1752,15 @@
         })
         .fail(function (e) {
             requestInProgress = false
-            $('#saveChanges').html("Save")
-            alert(`Error! ${e.responseText}`);
+            $('#saveChanges').html("Guardar")
+            alert(`¡Error! ${e.responseText}`);
             console.error(e)
         })
     })
 
     $('#resetSettings').click(function() {
         if (requestInProgress) return
-        else if (!confirm("Last chance! Are you sure you want to reset all settings?")) return
+        else if (!confirm("¡Última oportunidad! ¿Seguro que quieres restablecer todos los ajustes?")) return
         requestInProgress = true
         $.ajax({
             url: "/api/settings", type: "post",
@@ -1748,14 +1773,14 @@
         })
         .fail(function (e) {
             requestInProgress = false
-            alert(`Error! ${e.responseText}`);
+            alert(`¡Error! ${e.responseText}`);
             console.error(e)
         })
     })
 
     $('#resetXP').click(function() {
         if (requestInProgress) return
-        else if (!confirm("This is seriously your last chance!!! Reset everyone's XP?")) return
+        else if (!confirm("¡Esta es en serio tu última oportunidad!!! ¿Reiniciar la XP de todos?")) return
         requestInProgress = true
         $.ajax({
             url: "/api/settings", type: "post",
@@ -1764,13 +1789,13 @@
         })
         .done(function(res) {
             requestInProgress = false
-            alert("All XP has been reset!")
+            alert("¡Toda la XP ha sido reiniciada!")
             $('.confirmReset').hide()
             $('.confirmConfirmReset').hide()
         })
         .fail(function (e) {
             requestInProgress = false
-            alert(`Error! ${e.responseText}`);
+            alert(`¡Error! ${e.responseText}`);
             console.error(e)
         })
     })
@@ -1783,7 +1808,7 @@
         fetch(`/api/xp/${guildID}?format=${format}`).then(res => {
             if (!res.ok) {
                 requestInProgress = false
-                return res.json().then(e => { alert(`Error! ${e.message}`); }).catch(() => { alert("Error!") })
+                return res.json().then(e => { alert(`¡Error! ${e.message}`); }).catch(() => { alert("¡Error!") })
             }
             requestInProgress = false
             res.blob().then(blob => {
@@ -1796,7 +1821,7 @@
             })
         }).catch((e) => {
             requestInProgress = false
-            alert(`Error! ${e.responseText}`);
+            alert(`¡Error! ${e.responseText}`);
             console.error(e)
         })
     })
@@ -1807,7 +1832,7 @@
         let exampleLevel = Number($('#exampleLevel').val())
         let saveData = generateSaveJSON()
         let embedMode = saveData['levelUp.embed']
-        if (embedMode && !validateEmbedJSON()) return alert("Invalid level up embed data! Please fix it or remove it before testing.")
+        if (embedMode && !validateEmbedJSON()) return alert("¡Datos del embed de subida de nivel no válidos! Corrígelos o elimínalos antes de probar.")
         else if (!saveData['levelUp.message']) return
         else requestInProgress = true
         
@@ -1853,10 +1878,10 @@
             requestInProgress = false
             setTimeout(() => { $('#confirmPrune').prop('disabled', false) }, 1000);
 
-            if (res.matches < 1) return alert(`Nobody in your server has less than ${amt} XP!`)
+            if (res.matches < 1) return alert(`¡Nadie en tu servidor tiene menos de ${amt} XP!`)
 
-            if (confirm(`Are you sure you want to prune? This will wipe ${commafy(res.matches)} user${res.matches == 1 ? "" : "s"}, leaving ${commafy(res.total - res.matches)} left.`)) {
-                
+            if (confirm(`¿Seguro que quieres podar? Esto eliminará a ${commafy(res.matches)} usuario${res.matches == 1 ? "" : "s"}, dejando ${commafy(res.total - res.matches)}.`)) {
+
                 requestInProgress = true
 
                 $.ajax({
@@ -1870,7 +1895,7 @@
                 })
                 .fail(function (e) {
                     requestInProgress = false
-                    alert("Something went wrong while trying to prune!\n" + e.message)
+                    alert("¡Algo salió mal al intentar podar!\n" + e.message)
                     console.error(e)
                 })
 
@@ -1879,7 +1904,7 @@
         .fail(function (e) {
             requestInProgress = false
             setTimeout(() => { $('#confirmPrune').prop('disabled', false) }, 1000);
-            alert("Something went wrong checking the prune count!\n" + e.message)
+            alert("¡Algo salió mal al comprobar el número a podar!\n" + e.message)
             console.error(e)
         })
     })
@@ -1903,7 +1928,7 @@
     $('#confirmBotImport').click(async function() {
         if (requestInProgress) return
 
-        if (hasUnsavedChanges()) return alert("Please save your unsaved changes first!")
+        if (hasUnsavedChanges()) return alert("¡Guarda primero tus cambios pendientes!")
 
         let botName = $('#importfrom').find(":selected").text().split("(")[0].trim()
         let importBot = $('#importfrom').val()
@@ -1912,21 +1937,21 @@
         let jsonData;
         if (importBot == "json") {
             let jsonfile = $('#importJSONFile').prop('files')[0]
-            if (!jsonfile) return alert("No .json file has been uploaded!")
+            if (!jsonfile) return alert("¡No se ha subido ningún archivo .json!")
             jsonData = await readJSONFile(jsonfile).catch(() => null)
-            if (!jsonData) return alert("Could not parse that file! Are you sure it's a valid .json file?")
-            if (Array.isArray(jsonData) && jsonData[0] && jsonData[0].xp && !confirm("This .json file only contains XP data - no settings will be modified. Are you cool with that?")) return
+            if (!jsonData) return alert("¡No se pudo procesar ese archivo! ¿Seguro que es un archivo .json válido?")
+            if (Array.isArray(jsonData) && jsonData[0] && jsonData[0].xp && !confirm("Este archivo .json solo contiene datos de XP - no se modificará ningún ajuste. ¿Te parece bien?")) return
         }
 
-        if (!importGroup.length) return alert("Invalid bot??!")
-        if (failedImports.includes(importBot)) return alert(`You already tried to import from ${botName}, and it failed! Please wait 30 seconds since the last attempt before trying again.`)
+        if (!importGroup.length) return alert("¿¡Bot no válido!?")
+        if (failedImports.includes(importBot)) return alert(`¡Ya intentaste importar de ${botName} y falló! Espera 30 segundos desde el último intento antes de volver a intentarlo.`)
 
         let importSettings = { bot: importBot }
         importGroup.find('.importSetting').each(function() {
             importSettings[$(this).attr("option")] = $(this).attr("type") == "checkbox" ? $(this).prop("checked") : $(this).val()
         })
 
-        if (!importSettings.xp && (!importSettings.settings && !importSettings.rewardroles)) return alert("Please import either XP or settings!")
+        if (!importSettings.xp && (!importSettings.settings && !importSettings.rewardroles)) return alert("¡Importa la XP o los ajustes, al menos uno!")
 
         requestInProgress = true
         $('#botimporting').hide()
@@ -1951,8 +1976,8 @@
             requestInProgress = false
             if (e.responseJSON && e.responseJSON.apiError) {
                 let isJSON = (importBot == "json")
-                if (e.responseJSON.code == "noData") alert(isJSON ? "No server or XP data was found!" : "This server doesn't have any data!")
-                else alert("Error while trying to import data!\n" + e.responseJSON.message)  
+                if (e.responseJSON.code == "noData") alert(isJSON ? "¡No se encontraron datos de servidor o XP!" : "¡Este servidor no tiene ningún dato!")
+                else alert("¡Error al intentar importar los datos!\n" + e.responseJSON.message)
                 if (e.responseJSON.code != "importCooldown" && e.responseJSON.code != "invalidImport") {
                     if (!isJSON) failedImports.push(importBot)
                     setTimeout(() => {
@@ -1961,7 +1986,7 @@
                 }
             }
             else {
-                alert("Error while trying to import data!\n" + e.message)  
+                alert("¡Error al intentar importar los datos!\n" + e.message)
             }
             console.error(e)
         })

@@ -7,7 +7,7 @@
   
   "enableWebServer": true,
   "serverPort": 6880,
-  "siteURL": "http://89.168.90.160:6880",
+  "siteURL": "https://niveles.tscomunity.es",
   
   "changelogURL": "",
   "supportURL": "",

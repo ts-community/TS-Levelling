@@ -22,7 +22,9 @@ html {
     --defaultrolecol: #dddddd;
 
     --colon: #ff8000;
-    --polarisgreen: #00ff80;
+    --polarisgreen: #00e6a0;
+    --cyanbutton: #67d9f5;
+    --turquoisebutton: #2ed6b2;
 
     --sliderwidth: 60px;
     --sliderheight: 32px;
@@ -34,6 +36,7 @@ html {
 body {
     background-color: var(--bg);
     margin: 0px 0px;
+    overflow-x: hidden;
 }
 
 #bgBlur {
@@ -132,7 +135,8 @@ button {
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    background-color: var(--emojiblue);
+    background-color: var(--cyanbutton);
+    color: #09252b;
 }
 
 button:hover { filter: brightness(115%) }
@@ -312,6 +316,8 @@ input:checked + .sliderspan:before {
 
 .settingBox {
     width: 600px;
+    max-width: 100%;
+    box-sizing: border-box;
     height: fit-content;
 }
 
@@ -322,7 +328,10 @@ input:checked + .sliderspan:before {
 .categoryBox {
     cursor: pointer;
     width: 379px;
-    height: 150px;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-height: 150px;
+    height: auto;
     padding: 10px 20px;
     transition-duration: 0.1s;
 }
@@ -333,6 +342,11 @@ input:checked + .sliderspan:before {
 
 .categoryBox h2 {
     margin-top: 6px !important;
+}
+
+.categoryBox .details {
+    height: auto !important;
+    min-height: 56px;
 }
 
 .categoryBox .categoryIcon {
@@ -355,8 +369,18 @@ input:checked + .sliderspan:before {
     width: 50px;
 }
 
+.serverSwitchButton {
+    background-color: var(--cyanbutton);
+}
+
+.rankingButton {
+    background-color: var(--turquoisebutton);
+}
+
 .fulllength {
     width: 1260px;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .settingBreak {
@@ -373,6 +397,7 @@ input:checked + .sliderspan:before {
 .simpleflex {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: flex-start;
     justify-content: flex-start;
 }
@@ -405,6 +430,8 @@ input:checked + .sliderspan:before {
     margin-top: 10px;
     height: 42px;
     width: 420px;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 #header {
@@ -594,10 +621,18 @@ input:checked + .sliderspan:before {
     align-items: flex-start;
     padding-bottom: 20px;
     margin-left: 240px;
+    box-sizing: border-box;
+    max-width: 100%;
+}
+
+.configboxes > .settingBox {
+    min-width: 0;
 }
 
 .sideoption {
     width: 600px;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .optionRow {
@@ -612,11 +647,16 @@ input:checked + .sliderspan:before {
 .desmos {
     width: 512px;
     height: 512px;
+    max-width: 100%;
+    aspect-ratio: 1 / 1;
 }
 
 .flexTable {
     overflow-y: auto;
+    overflow-x: auto;
+    flex-wrap: nowrap;
     width: min-content;
+    max-width: 100%;
     max-height: 750px;
 }
 
@@ -825,6 +865,159 @@ input:checked + .sliderspan:before {
     text-decoration: line-through;
     font-weight: normal !important;
     opacity: 66%;
+}
+
+@media (max-width: 900px) {
+    #everything,
+    .configboxes,
+    .configboxes > .settingBox,
+    .box,
+    .settingBox {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .configboxes {
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .settingBox {
+        height: auto !important;
+    }
+
+    .simpleflex,
+    .centerflex,
+    .spacedflex {
+        max-width: 100%;
+        box-sizing: border-box;
+        flex-wrap: wrap;
+    }
+
+    .sideoption,
+    .sideoptions {
+        width: 100% !important;
+        min-width: 0;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    select,
+    textarea {
+        max-width: 100% !important;
+        box-sizing: border-box;
+    }
+
+    input[type="file"] {
+        width: 100% !important;
+        height: auto;
+        min-height: 40px;
+        padding-top: 8px !important;
+    }
+
+    button {
+        max-width: 100%;
+        min-height: 40px;
+        height: auto;
+        white-space: normal;
+    }
+
+    .exportXP,
+    .hideOnLoad,
+    .confirmReset,
+    .confirmResetSettings {
+        display: block;
+        margin: 8px 0px 0px 0px !important;
+    }
+
+    .spacedflex > * {
+        margin-right: 0px;
+    }
+
+    .spacedflex {
+        gap: 10px;
+    }
+
+    .field,
+    .varList,
+    .curvefield {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+    }
+
+    .curvefield {
+        gap: 6px;
+    }
+
+    .curvefield p {
+        margin-left: 0px;
+        margin-right: 0px;
+    }
+
+    .varList select {
+        width: 100% !important;
+        margin-right: 0px;
+        margin-bottom: 8px;
+    }
+
+    .flexTable {
+        width: 100%;
+    }
+
+    #importBotSection .centerflex,
+    #importBotSection .spacedflex {
+        align-items: flex-start;
+    }
+
+    #importBotSection input,
+    #importBotSection select {
+        width: 100% !important;
+    }
+
+    .leaderboardSlot {
+        flex-wrap: wrap;
+        row-gap: 12px;
+        padding: 14px 10px;
+    }
+
+    .leaderboardSlot .mainInfo,
+    .leaderboardSlot .xpSection {
+        width: 100% !important;
+        margin-right: 0px !important;
+        box-sizing: border-box;
+    }
+
+    .leaderboardSlot .mainInfo {
+        min-width: 0px;
+    }
+
+    .leaderboardSlot .generalInfo {
+        min-width: 0px;
+        overflow: hidden;
+    }
+
+    .leaderboardSlot .generalInfo p,
+    .leaderboardSlot p[lb=role] {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+
+    .leaderboardSlot h2[lb=rank] {
+        font-size: 22px;
+        width: 40px;
+    }
+
+    .leaderboardSlot .lbAvatar {
+        height: 48px !important;
+        width: 48px !important;
+        margin-right: 12px !important;
+    }
+
+    .leaderboardSlot p {
+        font-size: 16px;
+    }
 }
 
 .progressBar {
@@ -1375,6 +1568,192 @@ input:checked + .sliderspan:before {
     border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
+.topbarLeft {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0px;
+}
+
+.hamburgerBtn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    width: 40px;
+    min-width: unset;
+    padding: 0px;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    cursor: pointer;
+}
+
+.hamburgerBtn:hover, .hamburgerBtn:focus-visible {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.hamburgerBtn svg {
+    height: 20px;
+    width: 20px;
+    flex-shrink: 0;
+}
+
+.sidebarBackdrop {
+    display: none;
+    position: fixed;
+    inset: 68px 0px 0px 0px;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+.sidebarBackdrop.open {
+    opacity: 1;
+    pointer-events: all;
+}
+
+@media (max-width: 900px) {
+    .hamburgerBtn {
+        display: flex;
+    }
+
+    .sidebarBackdrop {
+        display: block;
+    }
+
+    .lbSidebar, #sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .lbSidebar.open, #sidebar.open {
+        transform: translateX(0px);
+    }
+
+    .lbContent, .configboxes {
+        margin-left: 0px !important;
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+
+    .configboxes > .settingBox {
+        width: 100%;
+        margin-left: 0px;
+        margin-right: 0px;
+    }
+
+    #serverInfo > .settingBox:first-child {
+        align-items: stretch !important;
+        flex-direction: column;
+        gap: 20px !important;
+        padding: 18px 20px !important;
+    }
+
+    #serverInfo > .settingBox:first-child > .centerflex:first-child {
+        width: 100%;
+    }
+
+    #serverInfo > .settingBox:first-child .serverName {
+        max-width: 100%;
+        font-size: 30px;
+    }
+
+    #serverInfo > .settingBox:first-child > .middleflex {
+        width: 100%;
+        flex-direction: column;
+        gap: 12px !important;
+    }
+
+    #serverInfo > .settingBox:first-child > .middleflex a,
+    .serverSwitchButton,
+    .rankingButton {
+        width: 100% !important;
+        max-width: 320px;
+    }
+
+    .categoryBox {
+        width: 100%;
+        min-height: 150px;
+        height: auto;
+        padding: 16px 20px;
+    }
+
+    .categoryBox h2 {
+        font-size: 21px;
+        line-height: 1.2;
+    }
+
+    .categoryBox p {
+        line-height: 1.5;
+    }
+}
+
+@media (max-width: 480px) {
+    .topbar {
+        height: 62px;
+        padding: 0px 14px;
+    }
+
+    .sidebarBackdrop {
+        inset: 62px 0px 0px 0px;
+    }
+
+    .configboxes {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    .box {
+        border-radius: 14px;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    h1 {
+        font-size: 30px;
+        line-height: 1.15;
+    }
+
+    h2 {
+        font-size: 21px;
+        line-height: 1.25;
+    }
+
+    p {
+        font-size: 16px;
+        line-height: 1.55;
+    }
+
+    .categoryBox .centerflex {
+        align-items: flex-start;
+    }
+
+    .categoryBox .categoryIcon {
+        margin-top: 4px;
+        margin-right: 14px;
+    }
+
+    .categoryBox .categoryIcon img,
+    .categoryBox .categoryIcon svg {
+        height: 36px;
+        width: 36px;
+    }
+
+    .categoryBox .details {
+        min-height: 0;
+    }
+
+    .topbarBrand span {
+        display: none;
+    }
+}
+
 .topbarBrand {
     display: flex;
     align-items: center;
@@ -1433,6 +1812,150 @@ input:checked + .sliderspan:before {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+    .lbContent {
+        width: 100%;
+        padding: 0px 10px 20px !important;
+        overflow-x: hidden;
+    }
+
+    .leaderboardBox {
+        width: 100%;
+        padding: 6px 8px;
+        border-radius: 16px;
+    }
+
+    .leaderboardSlot {
+        align-items: stretch;
+        gap: 10px;
+        padding: 14px 8px;
+    }
+
+    .leaderboardSlot .mainInfo,
+    .leaderboardSlot .xpSection {
+        width: 100% !important;
+        min-width: 0;
+        margin-right: 0px !important;
+    }
+
+    .leaderboardSlot .mainInfo {
+        align-items: center;
+    }
+
+    .leaderboardSlot .generalInfo,
+    .leaderboardSlot .mainInfo > div:last-child {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .leaderboardSlot .generalInfo p,
+    .leaderboardSlot p[lb="role"],
+    .leaderboardSlot p[lb="level"] {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        max-width: 100%;
+    }
+
+    .leaderboardSlot .xpLabel,
+    .leaderboardSlot .xpLabel > p {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        min-width: 0;
+    }
+
+    .leaderboardSlot .xpLabel {
+        display: block;
+        line-height: 1.35;
+    }
+
+    .leaderboardSlot .xpLabelRight {
+        display: flex;
+        justify-content: flex-start;
+        margin: 4px 0px 0px 0px;
+        text-align: left;
+    }
+
+    .leaderboardSlot .lbAvatar {
+        flex-shrink: 0;
+    }
+
+    .discordCard {
+        width: 100%;
+        margin: 0px 0px 20px 0px;
+        border-radius: 16px;
+    }
+
+    .discordBanner {
+        height: 230px;
+    }
+
+    .discordBanner.noBanner {
+        height: 170px;
+    }
+
+    .discordAvatar,
+    .discordBanner.noBanner ~ .discordAvatar {
+        left: 18px;
+        top: 162px;
+        height: 104px;
+        width: 104px;
+    }
+
+    .discordBanner.noBanner ~ .discordAvatar {
+        top: 102px;
+    }
+
+    .discordHeader {
+        padding: 62px 18px 18px;
+    }
+
+    .discordName {
+        font-size: 23px !important;
+        overflow-wrap: anywhere;
+    }
+
+    .discordStatusRow {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .discordStatusPill,
+    .discordInlineXP {
+        max-width: 100%;
+    }
+
+    .discordInlineXP {
+        width: 100%;
+        flex: 0 1 auto;
+    }
+
+    .discordXPLine {
+        overflow-wrap: anywhere;
+        white-space: normal;
+    }
+
+    .rankBadge {
+        top: 12px;
+        right: 12px;
+        padding: 6px 10px;
+    }
+
+    .statGrid {
+        gap: 10px;
+    }
+
+    .statBox {
+        flex-basis: 100%;
+        max-width: 100%;
+        padding: 16px 18px;
+    }
+
+    .statBox .statValue {
+        overflow-wrap: anywhere;
+    }
 }
 
 .userMenuButton .userRole {
@@ -1549,6 +2072,35 @@ input:checked + .sliderspan:before {
 .statusPill.pill-member {
     color: #b6b6b6;
     background: rgba(182, 182, 182, 0.12);
+}
+
+.previewToggleBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    color: white !important;
+    text-decoration: none !important;
+    font-family: var(--opensans);
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition-duration: 0.15s;
+    transition-property: background-color, border-color, color;
+}
+
+.previewToggleBtn:hover, .previewToggleBtn:focus-visible {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.previewToggleBtn svg {
+    height: 16px;
+    width: 16px;
+    flex-shrink: 0;
 }
 
 .topbarLoginBtn {

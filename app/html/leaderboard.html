@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <link href="/css/polaris.css?v=1" type="text/css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="/css/polaris.css?v=9" type="text/css" rel="stylesheet">
     <link rel="icon" href="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless">
     <title>Clasificación</title>
 
@@ -48,11 +49,21 @@
 <body>
     <div id="bgBlur"></div>
     <div class="topbar">
-        <a class="topbarBrand" href="/">
-            <img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt="">
-            <span>TS Community Brawl</span>
+        <div class="topbarLeft">
+            <button id="sidebarToggle" class="hamburgerBtn" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+            <a class="topbarBrand" href="/">
+                <img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt="">
+                <span>TS Community Brawl</span>
+            </a>
+        </div>
+        <a id="previewToggle" class="previewToggleBtn" style="display: none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            <span>Vista administrador</span>
         </a>
     </div>
+    <div class="sidebarBackdrop" id="sidebarBackdrop"></div>
 
     <h2 class="middleflex" id="loading">Cargando...</h2>
 
@@ -71,15 +82,11 @@
             </button>
             <button class="lbNavItem" box="roles">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z"></path></svg>
-                <span>Roles de Recompensa</span>
+                <span>Recompensas</span>
             </button>
             <button class="lbNavItem" box="levels">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" stroke="none"></path><path d="M2 12l10 5 10-5"></path><path d="M2 17l10 5 10-5"></path></svg>
                 <span>Todos los Niveles</span>
-            </button>
-            <button class="lbNavItem" box="hidden" id="hiddenMemberTab" style="display: none">
-                <svg viewBox="0 0 640 512" fill="currentColor"><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c8.4-19.3 10.6-41.4 4.8-63.3c-11.1-41.5-47.8-69.4-88.6-71.1c-5.8-.2-9.9 5.4-8.1 10.9c3.1 9.3 4.8 19.3 4.8 29.7c0 5.4-.5 10.6-1.4 15.7l-96.4-75.9zM373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C173.5 443.2 238.2 480 319.9 480c47.4 0 89.1-12.4 125.2-31.4L373 389.9z"/></svg>
-                <span>Miembros Ocultos</span>
             </button>
             <button class="lbNavItem" box="records">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a5 5 0 0 1 5 5v1h2a1 1 0 0 1 1 1c0 2.4-1.6 4.4-3.8 4.9A5.03 5.03 0 0 1 13 16.9V19h3a1 1 0 0 1 0 2H8a1 1 0 0 1 0-2h3v-2.1a5.03 5.03 0 0 1-3.2-3 5.5 5.5 0 0 1-3.8-4.9 1 1 0 0 1 1-1h2V7a5 5 0 0 1 5-5zM5 9c.2 1.1.9 2 1.9 2.5A7 7 0 0 1 6.5 9H5zm12.5 0h-1.4a7 7 0 0 1-.4 2.5C16.6 11 17.3 10.1 17.5 9z"></path></svg>
@@ -124,7 +131,7 @@
         </div>
 
     <div id="leaderboard" box="leaderboard" class="leaderboardBox lbBox"></div>
-    <h2 id="noXPYet" box="leaderboard" style="text-align: center; display: none" class="lbBox">Nobody in this server has any XP yet!</h2>
+    <h2 id="noXPYet" box="leaderboard" style="text-align: center; display: none" class="lbBox">¡Nadie en este servidor tiene XP todavía!</h2>
 
     <div id="pageInfo" box="leaderboard" class="middleflex lbBox" style="flex-direction: row; margin-top: 20px">
         <button id="pageDown" onclick="setPage(page - 1)" disabled style="width: 44px; min-width: 44px; height: 44px; padding: 0px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); margin-right: 20px;">&lt;-</button>
@@ -132,21 +139,12 @@
         <button id="pageUp" onclick="setPage(page + 1)" style="width: 44px; min-width: 44px; height: 44px; padding: 0px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); margin-left: 20px;">-&gt;</button>
     </div>
 
-    <h2 box="roles" class="lbBox plsLogIn">Log in to view your progress towards reward roles!</h2>
+    <h2 box="roles" class="lbBox plsLogIn">¡Inicia sesión para ver tu progreso hacia los roles de recompensa!</h2>
     <div id="roleList" box="roles" class="leaderboardBox lbBox" style="display: none"></div>
     <h2 id="noRewardRoles" box="roles" style="text-align: center; display: none" class="lbBox">This server doesn't have any reward roles!</h2>
 
-    <h2 box="levels" class="lbBox plsLogIn">Log in to view your progress towards each level!</h2>
+    <h2 box="levels" class="lbBox plsLogIn">¡Inicia sesión para ver tu progreso hacia cada nivel!</h2>
     <div id="progress" box="levels" class="leaderboardBox lbBox" style="display: none"></div>
-
-    <div box="hidden" class="lbBox" style="margin-bottom: 20px; display: none">
-        <h2 style="text-align: center">Hidden Members</h2>
-        <p style="text-align: center; margin-top: 4px">
-            Members listed here are hidden from the leaderboard and skipped over when calculating ranks.<br>
-            In most cases, these are members who left the server or are inactive.<br>
-            <b>They will be automatically unhidden upon gaining XP.</b></p>
-    </div>
-    <div id="hiddenMemberList" box="hidden" class="emptyLbBox lbBox middleflex centerflex" style="display: none"></div>
 
     <div box="records" class="lbBox middleflex centerflex" style="display: none; flex-direction: column; min-height: 320px; text-align: center;">
         <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="height: 56px; width: 56px"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
@@ -250,7 +248,7 @@
     <div class="leaderboardSlot" slot="leaderboard">
         <div class="mainInfo" style="width: 50%">
             <h2 lb="rank"></h2>
-            <div style="height: 70px; width: 70px; margin-left: 10px; margin-right: 20px; border-radius: 420px; background-color: rgba(255, 255, 255, 0.1);">
+            <div class="lbAvatar" style="height: 70px; width: 70px; margin-left: 10px; margin-right: 20px; border-radius: 420px; background-color: rgba(255, 255, 255, 0.1);">
                 <img lb="pfp" style="border-radius: 420px; height: 100%;">
             </div>
             <div class="generalInfo">
@@ -258,12 +256,11 @@
                 <div style="display: flex">
                     <p lb="level"></p>
                     <p lb="warning" class="red" style="margin-left: 10px; display: none; opacity: 100%; text-decoration: unset !important; font-weight: bold !important;">No está en el servidor</p>
-                    <p lb="hideUser" class="red hideFromLeaderboard" style="margin-left: 12px; display: none; opacity: 80%; text-decoration: underline !important">Hide member</p>
                 </div>
             </div>
         </div>
 
-        <div style="width: 48%; margin-right: 20px;">
+        <div class="xpSection" style="width: 48%; margin-right: 20px;">
             <div class="xpLabel">
                 <p><span lb="xp"></span><span lb="percent"></span></p>
                 <div class="xpLabelRight">
@@ -292,7 +289,7 @@
             </div>
         </div>
 
-        <div style="width: 60%; margin-right: 20px;">
+        <div class="xpSection" style="width: 60%; margin-right: 20px;">
             <p lb="percent" class="xpLabel"></p>
             <div class="progressBar">
                 <div class="progress" lb="progress"></div>
@@ -309,7 +306,7 @@
             </div>
         </div>
 
-        <div style="width: 60%; margin-right: 20px;">
+        <div class="xpSection" style="width: 60%; margin-right: 20px;">
             <p lb="percent" class="xpLabel"></p>
             <div class="progressBar">
                 <div class="progress" lb="progress"></div>
@@ -317,13 +314,6 @@
         </div>
     </div>
 
-    <!-- hidden member template -->
-    <div class="hiddenMemberSlot" slot="hidden">
-        <p lb="id" style="font-weight: bold; margin-top: 0px; margin-bottom: 4px"></p>
-        <p lb="xp" style="margin-top: 2px; margin-bottom: 0px;"></p>
-        <p lb="unhide" class="unhideMember" style="margin-top: 5px; margin-bottom: 0px">Unhide</p>
-    </div>
-    
     <div style="height: 40px"></div>
 
         </div>
@@ -362,19 +352,6 @@
         </div>
     </div>
 
-    <div class="popup" id="confirmHide">
-        <div class="popupbox">
-            <div class="box">
-                <h2 style="font-size: 36px">¿Ocultar de la clasificación?</h2>
-                <p style="margin: 10px 0px">This member will be removed from the leaderboard, and skipped over when calculating rankings. <b>Their XP will not be reset, and they will be automatically unhidden upon gaining XP.</b></p>
-                <p style="opacity: 50%">(hold shift to skip this popup)</p>
-
-                <button class="popupConfirm" style="background-color: var(--lightestfg)" onclick="$('.popup').hide()">Cancel</button>
-                <button id="hideConfirmation" class="popupConfirm">Confirm</button>
-            </div>
-        </div>
-    </div>
-
     </div>
 
 </body>
@@ -388,9 +365,8 @@
 const tabInfo = {
     leaderboard: { slug: "leaderboard", label: "Clasificación" },
     rank: { slug: "rank", label: "Tu Rango" },
-    roles: { slug: "roles", label: "Roles de Recompensa" },
+    roles: { slug: "roles", label: "Recompensas" },
     levels: { slug: "levels", label: "Todos los Niveles" },
-    hidden: { slug: "hidden", label: "Miembros Ocultos" },
     records: { slug: "records", label: "Récords" },
 }
 const slugToBox = Object.fromEntries(Object.entries(tabInfo).map(([box, info]) => [info.slug, box]))
@@ -418,14 +394,12 @@ let setPage;
 let leaderboardSlot = $('.leaderboardSlot[slot=leaderboard]').first().clone()
 let roleSlot = $('.leaderboardSlot[slot=role]').first().clone()
 let progressSlot = $('.leaderboardSlot[slot=progress]').first().clone()
-let hiddenSlot = $('.hiddenMemberSlot[slot=hidden]').first().clone()
 
 let pageCache = {}
 
 addUhOh()
 
 $('.leaderboardSlot').remove()
-$('.hiddenMemberSlot').remove()
 
 if (currentBox !== "leaderboard") {
     $('.selectedlb').removeClass('selectedlb')
@@ -442,6 +416,20 @@ $('#userMenuButton').on('click', function(e) {
 })
 $('#userDropdown').on('click', function(e) { e.stopPropagation() })
 $(document).on('click', function() { $('#userMenu').removeClass('open') })
+
+$('#sidebarToggle').on('click', function(e) {
+    e.stopPropagation()
+    $('.lbSidebar').toggleClass('open')
+    $('#sidebarBackdrop').toggleClass('open')
+})
+$('#sidebarBackdrop').on('click', function() {
+    $('.lbSidebar').removeClass('open')
+    $(this).removeClass('open')
+})
+$('.lbNavItem').on('click', function() {
+    $('.lbSidebar').removeClass('open')
+    $('#sidebarBackdrop').removeClass('open')
+})
 
 function commafy(num) {
     if (isNaN(num)) return 0
@@ -550,6 +538,7 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         $('#userAvatar').attr("src", avatarURL)
         $('#userRole').text(data.moderator ? "Administrador" : "Miembro")
         if (data.moderator) $('#serverPickerLink').show()
+        if (data.moderator) $('#previewToggle').attr('href', `/settings/${guildID}`).show()
         $('#userMenu').show()
     }
     else $('#topbarLogin').show()
@@ -573,8 +562,6 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         $('#yourrank').prop('disabled', true)
     }
 
-    checkHiddenMembers(data)
-
     let userLevel = getLevel(data.user.xp || 0, data.settings)
     let userColor = roleCol(data.user.color)
     let userMultiplier = getMultiplier(data.user.roles, data.settings, data.roles)
@@ -597,7 +584,6 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
             if (x.missing) {
                 userSlot.addClass('notInServer')
                 userSlot.find("[lb=warning]").show()
-                if (data.moderator) userSlot.find("[lb=hideUser]").attr('userID', x.id).show()
             }
             if (data.moderator) {
                 userSlot.addClass('canManage')
@@ -650,7 +636,7 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         else {
             $('#leaderboard').remove();
             $('#noXPYet').show()
-            if (data.settings.leaderboard.minLevel > 0) $('#noXPYet').html(`Nobody in this server is on the leaderboard yet!<br><span style="opacity: 66%; font-size: 18px; line-height: 46px">(nivel ${commafy(data.settings.leaderboard.minLevel)} requerido)</span>`)
+            if (data.settings.leaderboard.minLevel > 0) $('#noXPYet').html(`¡Nadie en este servidor está en la clasificación todavía!<br><span style="opacity: 66%; font-size: 18px; line-height: 46px">(nivel ${commafy(data.settings.leaderboard.minLevel)} requerido)</span>`)
         }
     }
     appendLeaderboard(data.leaderboard)
@@ -781,9 +767,6 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         $('html').scrollTop(savedScroll)
         appendLeaderboard(res.leaderboard)
 
-        if (res.moderator) checkHiddenMembers(res)
-        else $('#hiddenMemberTab').hide()
-
         if (res.guild) updateRankedCount(res)
 
         loadingPage = false
@@ -876,88 +859,6 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         })
     })
 
-    $(document).on('click', '.hideFromLeaderboard', function(e) {
-        if (!data.moderator) return
-        $('.popup').hide()
-        let foundUser = pageCache[page].leaderboard.find(x => x.id == $(this).attr('userID'))
-        if (!foundUser) return
-        e.stopImmediatePropagation()
-        e.preventDefault()
-
-        function hideMember() {
-            if (isUpdating) return
-            isUpdating = true
-            $.ajax({
-                url: "/api/leaderboardHide", type: "post",
-                data: JSON.stringify({guildID, user: foundUser.id, hide: true}),
-                headers: { 'Content-Type': 'application/json'}
-            })
-            .done(function(res) {
-                pageCache = {}
-                setPage(page, true)
-                $('.popup').hide()
-                isUpdating = false
-            })
-            .fail(function (e) {
-                alert(`Error! ${e.responseText}`);
-                console.error(e)
-                $('.popup').hide()
-                isUpdating = false
-            })
-        }
-
-        if (e.originalEvent.shiftKey) hideMember()
-        else {
-            $('#confirmHide').show()
-            $('#hideConfirmation').off('click')
-            $('#hideConfirmation').click(hideMember)
-        }
-    })
-
-    $(document).on('click', '.unhideMember', function(e) {
-        if (!data.moderator || !data.hiddenMembers) return
-        let foundUser = data.hiddenMembers.find(x => x.id == $(this).attr('userID'))
-
-        if (isUpdating) return
-        isUpdating = true
-        $.ajax({
-            url: "/api/leaderboardHide", type: "post",
-            data: JSON.stringify({guildID, user: foundUser.id, hide: false}),
-            headers: { 'Content-Type': 'application/json'}
-        })
-        .done(function(res) {
-            pageCache = {}
-            setPage(page, true)
-            isUpdating = false
-        })
-        .fail(function (e) {
-            alert(`Error! ${e.responseText}`);
-            console.error(e)
-            $('.popup').hide()
-            isUpdating = false
-        })
-    })
-
-    function checkHiddenMembers(dat) {
-        if (!dat) return
-        $('#hiddenMemberList').html("")
-
-        if (dat.hiddenMembers && dat.hiddenMembers.length > 0) {
-            data.hiddenMembers = dat.hiddenMembers
-            $('#hiddenMemberTab').show()
-
-            dat.hiddenMembers.forEach(x => {
-                let hidSlot = hiddenSlot.clone()
-                hidSlot.find("[lb=id]").text(`ID: ${x.id}`)
-                hidSlot.find("[lb=xp]").html(`Nivel ${commafy(getLevel(x.xp, dat.settings).level)} &nbsp; • &nbsp; ${commafy(x.xp)} XP`)
-                hidSlot.find("[lb=unhide]").attr("userID", x.id)
-                $('#hiddenMemberList').append(hidSlot)
-            })
-        }
-
-        else $('#hiddenMemberTab').hide()
-    }
-
     $('#everything').show()
     $('#loading').hide()
 
@@ -965,24 +866,24 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
     console.error(e)
     if (e.apiError) switch (e.code) {
         case "invalidServer":
-            $('#errorheader').text("No leaderboard!")
-            $('#errorfooter').text("This server does not have a leaderboard... are you sure it exists?")
+            $('#errorheader').text("¡Sin clasificación!")
+            $('#errorfooter').text("Este servidor no tiene una clasificación... ¿seguro que existe?")
             break;
 
         case "privateLeaderboard":
-            $('#errorheader').text("Private leaderboard!")
-            $('#errorfooter').text("This leaderboard is private, and is only viewable to members of the server.")
+            $('#errorheader').text("¡Clasificación privada!")
+            $('#errorfooter').text("Esta clasificación es privada, y solo la pueden ver los miembros del servidor.")
             $('#loginbutton').show()
             break;
 
         case "xpDisabled":
-            $('#errorheader').text("XP disabled!")
-            $('#errorfooter').text("This server currently has XP disabled.")
+            $('#errorheader').text("¡XP desactivada!")
+            $('#errorfooter').text("Este servidor tiene la XP desactivada actualmente.")
             break;
 
         case "leaderboardDisabled":
             $('#errorheader').text("¡Clasificación desactivada!")
-            $('#errorfooter').text("This server has disabled the leaderboard.")
+            $('#errorfooter').text("Este servidor ha desactivado la clasificación.")
             break;
 
         default:

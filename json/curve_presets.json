@@ -1,8 +1,8 @@
 {
     "presets": [
         {
-            "name": "Polaris (Default)",
-            "desc": "The default and recommended curve. Decently balanced.",
+            "name": "Polaris (Por defecto)",
+            "desc": "La curva por defecto y recomendada. Bastante equilibrada.",
             "curve": { "3": 1,      "2": 50,        "1": 100 },
             "round": 100,
             "bestRange": [50, 100]
@@ -10,71 +10,71 @@
 
         {
             "name": "RoboTop",
-            "desc": "The curve used by RoboTop, the predecessor to Polaris. Starts fine, but gets absurdly difficult.",
+            "desc": "La curva usada por RoboTop, el predecesor de Polaris. Empieza bien, pero se vuelve absurdamente difícil.",
             "curve": { "3": 5,      "2": 100,        "1": 150 },
             "round": 100,
             "bestRange": [50, 100]
         },
 
         {
-            "name": "Generous",
-            "desc": "Too hard to level up? This curve is a little more on the friendly side.",
+            "name": "Generosa",
+            "desc": "¿Demasiado difícil subir de nivel? Esta curva es un poco más amigable.",
             "curve": { "3": 0.5,      "2": 20,        "1": 50 },
             "round": 50,
             "bestRange": [50, 100]
         },
 
         {
-            "name": "Linear",
-            "desc": "Completely linear. Set XP per message to 100-100 to level up exactly every 100 messages.",
+            "name": "Lineal",
+            "desc": "Completamente lineal. Pon la XP por mensaje en 100-100 para subir de nivel exactamente cada 100 mensajes.",
             "curve": { "3": 0,      "2": 0,     "1": 10000 },
             "round": 1,
             "bestRange": [100, 100]
         },
 
         {
-            "name": "Exponential",
-            "desc": "Not too easy, not too difficult. And it scales really smoothly.",
+            "name": "Exponencial",
+            "desc": "Ni muy fácil ni muy difícil. Y escala de forma muy suave.",
             "curve": { "3": 0,      "2": 250,     "1": 0 },
             "round": 1,
             "bestRange": [50, 100]
         },
 
         {
-            "name": "Minimalist",
-            "desc": "1-10 XP per message. Why not?.",
+            "name": "Minimalista",
+            "desc": "1-10 XP por mensaje. ¿Por qué no?.",
             "curve": { "3": 1,      "2": 2,     "1": 3 },
             "round": 10,
             "bestRange": [1, 10]
         },
 
         {
-            "name": "Ultra Minimalist",
-            "desc": "1 XP per message, level up every 100 messages. Alternatively, I also recommend a 12 hour cooldown where you level up every 10 messages!",
+            "name": "Ultra minimalista",
+            "desc": "1 XP por mensaje, sube de nivel cada 100 mensajes. Alternativamente, también recomiendo un cooldown de 12 horas donde subas de nivel cada 10 mensajes!",
             "curve": { "3": 0,      "2": 0,     "1": 100 },
             "round": 1,
             "bestRange": [1, 1]
         },
-        
+
         {
             "name": "Minecraft",
-            "desc": "Minecraft's XP curve changes a bit depending on your level, but this is the curve from level 0-15. Close enough. I recommend 3-11 XP per message, which is how much a Bottle o' Enchanting grants.",
+            "desc": "La curva de XP de Minecraft cambia un poco según tu nivel, pero esta es la curva del nivel 0-15. Suficientemente parecida. Recomiendo 3-11 XP por mensaje, que es lo que otorga una Botella de Encantar.",
             "curve": { "3": 0,      "2": 1,     "1": 6 },
             "round": 1,
             "bestRange": [3, 11]
         },
 
         {
-            "name": "Arcane",
-            "desc": "What a mysterious curve that definitely doesn't come from another bot!",
+            "name": "Arcana",
+            "desc": "Qué curva tan misteriosa que definitivamente no viene de otro bot!",
             "curve": { "3": 0,      "2": 50,      "1": 25 },
             "round": 5,
             "bestRange": [15, 40]
         },
 
         {
-            "name": "Definitely not Mee6",
-            "desc": "I can assure you that this oddly specific curve was not lifted from that one bot people don't like. Also last time I checked, you can't own a cubic function.",
+            "name": "Definitivamente no es Mee6",
+            "desc": "Te puedo asegurar que esta curva tan específica no fue copiada de ese bot que a la gente no le gusta. Además, que yo sepa, no se puede ser dueño de una función cúbica.",
             "curve": { "3": 1.6666666667,      "2": 22.5,      "1": 75.8333333333 },
             "round": 5,
             "bestRange": [15, 25]
@@ -82,25 +82,25 @@
     ],
 
     "difficultyRatings": {
-        "0": "Linear",
-        "1": "Basically linear",
-        "25": "Almost no scaling",
-        "50": "Extremely generous",
-        "100": "Very generous",
-        "225": "Generous",
-        "350": "Slightly generous",
+        "0": "Lineal",
+        "1": "Básicamente lineal",
+        "25": "Casi sin escalado",
+        "50": "Extremadamente generosa",
+        "100": "Muy generosa",
+        "225": "Generosa",
+        "350": "Ligeramente generosa",
         "500": "Normal",
-        "1000": "Slightly spicy",
-        "1500": "Moderately spicy",
-        "2000": "Spicy",
-        "2500": "Very spicy",
-        "3250": "Extremely spicy",
-        "4000": "Dangerously spicy",
-        "5000": "Insanely spicy",
+        "1000": "Un poco picante",
+        "1500": "Moderadamente picante",
+        "2000": "Picante",
+        "2500": "Muy picante",
+        "3250": "Extremadamente picante",
+        "4000": "Peligrosamente picante",
+        "5000": "Increíblemente picante",
         "6500": "Brutal",
-        "10000": "Extremely brutal",
-        "20000": "What the actual heck",
-        "35000": "Are you out of your mind",
+        "10000": "Extremadamente brutal",
+        "20000": "Pero qué demonios",
+        "35000": "¿Has perdido la cabeza?",
         "50000": "AAAAAAAAAAAAAAAAAAAAAAA"
     }
 }
