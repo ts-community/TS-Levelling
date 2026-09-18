@@ -1,0 +1,56 @@
+Copyright (c) 2026 TS Community Brawl (ts-community).
+Originally created by tumonulo.
+
+All rights reserved.
+
+SCOPE OF THIS LICENSE
+----------------------
+This license applies ONLY to the original modifications, additions,
+assets, configuration, documentation, and other files created for
+TS-Levelling by TS Community Brawl.
+
+It does NOT apply to the base code from Polaris Open by Colon (GDColon),
+which remains governed solely by its original terms in the LICENSE file
+at the root of this repository. Nothing in this file restricts or
+re-licenses the rights already granted by that original license over the
+base code.
+
+DUAL-LICENSE SUMMARY
+--------------------
+* Base code (Polaris Open): see LICENSE (free non-commercial use,
+  modification and distribution with credit to Colon).
+* TSCommunity modifications: all rights reserved under this file.
+
+PERMITTED WITHOUT PRIOR PERMISSION
+-----------------------------------
+* View and study the source code for personal, educational, and
+  learning purposes.
+* Fork via GitHub solely to propose contributions back to this
+  repository (pull requests).
+* Authorized deployment/hosting by TS Community Brawl for its own Discord
+  server.
+
+NOT PERMITTED WITHOUT PRIOR WRITTEN PERMISSION
+----------------------------------------------
+* Use this source code, in whole or in part, in another project or bot.
+* Deploy or host this project, or any modified version of it, on any
+  server, except the authorized TSCommunity production use above.
+* Copy, redistribute, republish, or sell the source code or any
+  modified version.
+* Create or distribute forks or derivative versions intended for use
+  by others (outside of pull requests to this repository).
+* Present any part of this project or its source code as your own.
+* Remove or modify copyright notices or attribution.
+
+You are welcome to study the code, learn from its implementation, and
+use it as a reference for your own learning. Writing your own
+independent implementation based on what you learned is allowed;
+copy-pasting code is not.
+
+Any use not explicitly permitted by this license (or by the LICENSE
+file for the base code) requires prior written permission from the
+copyright holder.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.

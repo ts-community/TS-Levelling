@@ -273,14 +273,17 @@ class LevelUpMessage {
             : triggerPreview
         const hasRealTrigger = quoted && quoted !== NO_TRIGGER_TEXT
         let contextLine = null
+        let safeCode = null
         if (!this.example && hasRealTrigger) {
             // Evita romper el bloque de codigo si el mensaje contiene ```
-            const safeCode = quoted.replace(/```/g, "ˋˋˋ")
-            contextLine = `${EMOJI.MESSAGES} **Mensaje de subida:**\n\`\`\`\n${safeCode}\n\`\`\``
+            safeCode = quoted.replace(/```/g, "ˋˋˋ")
+            contextLine = `${EMOJI.MESSAGES} **Mensaje de subida:**`
         }
         if (contextLine) {
             container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(contextLine))
+            container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`\`\`\`\n${safeCode}\n\`\`\``))
         }
 
         // Sin botones: mención clicable al comando con ID del servidor

@@ -49,7 +49,14 @@ Al llegar a **Pro**, el rango máximo, la tarjeta cambia automáticamente para m
 
 ## 📚 Origen
 
-Proyecto basado en [Polaris Open](https://github.com/GDColon/Polaris-Open), posteriormente adaptado y personalizado para TSCommunity.
+Proyecto basado en [Polaris Open](https://github.com/GDColon/Polaris-Open) por Colon (GDColon), posteriormente adaptado y personalizado para TS Community Brawl.
+
+## 📜 Licencia
+
+Este proyecto tiene licencia dual:
+
+* **Código base (Polaris Open):** ver fichero `LICENSE`. Uso, modificación y distribución libres para fines no comerciales, con crédito a Colon.
+* **Modificaciones de TSCommunity (rangos, tarjetas `/rank`, `/top`, configs, assets, docs, etc.):** todos los derechos reservados, ver fichero `LICENSE-TS`. Se permite ver y estudiar el código, pero no reutilizarlo, desplegarlo ni redistribuirlo sin permiso escrito, salvo el uso autorizado en producción por TSCommunity.
 
 ## 📌 Estado
 
