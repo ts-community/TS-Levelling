@@ -1,4 +1,6 @@
 const LevelUpMessage = require("../../classes/LevelUpMessage.js")
+const OvertakeMessage = require("../../classes/OvertakeMessage.js")
+const { isProRank, getOvertakenIds } = require("../events/message.js")
 
 module.exports = {
 metadata: {    permission: "ManageGuild",
@@ -63,23 +65,55 @@ async run(client, int, tools) {
     client.db.update(int.guild.id, { $set: { [`users.${user.id}.xp`]: newXP } }).then(async () => {
         int.reply(`${newXP > xp ? "⏫" : "⏬"} ${user.displayName} now has **${tools.commafy(newXP)}** XP${newLevel != level ? ` and is **level ${newLevel}**` : ""}! (previously ${tools.commafy(xp)}, ${xpDiff >= 0 ? "+" : ""}${tools.commafy(xpDiff)})`)
 
+        let pseudoMessage = {
+            id: null, content: "",
+            attachments: { size: 0 }, stickers: { size: 0 }, embeds: [],
+            author: user, member, guild: int.guild, channel: int.channel, client,
+        }
+        // pasar el registro completo (mensajes incluidos), no solo xp,
+        // para que los contadores no salgan a 0 en la tarjeta
+        let lvlUserData = { ...(currentXP || {}), xp: newXP }
+
+        // el ranking (para el TOP y para detectar adelantamientos) se lee una
+        // sola vez y ya incluye el XP nuevo (el $set de arriba ya se aplico)
+        const needLevelCard = newLevel > level && db.settings.levelUp.enabled
+        const authorIsPro = db.settings.levelUp.enabled && isProRank(member, newLevel, db.settings)
+        let boardDb = null
+        if (needLevelCard || authorIsPro) {
+            boardDb = await tools.fetchAll(int.guild.id).catch(() => null)
+        }
+
         // level up card (sin mensaje origen: la cita se omite en ese caso)
-        if (newLevel > level && db.settings.levelUp.enabled) {
+        if (needLevelCard) {
             let useMultiple = (db.settings.levelUp.multiple > 1 && (db.settings.levelUp.multipleUntil == 0 || (newLevel < db.settings.levelUp.multipleUntil)))
             if (!useMultiple || (newLevel % db.settings.levelUp.multiple == 0)) {
-                let pseudoMessage = {
-                    id: null, content: "",
-                    attachments: { size: 0 }, stickers: { size: 0 }, embeds: [],
-                    author: user, member, guild: int.guild, channel: int.channel, client,
-                }
-                // pasar el registro completo (mensajes incluidos), no solo xp,
-                // para que los contadores no salgan a 0 en la tarjeta
-                let lvlUserData = { ...(currentXP || {}), xp: newXP }
                 // todos los usuarios para poder calcular el TOP #rank
-                let allDb = await tools.fetchAll(int.guild.id).catch(() => null)
-                let lvlMessage = new LevelUpMessage(db.settings, pseudoMessage, { oldLevel: level, level: newLevel, userData: lvlUserData, allUsers: allDb?.users || null, client })
+                let lvlMessage = new LevelUpMessage(db.settings, pseudoMessage, { oldLevel: level, level: newLevel, userData: lvlUserData, allUsers: boardDb?.users || null, client })
                 lvlMessage.send()
             }
+        }
+
+        // aviso de adelantamiento (igual que en el flujo de mensajes: solo si
+        // el autor es rango Pro y ha subido puestos en la clasificacion).
+        // Tambien salta sin subir de nivel, basta con adelantar a alguien.
+        if (authorIsPro && boardDb?.users) {
+            try {
+                const newUsers = boardDb.users
+                const newEntry = newUsers[user.id] || {}
+                const oldUsers = { ...newUsers, [user.id]: { ...newEntry, xp, hidden: currentXP?.hidden ?? newEntry.hidden } }
+                const overtake = getOvertakenIds(oldUsers, newUsers, user.id, db.settings)
+                if (overtake) {
+                    const overtakeMsg = new OvertakeMessage(db.settings, pseudoMessage, {
+                        oldPos: overtake.oldPos,
+                        newPos: overtake.newPos,
+                        overtakenIds: overtake.overtakenIds,
+                        level: newLevel,
+                        userData: lvlUserData,
+                        client,
+                    })
+                    overtakeMsg.send()
+                }
+            } catch {}
         }
 }).catch((e) => {
     const msg = `Something went wrong while trying to modify XP! \`\`\`${e.message}\`\`\``;
