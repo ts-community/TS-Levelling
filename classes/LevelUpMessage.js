@@ -15,6 +15,7 @@ const {
 } = require("discord.js")
 const Tools = require("./Tools.js")
 const ranks = require("../consts/ranks.js")
+const recordsConfig = require("../config/records.js")
 const tools = Tools.global
 
 // Mismo lenguaje visual que /rank y /top. Ids copiados de rank.js / top.js.
@@ -234,9 +235,12 @@ class LevelUpMessage {
         }
         const totalMsgs = tools.commafy(tools.getMessages(this.userData))
         const monthlyMsgs = tools.commafy(tools.getMonthlyMessages(this.userData))
+        // TODO: completados reales cuando exista la lógica de récords.
+        const recordsTotal = recordsConfig.countTiers(recordsConfig.visibleRecords())
         const subLines = [
             `**${EMOJI.XP}** **Nivel ${tools.commafy(this.level)}** (${tools.commafy(xp)} XP)`,
             `**${EMOJI.MESSAGES}** ${formatMessagesLine(totalMsgs, monthlyMsgs)}`,
+            `**${recordsConfig.RECORDS_EMOJI}** **0/${recordsTotal} récords**`,
         ]
 
         const container = new ContainerBuilder().setAccentColor(accentColor)
@@ -293,9 +297,10 @@ class LevelUpMessage {
         // Sin botones: mención clicable al comando con ID del servidor
         const rankCmd = commandMention(this.client, "rank")
         const topCmd = commandMention(this.client, "top")
+        const recordsCmd = commandMention(this.client, "records")
         container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
         container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-            `-# Consulta ${rankCmd} para ver tu progreso y ${topCmd} para ver la clasificación`
+            `-# Consulta ${rankCmd} para ver tu progreso, ${topCmd} para ver la clasificación y ${recordsCmd} para ver tus records`
         ))
 
         this.container = container

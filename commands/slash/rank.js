@@ -11,6 +11,7 @@ const {
 } = require('discord.js')
 const multiplierModes = require("../../json/multiplier_modes.json")
 const ranks = require("../../consts/ranks.js")
+const recordsConfig = require("../../config/records.js")
 const path = require("path")
 
 module.exports = {
@@ -43,6 +44,8 @@ module.exports = {
         let levelData = tools.getLevel(xp, db.settings, true)
         let totalMsgs = tools.commafy(tools.getMessages(currentXP))
         let monthlyMsgs = tools.commafy(tools.getMonthlyMessages(currentXP))
+        // TODO: completados reales cuando exista la lógica de récords.
+        let recordsTotal = recordsConfig.countTiers(recordsConfig.visibleRecords())
         let maxLevel = levelData.level >= db.settings.maxLevel
 
         const levelRoles = tools.getRolesForLevel(levelData.level, db.settings.rewards)
@@ -255,6 +258,7 @@ module.exports = {
                         `## ${role.emoji} <@&${role.id}> <:top:1467967277251956887> #${userRank || "?"}`,
                         `**<:XP:1467192533812645939>** **Nivel ${levelData.level}** (${tools.commafy(xp)} XP)`,
                         `**<:messages:1467163578699354235>** ${formatMessagesLine(totalMsgs, monthlyMsgs)}`,
+                        `**${recordsConfig.RECORDS_EMOJI}** **0/${recordsTotal} records** completados`,
                         `**<:next_level:1452305752390766633>** ${tools.commafy(levelData.xpRequired - xp)} XP para subir`,
                         `**<:cooldown:1452305790495887515>** ${cooldown}`
                     ].join('\n'))
