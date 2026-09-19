@@ -17,19 +17,61 @@ function getCurrentSpanishMonth() {
     }).format(new Date())
 }
 
-// Ancho aproximado (en "unidades visuales") disponible antes de que Discord
-// parta la línea en dos en una pantalla de móvil estrecha. Es una estimación
-// -Discord no da un valor exacto y la fuente no es monoespaciada- pensada
-// para quedar con margen de sobra en la mayoría de móviles.
-const MOBILE_LINE_WIDTH = 57
-const MONTHLY_LINE_WIDTH = 53
+// Ancho visual disponible (en "unidades de carácter") antes de que Discord
+// parta la línea en dos en una pantalla de móvil estrecha. La fuente de
+// Discord NO es monoespaciada: un "1" o un "." ocupan bastante menos que un
+// "0" o una "m", así que medir con text.length elegía a veces la variante
+// larga para líneas que luego saltaban (p. ej. "109.936 msjs totales -
+// 3.240 este mes" saltaba y la casi idéntica "110.894 msjs totales -
+// 1.184 este mes" no). Por eso se pesa cada carácter y los umbrales están
+// calibrados con casos reales de este servidor. Dos líneas casi idénticas
+// ("15.577 mensajes totales - 0 este mes", cabe; "15.637 mensajes totales -
+// 11 este mes", saltaba) difieren físicamente en ~2px, así que ningún umbral
+// las separa con margen: por eso la cascada acorta primero "este mes"→"mes"
+// (casi invisible) antes que "mensajes"→"msjs", y el umbral deja medio
+// punto de aire bajo el primer caso real que saltaba.
+const MOBILE_LINE_WIDTH = 37.9
+// Umbral mensual propio: las líneas mensuales llevan números de XP grandes
+// en negrita y el medidor las infravalora un poco frente a las globales.
+// Calibrado con datos de pantalla: "87 msgs este mes - 300 XP este mes"
+// (37.45, cabe) frente a "1.185 mensajes mes - 115.080 XP mes" (37.02,
+// saltaba). El global no se toca.
+const MONTHLY_LINE_WIDTH = 36.9
 // Un emoji personalizado (<:nombre:id>) se ve como un solo icono pequeño,
-// pero como texto pesa muchísimo más que eso: lo tratamos como si ocupara
-// el ancho de 2 caracteres normales a la hora de medir.
-const CUSTOM_EMOJI_VISUAL_WIDTH = 2
+// pero como texto pesa muchísimo más que eso: se le da un ancho fijo.
+const CUSTOM_EMOJI_VISUAL_WIDTH = 1.8
+// La negrita (**...**) ensancha un poco el texto.
+const BOLD_WIDTH_FACTOR = 1.08
+
+function charWidth(ch) {
+    if (ch === " ") return 0.45
+    if (ch === "1") return 0.55
+    if (ch === "." || ch === ",") return 0.4
+    if (ch === "-") return 0.55
+    if (ch === "#") return 0.9
+    if ("ijl".includes(ch)) return 0.55
+    if ("tf".includes(ch)) return 0.7
+    if ("mw".includes(ch)) return 1.4
+    if ("MW".includes(ch)) return 1.45
+    return 1
+}
 
 function estimateVisualWidth(text) {
-    return text.replace(/<a?:\w+:\d+>/g, "*".repeat(CUSTOM_EMOJI_VISUAL_WIDTH)).length
+    let width = 0
+    for (const part of text.split(/(<a?:\w+:\d+>)/g)) {
+        if (!part) continue
+        if (/<a?:\w+:\d+>/.test(part)) {
+            width += CUSTOM_EMOJI_VISUAL_WIDTH
+            continue
+        }
+        // Tramos impares = dentro de **...** (negrita).
+        part.split("**").forEach((segment, index) => {
+            let segmentWidth = 0
+            for (const ch of segment) segmentWidth += charWidth(ch)
+            width += index % 2 === 1 ? segmentWidth * BOLD_WIDTH_FACTOR : segmentWidth
+        })
+    }
+    return width
 }
 
 // Recibe variantes del mismo texto de la más completa a la más corta y
@@ -43,6 +85,42 @@ function fitLine(...variants) {
 function fitMonthlyLine(...variants) {
     return variants.find(variant => estimateVisualWidth(variant) <= MONTHLY_LINE_WIDTH)
         ?? variants[variants.length - 1]
+}
+
+// commafy devuelve string: solo "1" es singular, el resto plural (incluido "0").
+// Se elige aquí porque fitLine mide la variante ya construida: el cambio de
+// palabra no rompe la medición.
+const isSingleMessage = n => String(n).trim() === "1"
+
+function globalMessageVariants(total, monthly) {
+    const E = "<:messages:1467163578699354235>"
+    const full = isSingleMessage(total) ? "mensaje" : "mensajes"
+    const abbr = isSingleMessage(total) ? "msj" : "msjs"
+    const tot = isSingleMessage(total) ? "total" : "totales"
+    return [
+        `-# ${E} **${total}** ${full} ${tot}  -  ${E} **${monthly}** este mes`,
+        `-# ${E} **${total}** ${full} ${tot}  -  ${E} **${monthly}** mes`,
+        `-# ${E} **${total}** ${abbr} ${tot}  -  ${E} **${monthly}** mes`,
+        `-# ${E} **${total}** ${abbr}  -  ${E} **${monthly}** mes`,
+        `-# ${E} **${total}** m  -  ${E} **${monthly}** m`,
+        `-# ${E} **${total}**  -  ${E} **${monthly}**`
+    ]
+}
+
+function monthlyMessageVariants(monthly, xp) {
+    const E = "<:messages:1467163578699354235>"
+    const X = "<:XP:1467192533812645939>"
+    const full = isSingleMessage(monthly) ? "mensaje" : "mensajes"
+    const abbr = isSingleMessage(monthly) ? "msg" : "msgs"
+    return [
+        `-# ${E} **${monthly}** ${full} este mes  -  ${X} **${xp}** XP este mes`,
+        `-# ${E} **${monthly}** ${abbr} este mes  -  ${X} **${xp}** XP este mes`,
+        `-# ${E} **${monthly}** ${full} mes  -  ${X} **${xp}** XP mes`,
+        `-# ${E} **${monthly}** ${abbr} mes  -  ${X} **${xp}** XP mes`,
+        `-# ${E} **${monthly}** ${abbr}  -  ${X} **${xp}** XP`,
+        `-# ${E} **${monthly}** m  -  ${X} **${xp}** XP`,
+        `-# ${E} **${monthly}**  -  ${X} **${xp}**`
+    ]
 }
 
 module.exports = {
@@ -157,7 +235,7 @@ async run(client, int, tools) {
             const displayName = member?.displayName || user?.globalName || user?.username
             const memberDisplay = member
                 ? `<@${userId}>`
-                : `<@${userId}>  🚪`
+                : `<@${userId}>  <:no_en_el_server:1549908584555347988>`
             const searchedMemberName = displayName || "Miembro"
             const memberMarker = isHighlighted && !isRequester
                 ? `  <:member:1467596629787021415>** ${searchedMemberName || "Miembro"}**`
@@ -167,20 +245,8 @@ async run(client, int, tools) {
             entryComponents.push(new TextDisplayBuilder().setContent([
                 `${rankRole?.emoji || "<:top:1467967277251956887>"} **#${position} - Nivel ${level} - ${memberDisplay}**${memberMarker}`,
                 monthlyMode
-                    ? fitMonthlyLine(
-                        `-# <:messages:1467163578699354235> **${monthlyMessages}** mensajes este mes  -  <:XP:1467192533812645939> **${monthlyXP}** XP este mes`,
-                        `-# <:messages:1467163578699354235> **${monthlyMessages}** msjs este mes  -  <:XP:1467192533812645939> **${monthlyXP}** XP este mes`,
-                        `-# <:messages:1467163578699354235> **${monthlyMessages}** msjs mes  -  <:XP:1467192533812645939> **${monthlyXP}** XP mes`,
-                        `-# <:messages:1467163578699354235> **${monthlyMessages}** msg  -  <:XP:1467192533812645939> **${monthlyXP}** XP`,
-                        `-# <:messages:1467163578699354235> **${monthlyMessages}**  -  <:XP:1467192533812645939> **${monthlyXP}**`
-                    )
-                    : fitLine(
-                        `-# <:messages:1467163578699354235> **${totalMessages}** mensajes totales  -  <:messages:1467163578699354235> **${monthlyMessages}** este mes`,
-                        `-# <:messages:1467163578699354235> **${totalMessages}** msjs totales  -  <:messages:1467163578699354235> **${monthlyMessages}** este mes`,
-                        `-# <:messages:1467163578699354235> **${totalMessages}** msjs totales  -  <:messages:1467163578699354235> **${monthlyMessages}** mes`,
-                        `-# <:messages:1467163578699354235> **${totalMessages}** msjs  -  <:messages:1467163578699354235> **${monthlyMessages}** mes`,
-                        `-# <:messages:1467163578699354235> **${totalMessages}**  -  <:messages:1467163578699354235> **${monthlyMessages}**`
-                    )
+                    ? fitMonthlyLine(...monthlyMessageVariants(monthlyMessages, monthlyXP))
+                    : fitLine(...globalMessageVariants(totalMessages, monthlyMessages))
             ].join("\n")))
 
             if (index < pageData.length - 1) {
@@ -310,3 +376,10 @@ async run(client, int, tools) {
     })
 
 }}
+
+// Helpers expuestos para tests/verificación (el loader solo usa .metadata).
+module.exports.estimateVisualWidth = estimateVisualWidth
+module.exports.fitLine = fitLine
+module.exports.fitMonthlyLine = fitMonthlyLine
+module.exports.globalMessageVariants = globalMessageVariants
+module.exports.monthlyMessageVariants = monthlyMessageVariants

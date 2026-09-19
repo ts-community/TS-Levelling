@@ -145,11 +145,15 @@ class OvertakeMessage {
         // mensajes con el mismo acortado que rank.js.
         function formatMessagesLine(total, monthly) {
             const maxLength = 28
-            let text = `**${total} ${total === 1 ? 'mensaje' : 'mensajes'}** (${monthly} este mes)`
+            let text = `**${total} ${Number(total) === 1 ? 'mensaje' : 'mensajes'}** (${monthly} este mes)`
             if (text.length <= maxLength) return text
-            text = `**${total} ${total === 1 ? 'msg' : 'msgs'}** (${monthly} este mes)`
+            text = `**${total} ${Number(total) === 1 ? 'msg' : 'msgs'}** (${monthly} este mes)`
             if (text.length <= maxLength) return text
-            return `**${total} ${total === 1 ? 'msg' : 'msgs'}** (${monthly} mes)`
+            text = `**${total} ${Number(total) === 1 ? 'msg' : 'msgs'}** (${monthly} mes)`
+            if (text.length <= maxLength) return text
+            text = `**${total} m** (${monthly} m)`
+            if (text.length <= maxLength) return text
+            return `**${total}** (${monthly})`
         }
         const totalMsgs = tools.commafy(tools.getMessages(this.userData))
         const monthlyMsgs = tools.commafy(tools.getMonthlyMessages(this.userData))
