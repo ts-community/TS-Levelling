@@ -240,7 +240,7 @@ class LevelUpMessage {
         const subLines = [
             `**${EMOJI.XP}** **Nivel ${tools.commafy(this.level)}** (${tools.commafy(xp)} XP)`,
             `**${EMOJI.MESSAGES}** ${formatMessagesLine(totalMsgs, monthlyMsgs)}`,
-            `**${recordsConfig.RECORDS_EMOJI}** **0/${recordsTotal} récords**`,
+            `**${recordsConfig.RECORDS_EMOJI}** **${tools.getRecordsCompleted(this.userData)}/${recordsTotal} Records** completados`,
         ]
 
         const container = new ContainerBuilder().setAccentColor(accentColor)
@@ -300,7 +300,7 @@ class LevelUpMessage {
         const recordsCmd = commandMention(this.client, "records")
         container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
         container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-            `-# Consulta ${rankCmd} para ver tu progreso, ${topCmd} para ver la clasificación y ${recordsCmd} para ver tus records`
+            `-# Consulta ${rankCmd} para ver tu progreso, ${topCmd} para ver la clasificación y ${recordsCmd} para ver tus logros`
         ))
 
         this.container = container

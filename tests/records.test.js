@@ -19,7 +19,7 @@ test("command metadata is valid", () => {
     assert.equal(command.metadata.name, "records")
     assert.ok(command.metadata.description.length > 0)
     assert.equal(typeof command.run, "function")
-    for (const fn of ["formatTier", "buildRecordBlock", "buildCategoryBlocks", "buildHiddenBlocks", "buildTitle", "buildNavButtons", "titleCounts", "buildBar", "getProgress"]) {
+    for (const fn of ["buildRecordBlock", "buildCategoryBlocks", "buildHiddenBlocks", "buildTitle", "buildCatSelect", "titleCounts", "buildBar", "getProgress"]) {
         assert.equal(typeof command[fn], "function")
     }
 })
@@ -55,10 +55,7 @@ test("records go from easiest to hardest within each category", () => {
     assert.deepEqual(order.voice, ["voice_general", "voice_all_fixed", "voice_time"])
 })
 
-test("records board uses its banner and voted color", () => {
-    const fs = require("node:fs")
-    const path = require("node:path")
-    assert.ok(fs.existsSync(path.join(__dirname, "..", "assets", "banners", "bronze.webp")))
+test("records board color and page count", () => {
     assert.equal(command.RECORDS_COLOR, 0xe6c036)
     assert.equal(command.PAGES.length, 6)
 })
@@ -89,13 +86,16 @@ test("title counts hidden only once discovered", () => {
     assert.equal(command.buildTitle(new Set()), "# <:records:1549908515399929959> Mis records (0/27)")
 })
 
-test("nav buttons show per-category progress", () => {
-    const buttons = command.buildNavButtons("mensajes", new Set()).map(b => b.toJSON())
-    assert.equal(buttons.length, 6)
-    assert.deepEqual(buttons.map(b => b.label), ["💬 Mensajes 0/8", "🔥 Constancia 0/6", "🤝 Comunidad 0/4", "📺 Canales 0/4", "🎙️ Voz 0/5", "🕵️ Ocultos 0/6"])
-    assert.deepEqual(buttons.map(b => b.custom_id), ["records-cat-mensajes", "records-cat-constancia", "records-cat-comunidad", "records-cat-channels", "records-cat-voice", "records-cat-hidden"])
-    assert.equal(buttons[0].disabled, true)
-    assert.equal(buttons.slice(1).every(b => !b.disabled), true)
+test("category select shows per-category progress", () => {
+    const select = command.buildCatSelect("mensajes", new Set()).toJSON()
+    assert.equal(select.custom_id, "records-cat")
+    assert.equal(select.options.length, 6)
+    assert.deepEqual(select.options.map(o => o.label), ["Mensajes (0/8)", "Constancia (0/6)", "Comunidad (0/4)", "Canales (0/4)", "Voz (0/5)", "Ocultos (0/6)"])
+    assert.deepEqual(select.options.map(o => o.value), ["mensajes", "constancia", "comunidad", "channels", "voice", "hidden"])
+    assert.equal(select.options[0].default, true)
+    assert.equal(select.options.slice(1).every(o => !o.default), true)
+    const disabled = command.buildCatSelect("voice", new Set(), true).toJSON()
+    assert.equal(disabled.disabled, true)
 })
 
 test("every rendered line fits on mobile", () => {
@@ -133,8 +133,8 @@ test("every rendered line fits on mobile", () => {
         checkLines(block)
     }
     // Recompensa con rol (aún sin usar): también tiene que caber.
-    const roleTier = { threshold: 10, xp: 0, name: "Prueba", desc: "Envía 10 mensajes", roleId: "1113898817469820928" }
-    checkLines(command.formatTier(roleTier, false, null, tools.commafy))
+    const roleRecord = { id: "role_test", label: "Rol prueba", emoji: "🎖️", mechanic: { type: "messages_total" }, unit: "mensajes", tiers: [{ threshold: 10, xp: 0, name: "Prueba", desc: "Envía 10 mensajes", roleId: "1113898817469820928" }] }
+    checkLines(command.buildRecordBlock(roleRecord, new Set(), null, tools.commafy))
 })
 
 test("progress bars grow with real data", () => {
@@ -171,16 +171,26 @@ test("progress bars grow with real data", () => {
     assert.equal(command.buildBar(1).match(/⬜/gu), null)
 })
 
-test("tiers show xp with emoji, desc plain and no locks when pending", () => {
+test("record block shows only the current tier with real progress", () => {
     const { record } = records.allRecords().find(({ record }) => record.id === "messages")
-    const locked = command.formatTier(record.tiers[0], false, null, tools.commafy)
+    const commafy = tools.commafy
+    const locked = command.buildRecordBlock(record, new Set(), command.getProgress(record, { messages: 7 }, null, commafy), commafy)
     assert.ok(!locked.includes("🔒"), "sobran candados")
-    assert.ok(locked.startsWith("**Primeros pasos**"))
+    assert.ok(locked.startsWith(`${record.emoji} **Mensajes** — 0/5`))
     const lines = locked.split("\n")
-    assert.equal(lines[1], "Envía 10 mensajes")
-    assert.ok(lines[2].startsWith("-# **Recompensa:** <:XP:1467192533812645939> +250"))
-    const unlocked = command.formatTier(record.tiers[0], true, null, tools.commafy)
-    assert.ok(unlocked.startsWith("✅ "))
+    assert.equal(lines[1], "**Primeros pasos**")
+    assert.equal(lines[2], "Envía 10 mensajes")
+    assert.ok(lines[3].startsWith("-# 🟩🟩🟩🟩🟩🟩🟩"))
+    assert.ok(lines[4].startsWith("-# **Recompensa:** <:XP:1467192533812645939> +250"))
+
+    // Con más mensajes salta a su siguiente objetivo y el contador avanza.
+    const next = command.buildRecordBlock(record, new Set(), command.getProgress(record, { messages: 150 }, null, commafy), commafy)
+    assert.ok(next.startsWith(`${record.emoji} **Mensajes** — 2/5`))
+    assert.ok(next.includes("**Charlatán**"))
+
+    // Superado todo el catálogo: ✅ y el último nivel.
+    const done = command.buildRecordBlock(record, new Set(), command.getProgress(record, { messages: 99999 }, null, commafy), commafy)
+    assert.ok(done.includes("✅ **Leyenda del chat**"))
 })
 
 test("hidden tiers never leak into the visible list", () => {

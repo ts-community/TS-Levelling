@@ -3,6 +3,7 @@ const assert = require("node:assert/strict")
 
 const Tools = require("../classes/Tools.js")
 const tools = new Tools()
+const recordsConfig = require("../config/records.js")
 
 const settings = {
     maxLevel: 1000,
@@ -183,4 +184,64 @@ test("getLevel binary search matches the reference across many curves and xp val
             }
         }
     }
+})
+
+function fakeClient() {
+    const docs = {}
+    const apply = (doc, data) => {
+        for (const [operator, values] of Object.entries(data)) {
+            if (operator !== "$set") continue
+            for (const [path, value] of Object.entries(values)) {
+                const parts = path.split(".")
+                let node = doc
+                for (let i = 0; i < parts.length - 1; i++) {
+                    node = node[parts[i]] ??= {}
+                }
+                node[parts[parts.length - 1]] = value
+            }
+        }
+    }
+    return {
+        docs,
+        db: {
+            fetch: async id => docs[id],
+            update: (id, data) => ({
+                exec: async () => { docs[id] ??= {}; apply(docs[id], data); return docs[id] }
+            })
+        }
+    }
+}
+
+test("getRecordsCompleted counts only visible completed records", () => {
+    assert.equal(tools.getRecordsCompleted(undefined), 0)
+    assert.equal(tools.getRecordsCompleted({}), 0)
+    assert.equal(tools.getRecordsCompleted({ records: {} }), 0)
+
+    const record = recordsConfig.allRecords().find(x => !x.record.hidden).record
+    const tier = record.tiers[0]
+    const userData = { records: { [`${record.id}:${tier.threshold}`]: true } }
+    assert.equal(tools.getRecordsCompleted(userData), 1)
+})
+
+test("unlockRecord lazily creates the records field in the db", async () => {
+    const fake = fakeClient()
+    const t = new Tools(fake, {})
+
+    const record = recordsConfig.allRecords().find(x => !x.record.hidden).record
+    const tier = record.tiers[0]
+
+    const first = await t.unlockRecord("guild", "user", record.id, tier.threshold)
+    assert.equal(first, true, "first unlock should return true")
+    assert.equal(fake.docs["guild"].users.user.records[`${record.id}:${tier.threshold}`], true)
+
+    const second = await t.unlockRecord("guild", "user", record.id, tier.threshold)
+    assert.equal(second, false, "already unlocked should return false")
+})
+
+test("unlockRecord rejects unknown records and tiers", async () => {
+    const t = new Tools(fakeClient(), {})
+    assert.equal(await t.unlockRecord("guild", "user", "does-not-exist", 1), false)
+
+    const record = recordsConfig.allRecords()[0].record
+    assert.equal(await t.unlockRecord("guild", "user", record.id, -1), false)
 })
