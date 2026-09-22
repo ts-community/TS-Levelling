@@ -1,4 +1,5 @@
 const config = require('../config.json')
+const recordsConfig = require('../config/records.js')
 const Discord = require('discord.js')
 
 // this class contains all sorts of misc functions used around the bot
@@ -90,6 +91,40 @@ class Tools {
 
         this.getMonthlyXP = function(userData) {
             return userData?.monthlyXP || 0
+        }
+
+        // cuenta cuántos récords completos tiene el usuario
+        this.getRecordsCompleted = function(userData) {
+            if (!userData?.records) return 0
+            let count = 0
+            // recorremos todos los récords visibles y cuentan los tiers completados
+            const allRecords = recordsConfig.allRecords()
+            for (const { record } of allRecords) {
+                if (record.hidden) continue // solo cuentas los visibles en este conteo básico
+                for (const tier of record.tiers) {
+                    const key = `${record.id}:${tier.threshold}`
+                    if (userData.records[key]) count++
+                }
+            }
+            return count
+        }
+
+        // marca como completado un nivel (tier) de un logro. Crea users.<id>.records
+        // en la DB la primera vez (lazy create), por eso no hace falta migración ni backfill.
+        // Devuelve true solo si acaba de desbloquearse (útil para entregar recompensas después).
+        this.unlockRecord = async function(guildID, userID, recordID, threshold) {
+            const found = recordsConfig.allRecords().find(x => x.record.id === recordID)
+            const tier = found?.record.tiers.find(t => t.threshold === threshold)
+            if (!tier) return false
+
+            const key = `${recordID}:${threshold}`
+            const data = await client.db.fetch(guildID)
+            if (data?.users?.[userID]?.records?.[key]) return false
+
+            await client.db.update(guildID, {
+                $set: { [`users.${userID}.records.${key}`]: true }
+            }).exec()
+            return true
         }
 
         // calculate xp to reach a level

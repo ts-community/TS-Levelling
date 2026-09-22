@@ -130,7 +130,7 @@ Object.entries(settings).forEach(x => {
 
 const schema = { 
     _id: String,
-    users: { type: Object }, // xp, cooldown, hidden. should be validated but it just slows things down
+    users: { type: Object }, // xp, cooldown, hidden, records { "<recordId>:<threshold>": true }, + progreso de records: streak {current,lastDay}, reactionsSent, channels (set), countingSent, voiceJoined, voiceMinutes
     settings: settingsObj,
     info: {
         lastUpdate: { type: Number, default: 0 },

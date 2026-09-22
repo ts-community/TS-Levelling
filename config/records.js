@@ -19,12 +19,27 @@
 const RECORDS_EMOJI = "<:records:1549908515399929959>"
 const MESSAGES_EMOJI = "<:messages:1467163578699354235>"
 
-// Catálogo de mecánicas (para la futura lógica de completado):
-// messages_total, messages_monthly, streak_days, reactions_sent,
-// member_tenure, talk_to_user, distinct_channels, counting_numbers,
-// voice_minutes, voice_join_channel, voice_join_all_fixed,
-// starboard_featured, message_reactions, night_message, hidden_command,
-// web_easter_egg, secret_phrase
+// Catálogo de mecánicas (para la futura lógica de completado) y QUÉ estadística
+// de DB necesita cada una para saber si se alcanza. La clave <recordId>:<threshold>
+// en userData.records solo es el flag "completado"; el progreso vive en users.<id>:
+//
+//   messages_total        -> messages            (ya se guarda en message.js)
+//   messages_monthly      -> monthlyMessages     (ya se guarda)
+//   member_tenure         -> member.joinedAt     (sin DB)
+//   streak_days           -> streak = { current, lastDay }  (día en TZ del servidor)
+//   reactions_sent        -> reactionsSent       (contador total de reacciones enviadas)
+//   talk_to_user          -> flag en records     (evento: la IA responde)
+//   distinct_channels     -> channels            (set de channelIds donde ha escrito)
+//   counting_numbers      -> countingSent        (o contador por canal en channels)
+//   voice_minutes         -> voiceMinutes        (minutos acumulados, sin AFK/solo/eventos)
+//   voice_join_channel    -> voiceJoined         (set de fijos a los que ha entrado)
+//   voice_join_all_fixed  -> voiceJoined         (mismo set: al completar los 5)
+//   starboard_featured    -> flag en records     (evento: entra al starboard)
+//   message_reactions     -> flag en records     (evento: un mensaje llega a count)
+//   night_message         -> flag en records     (evento: mensaje en franja)
+//   hidden_command        -> flag en records     (evento: usa el comando)
+//   web_easter_egg        -> flag en records     (evento: encuentra el easter egg)
+//   secret_phrase         -> flag en records     (evento: escribe la frase)
 
 const categories = [
     {

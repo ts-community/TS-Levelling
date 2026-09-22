@@ -1,25 +1,19 @@
-const path = require("path")
-const fs = require("fs")
 const {
     ActionRowBuilder,
-    AttachmentBuilder,
-    ButtonBuilder,
-    ButtonStyle,
     ContainerBuilder,
     MessageFlags,
     TextDisplayBuilder,
     SeparatorBuilder,
     SeparatorSpacingSize,
+    StringSelectMenuBuilder,
+    StringSelectMenuOptionBuilder,
     ThumbnailBuilder,
     SectionBuilder,
-    MediaGalleryBuilder,
-    MediaGalleryItemBuilder,
 } = require("discord.js")
 const records = require("../../config/records.js")
 
 const XP_EMOJI = "<:XP:1467192533812645939>"
 const RECORDS_COLOR = 0xe6c036
-const BANNER_FILE = "bronze.webp"
 const BAR_SIZE = 10
 const BAR_FULL = "🟩"
 const BAR_EMPTY = "⬜"
@@ -48,6 +42,8 @@ function makeProgress(current, tiers, fmt) {
         frac: full ? 1 : current / tier.threshold,
         currentLabel: fmt(shown),
         targetLabel: fmt(tier.threshold),
+        full,
+        completed: tiers.filter(t => t.threshold <= current).length,
     }
 }
 
@@ -92,25 +88,38 @@ function formatReward(tier, commafy) {
     return rewards.join(" + ")
 }
 
-function formatTier(tier, unlocked, progress, commafy) {
-    const lines = [`${unlocked ? "✅ " : ""}**${tier.name}**`, tier.desc]
-    if (progress && progress.tier === tier && !unlocked) {
-        lines.push(`-# ${buildBar(progress.frac)} ${progress.currentLabel}/${progress.targetLabel}`)
-    }
-    lines.push(`-# **Recompensa:** ${formatReward(tier, commafy)}`)
-    return lines.join("\n")
-}
-
-// Un bloque por logro: cabecera con emoji + sus niveles. Van con
-// separadores entre ellos, como campos de embed.
+// Un bloque por logro: cabecera con emoji + contador de niveles completados
+// + SOLO el nivel actual (el siguiente a desbloquear) con su progreso real.
+// Así no se repiten niveles parecidos tipo "Envía X mensajes" y cabe todo
+// el catálogo en una página sin scroll excesivo.
 function buildRecordBlock(record, unlockedIds, progress, commafy) {
-    const parts = [`${record.emoji} **${record.label}**`]
-    for (const tier of record.tiers) {
-        const key = `${record.id}:${tier.threshold}`
-        const unlocked = unlockedIds.has(key)
-        parts.push(formatTier(tier, unlocked, progress && progress.tier === tier && !unlocked ? progress : null, commafy))
+    const tiers = record.tiers
+    const total = tiers.length
+    let completed
+    let currentTier
+    if (progress) {
+        if (progress.full) {
+            completed = total
+            currentTier = tiers[total - 1]
+        } else {
+            completed = progress.completed
+            currentTier = progress.tier
+        }
+    } else {
+        completed = tiers.filter(t => unlockedIds.has(`${record.id}:${t.threshold}`)).length
+        currentTier = tiers[Math.min(completed, total - 1)]
     }
-    return parts.join("\n\n")
+    const allDone = completed >= total
+
+    const lines = [`${record.emoji} **${record.label}** — ${completed}/${total}`]
+    lines.push(`${allDone ? "✅ " : ""}**${currentTier.name}**`)
+    lines.push(currentTier.desc)
+    if (progress && progress.tier === currentTier && !allDone) {
+        const unit = record.unit ? ` ${record.unit}` : ""
+        lines.push(`-# ${buildBar(progress.frac)} ${progress.currentLabel}/${progress.targetLabel}${unit}`)
+    }
+    lines.push(`-# **Recompensa:** ${formatReward(currentTier, commafy)}`)
+    return lines.join("\n")
 }
 
 function buildCategoryBlocks(category, userData, member, unlockedIds, commafy) {
@@ -134,30 +143,22 @@ function buildHiddenBlocks(hiddenCategory, unlockedIds, commafy) {
     return blocks
 }
 
-// Un botón por categoría, con sus completados. El actual va desactivado.
-// Son 6: se reparten en 2 filas de 3.
-function buildNavButtons(currentId, unlockedIds, disabled = false) {
-    return records.categories.map(category => {
-        const total = category.records.reduce((sum, r) => sum + r.tiers.length, 0)
-        const done = category.records.reduce((sum, r) => sum + r.tiers.filter(t => unlockedIds.has(`${r.id}:${t.threshold}`)).length, 0)
-        const isCurrent = category.id === currentId
-        return new ButtonBuilder()
-            .setCustomId(`records-cat-${category.id}`)
-            .setLabel(`${category.emoji} ${category.name} ${done}/${total}`)
-            .setStyle(isCurrent ? ButtonStyle.Primary : ButtonStyle.Secondary)
-            .setDisabled(disabled || isCurrent)
-    })
-}
-
-function loadBanner() {
-    try {
-        const bannerPath = path.join(__dirname, "../../assets/banners/", BANNER_FILE)
-        if (fs.existsSync(bannerPath)) {
-            const attachment = new AttachmentBuilder(bannerPath, { name: BANNER_FILE })
-            return { attachment, files: [attachment] }
-        }
-    } catch {}
-    return { attachment: null, files: [] }
+// Un menú desplegable por categoría, con sus completados. El actual queda
+// marcado como seleccionado por defecto.
+function buildCatSelect(currentId, unlockedIds, disabled = false) {
+    return new StringSelectMenuBuilder()
+        .setCustomId("records-cat")
+        .setPlaceholder("Elige una categoría")
+        .setDisabled(disabled)
+        .addOptions(records.categories.map(category => {
+            const total = category.records.reduce((sum, r) => sum + r.tiers.length, 0)
+            const done = category.records.reduce((sum, r) => sum + r.tiers.filter(t => unlockedIds.has(`${r.id}:${t.threshold}`)).length, 0)
+            return new StringSelectMenuOptionBuilder()
+                .setLabel(`${category.name} (${done}/${total})`)
+                .setValue(category.id)
+                .setEmoji(category.emoji)
+                .setDefault(category.id === currentId)
+        }))
 }
 
 module.exports = {
@@ -177,24 +178,10 @@ async run(client, int, tools) {
     const userData = db.users?.[int.user.id] || {}
     const totalPages = PAGES.length
     let pageNumber = 1
-    const { files } = loadBanner()
 
     const buildContainer = (page, member, disabled = false) => {
         const category = records.categories.find(c => c.id === PAGES[page - 1])
         const container = new ContainerBuilder().setAccentColor(RECORDS_COLOR)
-
-        if (files.length) {
-            container.addMediaGalleryComponents([
-                new MediaGalleryBuilder()
-                    .setId(1)
-                    .addItems([
-                        new MediaGalleryItemBuilder()
-                            .setURL(`attachment://${BANNER_FILE}`)
-                            .setDescription("Récords")
-                    ])
-            ])
-            container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
-        }
 
         const avatar = member?.displayAvatarURL?.()
         const title = new TextDisplayBuilder().setContent(buildTitle(unlockedIds))
@@ -214,10 +201,8 @@ async run(client, int, tools) {
             container.addTextDisplayComponents(new TextDisplayBuilder().setContent(block))
         }
 
-        const buttons = buildNavButtons(category.id, unlockedIds, disabled)
-        for (let i = 0; i < buttons.length; i += 3) {
-            container.addActionRowComponents(new ActionRowBuilder().addComponents(buttons.slice(i, i + 3)))
-        }
+        container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+        container.addActionRowComponents(new ActionRowBuilder().addComponents(buildCatSelect(category.id, unlockedIds, disabled)))
         return container
     }
 
@@ -228,7 +213,6 @@ async run(client, int, tools) {
     const sendPage = async (page, editor, member, disabled = false) => {
         await editor.editReply({
             components: [buildContainer(page, member, disabled)],
-            files,
             flags: MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications,
             allowedMentions: noPings,
         })
@@ -239,15 +223,16 @@ async run(client, int, tools) {
 
     let buttonPressed = false
     const collector = message.createMessageComponentCollector({ time: 24 * 60 * 60 * 1000 })
-    collector.on("collect", async button => {
-        if (button.user.id !== int.user.id) return tools.buttonReply(button)
+    collector.on("collect", async interaction => {
+        if (interaction.user.id !== int.user.id) return tools.buttonReply(interaction)
+        if (!interaction.isStringSelectMenu()) return tools.buttonReply(interaction)
         if (buttonPressed) return
         buttonPressed = true
         try {
-            await button.deferUpdate()
-            const target = PAGES.indexOf(button.customId.replace("records-cat-", ""))
+            await interaction.deferUpdate()
+            const target = PAGES.indexOf(interaction.values?.[0])
             if (target !== -1) pageNumber = target + 1
-            await sendPage(pageNumber, button, button.member)
+            await sendPage(pageNumber, interaction, interaction.member)
         } catch (error) {
             console.warn(`Could not update records board for ${int.guild?.id}:`, error.message)
         } finally {
@@ -258,7 +243,6 @@ async run(client, int, tools) {
         try {
             await message.edit({
                 components: [buildContainer(pageNumber, int.member, true)],
-                files,
                 flags: MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications,
                 allowedMentions: noPings,
             })
@@ -272,11 +256,9 @@ module.exports.getProgress = getProgress
 module.exports.titleCounts = titleCounts
 module.exports.buildTitle = buildTitle
 module.exports.formatReward = formatReward
-module.exports.formatTier = formatTier
 module.exports.buildRecordBlock = buildRecordBlock
 module.exports.buildCategoryBlocks = buildCategoryBlocks
 module.exports.buildHiddenBlocks = buildHiddenBlocks
-module.exports.buildNavButtons = buildNavButtons
-module.exports.loadBanner = loadBanner
+module.exports.buildCatSelect = buildCatSelect
 module.exports.RECORDS_COLOR = RECORDS_COLOR
 module.exports.PAGES = PAGES
