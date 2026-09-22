@@ -56,7 +56,7 @@
             <p>Recompensas</p>
         </div>
 
-        <div tabindex="0" category="levelup" class="category" title="Envía un mensaje personalizable cuando un miembro sube de nivel o alcanza un hito.">
+        <div tabindex="0" category="levelup" class="category" title="Envía un mensaje cuando alguien sube de nivel o alcanza un hito.">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4.5V17H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path></svg>
             <p>Mensajes</p>
         </div>
@@ -143,7 +143,7 @@
                 <div style="overflow: hidden">
                     <h2 cat="name"></h2>
                     <p cat="info" class="details" style="height: 56px"></p>
-                    <p cat="extra" style="white-space: nowrap"></p>
+                    <p cat="extra" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis"></p>
                 </div>
             </div>
         </div>
@@ -1207,7 +1207,7 @@
             $('p[cat="extra"][category="multipliers"]').text(`${addEs(data["multipliers.roles"].length, "rol", "roles")}, ${addEs(data["multipliers.channels"].length, "canal", "canales")}`)
             $('p[cat="extra"][category="rankcard"]').text(`${data["rankCard.disabled"] ? "Desactivada" : data["rankCard.ephemeral"] ? "Invisible" : "¡Activada!"}`)
             $('p[cat="extra"][category="leaderboard"]').text(`${data["leaderboard.disabled"] ? "Desactivada" : data["leaderboard.private"] ? "Privada" : "¡Activada!"}${data["leaderboard.maxEntries"] ? ` (máx. ${commafy(data["leaderboard.maxEntries"])})` : ""}`)
-            $('p[cat="extra"][category="data"]').text(`Guardado por última vez: ${lastUpdated ? `${new Date(lastUpdated).toLocaleString([], {year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'})}` : "Nunca"}`)
+            $('p[cat="extra"][category="data"]').text(`Últ. guardado: ${lastUpdated ? `${new Date(lastUpdated).toLocaleString([], {year: '2-digit', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'})}` : "Nunca"}`)
             $('#mainlbbutton').toggle(!data['leaderboard.disabled'])
         }
 
