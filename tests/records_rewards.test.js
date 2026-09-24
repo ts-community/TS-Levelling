@@ -174,10 +174,10 @@ test("unlock agrupa tiers del mismo record: último nombre (+N), sin ✅", () =>
     const msg = new RecordUnlockMessage({
         client: null, userId: "u1", avatarUrl: "",
         unlocks: [
-            { record: byId.messages, category: catOf("messages"), tier: byId.messages.tiers[0], done: 3, total: 5, totalCompleted: 3, totalVisible: 28 },
+            { record: byId.messages, category: catOf("messages"), tier: byId.messages.tiers[0], done: 3, total: 5, totalCompleted: 3, totalVisible: 9 },
             { record: byId.messages, category: catOf("messages"), tier: byId.messages.tiers[1], done: 3, total: 5, totalCompleted: 3, totalVisible: 28 },
-            { record: byId.messages, category: catOf("messages"), tier: byId.messages.tiers[2], done: 3, total: 5, totalCompleted: 3, totalVisible: 28 },
-            { record: byId.streak, category: catOf("streak"), tier: byId.streak.tiers[0], done: 1, total: 3, totalCompleted: 3, totalVisible: 28 },
+            { record: byId.messages, category: catOf("messages"), tier: byId.messages.tiers[2], done: 3, total: 5, totalCompleted: 10, totalVisible: 40 },
+            { record: byId.streak, category: catOf("streak"), tier: byId.streak.tiers[0], done: 1, total: 3, totalCompleted: 10, totalVisible: 40 },
         ],
     })
     const json = JSON.stringify(msg.msg.components.map(c => c.toJSON()))
@@ -186,7 +186,7 @@ test("unlock agrupa tiers del mismo record: último nombre (+N), sin ✅", () =>
     assert.ok(!json.includes("Primeros pasos"), "no lista cada tier")
     assert.ok(!json.includes("✅"), "sin tick verde")
     // Título estilo /rank con ## y totales del usuario.
-    assert.ok(json.includes("##") && json.includes("3/28 records"), "título con totales")
+    assert.ok(json.includes("##") && json.includes("10/40 records"), "título con los totales más recientes del lote")
     // Línea de categoría (no nombre del record).
     assert.ok(json.includes("Actividad"), "categoría en la línea de recompensa")
     assert.ok(json.includes("¡4 récords nuevos!"), "mención en plural")

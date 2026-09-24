@@ -120,7 +120,7 @@ app.get("/easteregg", async function(req, res) {
     const [user, guilds] = await getDiscordInfo(req)
     const guildId = resolveServerId({ guildId: req.query.guild || req.query.server || req.query.guildId, guilds })
 
-    function renderPage({ title, message, status = "info", showConfetti = false }) {
+    function renderPage({ title, message, status = "info", showConfetti = false, actionHref = "/servers", actionLabel = "Volver al dashboard" }) {
         return `
             <!DOCTYPE html>
             <html lang="es">
@@ -273,7 +273,7 @@ app.get("/easteregg", async function(req, res) {
                     <h1>${title}</h1>
                     <p>${message}</p>
                     <div class="actions">
-                        <a href="/servers">Volver al dashboard</a>
+                        <a href="${actionHref}">${actionLabel}</a>
                     </div>
                 </div>
 
@@ -347,10 +347,12 @@ app.get("/easteregg", async function(req, res) {
 
     if (!user) {
         return res.status(401).send(renderPage({
-            title: "Easter egg",
-            message: "Haz login con Discord para registrar este logro en el servidor.",
+            title: "Inicia sesión para reclamarlo",
+            message: "Necesitas iniciar sesión con Discord para reclamar este logro.",
             status: "info",
             showConfetti: false,
+            actionHref: "/discord",
+            actionLabel: "Iniciar sesión",
         }));
     }
 

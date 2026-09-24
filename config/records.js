@@ -168,9 +168,9 @@ const categories = [
                 mechanic: { type: "member_tenure", unit: "years" },
                 unit: "años", unitOne: "año", suffix: "en el servidor",
                 tiers: [
-                    { threshold: 1, xp: 10000, name: "Miembro veterano", desc: "Lleva 1 año en el servidor." },
-                    { threshold: 2, xp: 30000, name: "Parte de la historia", desc: "Lleva 2 años en el servidor." },
-                    { threshold: 3, xp: 75000, name: "Institución", desc: "Lleva 3 años en el servidor." },
+                    { threshold: 1, xp: 10000, name: "Miembro veterano", desc: "En la comunidad desde hace 1 año." },
+                    { threshold: 2, xp: 30000, name: "Parte de la historia", desc: "En la comunidad desde hace 2 años." },
+                    { threshold: 3, xp: 75000, name: "Institución", desc: "En la comunidad desde hace 3 años." },
                 ]
             },
         ]

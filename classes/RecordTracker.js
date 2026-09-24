@@ -300,26 +300,6 @@ async function grantRecord(client, guild, guildId, userId, recordId, threshold) 
         } catch {}
     }
 
-    if (settings?.levelUp?.enabled && after?.users && member && isProRank(member, newLevel, settings)) {
-        try {
-            const newUsers = after.users
-            const newEntry = newUsers[String(userId)] || {}
-            const oldUsers = { ...newUsers, [String(userId)]: { ...newEntry, xp: oldXP, hidden: beforeUser.hidden ?? newEntry.hidden } }
-            const overtake = getOvertakenIds(oldUsers, newUsers, String(userId), settings)
-            if (overtake) {
-                const overtakeMsg = new OvertakeMessage(settings, pseudoMessage, {
-                    oldPos: overtake.oldPos,
-                    newPos: overtake.newPos,
-                    overtakenIds: overtake.overtakenIds,
-                    level: newLevel,
-                    userData: leveledUserData,
-                    client,
-                })
-                await overtakeMsg.send()
-            }
-        } catch {}
-    }
-
     return {
         record: found.record,
         category: found.category,
@@ -426,6 +406,8 @@ async function sendBatchedUnlocks({ client, userId, avatarUrl, unlocks }) {
             tier: u.tier,
             done: u.done,
             total: u.total,
+            totalCompleted: u.totalCompleted,
+            totalVisible: u.totalVisible,
         })),
     })
     await unlockMsg.send(channel).catch(() => {})

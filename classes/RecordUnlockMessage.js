@@ -78,35 +78,16 @@ class RecordUnlockMessage {
         const container = new ContainerBuilder().setAccentColor(accentColor)
 
         // Título estilo /rank con ## + totales globales del usuario.
-        const first = unlocks[0]
+        // El último desbloqueo contiene el estado global más reciente del lote.
+        const first = unlocks[unlocks.length - 1]
         const totalCompleted = first.totalCompleted ?? unlocks.length
         const totalVisible = first.totalVisible ?? unlocks.reduce((sum, u) => sum + u.total, 0)
         const firstRecordName = recordsArray[0]?.record?.label || "Logro"
         const titleLine = `## ${RECORDS_EMOJI} **¡Nuevo récord!** • **${firstRecordName}** • **${totalCompleted}/${totalVisible} records**`
 
-        // Header section con avatar
-        if (avatarUrl) {
-            container.addSectionComponents(new SectionBuilder()
-                .addTextDisplayComponents(new TextDisplayBuilder().setContent(titleLine))
-                .setThumbnailAccessory(new ThumbnailBuilder({ media: { url: avatarUrl } })))
-        } else {
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(titleLine))
-        }
-
-        // Bloques por record (SOLO los que se acaban de desbloquear).
-        // Si son varios tiers del mismo record: solo el nombre del último + (+N).
-        let isFirstRecord = true
-        for (const { record, category, tiers, total, done } of recordsArray) {
-            // Ordenar tiers por threshold
+        const renderRecord = ({ record, category, tiers, total, done }) => {
             tiers.sort((a, b) => a.threshold - b.threshold)
             const lastTier = tiers[tiers.length - 1]
-
-            if (!isFirstRecord) {
-                // Separator entre récords
-                container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
-            }
-            isFirstRecord = false
-
             const catEmoji = category.emoji || ""
             const namePart = tiers.length > 1 ? `**${lastTier.name}** (+${tiers.length})` : `**${lastTier.name}**`
             const tierXp = tiers.reduce((sum, t) => sum + (t.xp || 0), 0)
@@ -116,13 +97,30 @@ class RecordUnlockMessage {
             if (tierXp > 0) rewards.push(`${XP_EMOJI} **+${tierXp} XP**`)
             if (tierRoles) rewards.push(tierRoles)
 
-            const lines = [
+            return [
                 `${record.emoji} ${namePart} — ${done}/${total} niveles`,
                 `> ${lastTier.desc}`,
                 rewards.length ? `-# ${catEmoji} ${category.name} — ${rewards.join(" + ")}` : `-# ${catEmoji} ${category.name}`,
-            ]
+            ].join("\n")
+        }
 
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(lines.join("\n")))
+        // Header y primer récord comparten el mismo TextDisplay para evitar
+        // el espacio vertical extra entre ambos componentes.
+        const firstRecordText = renderRecord(recordsArray[0])
+        if (avatarUrl) {
+            container.addSectionComponents(new SectionBuilder()
+                .addTextDisplayComponents(new TextDisplayBuilder().setContent(`${titleLine}\n${firstRecordText}`))
+                .setThumbnailAccessory(new ThumbnailBuilder({ media: { url: avatarUrl } })))
+        } else {
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(`${titleLine}\n${firstRecordText}`))
+        }
+
+        // Bloques por record (SOLO los que se acaban de desbloquear).
+        // Si son varios tiers del mismo record: solo el nombre del último + (+N).
+        for (const recordData of recordsArray.slice(1)) {
+            // Ordenar tiers por threshold
+            container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(renderRecord(recordData)))
         }
 
         // Separator antes del pie
