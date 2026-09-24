@@ -148,10 +148,11 @@ function makeMember({ id = "u1", roles = [] } = {}) {
     }
 }
 
-function makeMessage({ member, guildId = "g1" } = {}) {
+function makeMessage({ member, guildId = "g1", channelId = "c1" } = {}) {
     const guildRoles = [{ id: "r_reward", name: "Reward" }]
     return {
         id: "m1",
+        channelId,
         author: { id: member.id, bot: false, username: "tester", discriminator: "0001", displayName: "User" },
         guild: {
             id: guildId,
@@ -161,7 +162,7 @@ function makeMessage({ member, guildId = "g1" } = {}) {
             memberCount: 5
         },
         member,
-        channel: { id: "c1", name: "general", isThread: () => false, parent: null }
+        channel: { id: channelId, name: "general", isThread: () => false, parent: null }
     }
 }
 
@@ -171,7 +172,7 @@ async function flush() {
     await new Promise(resolve => setImmediate(resolve))
 }
 
-function makeHarness(dbOverrides = {}, toolOpts = {}) {
+function makeHarness(dbOverrides = {}, toolOpts = {}, messageOptions = {}) {
     const db = createFakeDb(dbOverrides)
     const tools = makeTools(db, toolOpts)
     const maintenanceCalls = []
@@ -180,7 +181,7 @@ function makeHarness(dbOverrides = {}, toolOpts = {}) {
         monthlyMaintenance: async (guild, knownServer) => { maintenanceCalls.push({ guild, knownServer }) }
     }
     const member = makeMember({ roles: toolOpts.memberRoles || [] })
-    const message = makeMessage({ member })
+    const message = makeMessage({ member, ...messageOptions })
     return {
         db,
         tools,
@@ -215,6 +216,12 @@ test("message flow: first message grants xp and bumps counters", async () => {
     assert.equal(user.monthlyXP, 100)
     assert.equal(user.cooldown, NOW + 60 * 1000)
     assert.equal(user.hidden, false)
+})
+
+test("message flow: economy channel grants participation record", async () => {
+    const h = makeHarness({}, {}, { channelId: "1532157047674638478" })
+    await h.run()
+    assert.equal(h.db.doc.users.u1.records["economy_participation:1"], true)
 })
 
 test("message flow: maintenance receives the full server document", async () => {

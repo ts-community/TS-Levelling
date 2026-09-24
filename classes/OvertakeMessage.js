@@ -135,7 +135,7 @@ class OvertakeMessage {
         const topTag = ` ${EMOJI.TOP} #${this.newPos}`
         const titleLine = `## 🎉 ¡Adelantamiento!${topTag}`
         // Linea del adelantado: sin TOP (ya va en el titulo), solo el primero
-        // con (+N más) y contexto corto para que quepa en una linea en movil.
+        // con (+N) y contexto corto para que quepa en una linea en movil.
         // El primero es el de mas arriba en el ranking (el rival mas alto).
         const firstOvertaken = this.overtakenIds[0]
         const innerExtra = this.overtakenIds.length > 1 ? ` (+${this.overtakenIds.length - 1})` : ""
@@ -217,10 +217,9 @@ class OvertakeMessage {
         // Sin botones: mención clicable al comando con ID del servidor
         const rankCmd = commandMention(this.client, "rank")
         const topCmd = commandMention(this.client, "top")
-        const recordsCmd = commandMention(this.client, "records")
         container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
         container.addTextDisplayComponents(new TextDisplayBuilder().setContent(
-            `-# Consulta ${rankCmd} para ver tu progreso, ${topCmd} para ver la clasificación y ${recordsCmd} para ver tus logros`
+            `-# Consulta ${rankCmd} para ver tu progreso y ${topCmd} para ver la clasificación`
         ))
 
         this.container = container

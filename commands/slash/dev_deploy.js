@@ -115,7 +115,7 @@ async run(client, int, tools) {
             if (int) int.reply(`**${!undeploy ? `${interactionList.length} global commands registered!` : "Global commands cleared!"}** (Wait a bit, or refresh with Ctrl+R to see changes)`)
             else console.info("Global commands registered!") 
             client.shard.broadcastEval(cl => { cl.application.commands.fetch(); return }) // cache new slash commands
-        }).catch(e => console.error(`Error deploying global commands to ${id}: ${e.message}`));
+        }).catch(e => console.error(`Error deploying global commands: ${e.message}`));
     }
 
     else {

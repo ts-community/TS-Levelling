@@ -258,7 +258,7 @@ module.exports = {
                         `## ${role.emoji} <@&${role.id}> <:top:1467967277251956887> #${userRank || "?"}`,
                         `**<:XP:1467192533812645939>** **Nivel ${levelData.level}** (${tools.commafy(xp)} XP)`,
                         `**<:messages:1467163578699354235>** ${formatMessagesLine(totalMsgs, monthlyMsgs)}`,
-                        `**${recordsConfig.RECORDS_EMOJI}** **1${tools.getRecordsCompleted(currentXP)}/${recordsTotal} Records** completados`,
+                        `**${recordsConfig.RECORDS_EMOJI}** **${tools.getRecordsCompleted(currentXP)}/${recordsTotal} Records** completados`,
                         `**<:next_level:1452305752390766633>** ${tools.commafy(levelData.xpRequired - xp)} XP para subir`,
                         `**<:cooldown:1452305790495887515>** ${cooldown}`
                     ].join('\n'))

@@ -69,6 +69,9 @@
 
     <div id="everything" style="display: none">
 
+    <button id="secretEasterTrigger" type="button" aria-label="Easter egg" title="¿Qué es esto?" style="position: fixed; right: 14px; bottom: 12px; width: 16px; height: 16px; border: 1px solid rgba(255,255,255,0.14); border-radius: 50%; background: radial-gradient(circle, rgba(135,243,255,0.8), rgba(135,243,255,0.1)); opacity: 0.08; cursor: pointer; z-index: 40; transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;">
+    </button>
+
     <div class="lbLayout">
         <div class="lbSidebar">
         <div class="lbSidebarNav">
@@ -354,6 +357,27 @@
 
     </div>
 
+    <script>
+        const secretTrigger = document.getElementById('secretEasterTrigger');
+        const guildMatch = window.location.pathname.match(/\/(leaderboard|rank|roles|levels|records)\/(\d+)/i);
+        const guildId = guildMatch ? guildMatch[2] : null;
+
+        if (secretTrigger) {
+            secretTrigger.addEventListener('click', () => {
+                window.location.href = guildId ? `/easteregg?guild=${guildId}` : '/easteregg';
+            });
+            secretTrigger.addEventListener('mouseenter', () => {
+                secretTrigger.style.opacity = '1';
+                secretTrigger.style.transform = 'scale(1.2)';
+                secretTrigger.style.boxShadow = '0 0 14px rgba(135,243,255,0.7)';
+            });
+            secretTrigger.addEventListener('mouseleave', () => {
+                secretTrigger.style.opacity = '0.08';
+                secretTrigger.style.transform = 'scale(1)';
+                secretTrigger.style.boxShadow = 'none';
+            });
+        }
+    </script>
 </body>
 
 <script type="text/javascript" src="/polaris.js"></script>
@@ -367,7 +391,7 @@ const tabInfo = {
     rank: { slug: "rank", label: "Tu Rango" },
     roles: { slug: "roles", label: "Recompensas" },
     levels: { slug: "levels", label: "Todos los Niveles" },
-    records: { slug: "records", label: "Récords" },
+    records: { slug: "records", label: "Records" },
 }
 const slugToBox = Object.fromEntries(Object.entries(tabInfo).map(([box, info]) => [info.slug, box]))
 

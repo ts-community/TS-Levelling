@@ -1,56 +1,14 @@
 const LevelUpMessage = require("../../classes/LevelUpMessage.js")
 const OvertakeMessage = require("../../classes/OvertakeMessage.js")
 const Tools = require("../../classes/Tools.js")
-const ranks = require("../../consts/ranks.js")
 const config = require("../../config.json")
+const recordsConfig = require("../../config/records.js")
+const tracker = require("../../classes/RecordTracker.js")
 
-// El autor es rango Pro si su nivel efectivo da el rol Pro o si ya lleva el
-// rol Pro puesto (por si el sync de roles aun no se aplico).
-function isProRank(member, level, settings) {
-    try {
-        const proRank = ranks.find(r => r.rank === "pro")
-        const proIds = new Set((proRank?.roles || []).map(r => String(r.id)))
-        if (!proIds.size) return false
-        const currentRoles = Tools.global.getRolesForLevel(level, settings.rewards)
-        if ((currentRoles || []).some(r => proIds.has(String(r.id)))) return true
-        const cache = member?.roles?.cache
-        if (cache) {
-            if (typeof cache.has === "function") {
-                for (const id of proIds) if (cache.has(id)) return true
-            } else if (typeof cache.some === "function") {
-                if (cache.some(r => proIds.has(String(r?.id)))) return true
-            }
-        }
-    } catch {}
-    return false
-}
-
-// Detecta a quienes ha adelantado el autor comparando la clasificacion
-// global (misma regla que /rank) antes y despues del XP de este mensaje.
-// Solo cuenta si ya estaba en el top y ahora esta mas arriba.
-function getOvertakenIds(oldUsers, newUsers, authorId, settings) {
-    try {
-        const oldBoard = Tools.global.getLeaderboard(oldUsers || {}, settings)
-        const newBoard = Tools.global.getLeaderboard(newUsers || {}, settings)
-        const oldIdx = oldBoard.findIndex(u => String(u.id) === String(authorId))
-        const newIdx = newBoard.findIndex(u => String(u.id) === String(authorId))
-        if (oldIdx === -1 || newIdx === -1 || newIdx >= oldIdx) return null
-        const oldPos = oldIdx + 1
-        const newPos = newIdx + 1
-        // Candidatos: estaban por delante antes (indices newPos-1..oldPos-2)
-        const candidates = oldBoard.slice(newPos - 1, oldPos - 1)
-            .filter(u => String(u.id) !== String(authorId))
-            .map(u => String(u.id))
-        // Solo los que ahora estan por detras del autor
-        const newPositions = new Map(newBoard.map((u, i) => [String(u.id), i]))
-        const authorNewIdx = newPositions.get(String(authorId))
-        const overtaken = candidates.filter(id => (newPositions.get(id) ?? -1) > authorNewIdx)
-        if (!overtaken.length) return null
-        return { oldPos, newPos, overtakenIds: overtaken }
-    } catch {
-        return null
-    }
-}
+// Helpers compartidos (viven en RecordTracker para que grantRecord pueda
+// comprobar level-up/adelantamiento sin ciclos de require).
+const { isProRank, getOvertakenIds } = tracker
+const MS_PER_YEAR = 365.25 * 24 * 3600 * 1000
 
 module.exports = {
 
@@ -75,12 +33,141 @@ async run(client, message, tools) {
     // fetch user's xp, or give them 0
     let userData = db.users[author] || { xp: 0, cooldown: 0 }
 
-    await client.db.update(message.guild.id, { 
+    await client.db.update(message.guild.id, {
         $inc: {
             [`users.${author}.messages`]: 1,
             [`users.${author}.monthlyMessages`]: 1
         }
     }).exec()
+
+    // Progreso de récords (cuenta aunque el XP esté en cooldown).
+    // No bloquea el XP si falla: todo va en try/catch.
+    const pendingUnlocks = []
+    try {
+        const countingId = tracker.getRecordIds().countingChannelId
+            || recordsConfig.allRecords().find(x => x.record.id === "counting")?.record.mechanic.channelId
+        let previousCountingMessage = null
+        if (String(message.channelId) === String(countingId) && message.channel?.messages?.fetch) {
+            previousCountingMessage = await message.channel.messages.fetch({ limit: 1, before: message.id })
+                .then(messages => messages.first?.() || null)
+                .catch(() => null)
+        }
+        const isCounting = tracker.isCountingMessage(message, countingId, previousCountingMessage)
+        const streakUpdate = tracker.computeStreakUpdate(userData.streak)
+        const channelKey = `users.${author}.channels.${message.channelId}`
+        const progressUpdate = { $set: { [`users.${author}.streak`]: streakUpdate } }
+        progressUpdate.$inc = { [channelKey]: 1 }
+        if (isCounting) progressUpdate.$inc[`users.${author}.countingSent`] = 1
+        client.db.update(message.guild.id, progressUpdate).exec().catch(() => {})
+
+        // Snapshot en memoria para comprobar umbrales sin otra lectura.
+        const messagesNow = (userData.messages || 0) + 1
+        const monthlyNow = (userData.monthlyMessages || 0) + 1
+        const countingNow = (userData.countingSent || 0) + (isCounting ? 1 : 0)
+        const streakNow = streakUpdate.current
+        const channelsNow = tracker.countDistinctChannels(userData.channels) +
+            (userData.channels?.[message.channelId] ? 0 : 1)
+        const tenureNow = message.member?.joinedTimestamp
+            ? (Date.now() - message.member.joinedTimestamp) / MS_PER_YEAR
+            : 0
+        const unlocked = tracker.unlockedIdSet(userData)
+        const byId = Object.fromEntries(recordsConfig.allRecords().map(({ record }) => [record.id, record]))
+        const counterChecks = [
+            [byId.messages, messagesNow],
+            [byId.monthly_messages, monthlyNow],
+            [byId.counting, countingNow],
+            [byId.streak, streakNow],
+            [byId.distinct_channels, channelsNow],
+            [byId.tenure, tenureNow],
+        ]
+        for (const [record, value] of counterChecks) {
+            if (!record) continue
+            for (const threshold of tracker.newlyReachedThresholds(record, value, unlocked)) {
+                unlocked.add(`${record.id}:${threshold}`)
+                const unlockInfo = await tracker.grantRecord(client, message.guild, message.guild.id, author, record.id, threshold)
+                if (unlockInfo) pendingUnlocks.push(unlockInfo)
+            }
+        }
+
+        // Eventos puros por mensaje.
+        const nightRecord = byId.night_owl
+        if (nightRecord) {
+            const hour = tracker.getMadridHour(new Date())
+            const { startHour = 4, endHour = 5 } = nightRecord.mechanic || {}
+            if (hour >= startHour && hour < endHour && !unlocked.has(`night_owl:${nightRecord.tiers[0].threshold}`)) {
+                unlocked.add(`night_owl:${nightRecord.tiers[0].threshold}`)
+                const unlockInfo = await tracker.grantRecord(client, message.guild, message.guild.id, author, "night_owl", nightRecord.tiers[0].threshold)
+                if (unlockInfo) pendingUnlocks.push(unlockInfo)
+            }
+        }
+
+        const talkRecord = byId.talk_to
+        if (talkRecord && !unlocked.has(`talk_to:${talkRecord.tiers[0].threshold}`)) {
+            const iaBotId = tracker.getRecordIds().iaBotId || talkRecord.mechanic?.userId
+            let isTalk = tracker.didTalkToIA(message, iaBotId)
+            if (!isTalk && message.reference?.messageId) {
+                try {
+                    const ref = await message.channel.messages.fetch(message.reference.messageId).catch(() => null)
+                    if (ref && String(ref.author?.id) === String(iaBotId)) isTalk = true
+                } catch {}
+            }
+            if (isTalk) {
+                unlocked.add(`talk_to:${talkRecord.tiers[0].threshold}`)
+                const unlockInfo = await tracker.grantRecord(client, message.guild, message.guild.id, author, "talk_to", talkRecord.tiers[0].threshold)
+                if (unlockInfo) pendingUnlocks.push(unlockInfo)
+            }
+        }
+
+        // Comando escondido /roger
+        const hiddenCmdRecord = byId.hidden_command
+        if (hiddenCmdRecord && !unlocked.has(`hidden_command:${hiddenCmdRecord.tiers[0].threshold}`)) {
+            if (message.content?.startsWith("/roger") || message.content?.startsWith("</roger:")) {
+                unlocked.add(`hidden_command:${hiddenCmdRecord.tiers[0].threshold}`)
+                const unlockInfo = await tracker.grantRecord(client, message.guild, message.guild.id, author, "hidden_command", hiddenCmdRecord.tiers[0].threshold)
+                if (unlockInfo) pendingUnlocks.push(unlockInfo)
+            }
+        }
+
+        // Palabra secreta "lentejas"
+        const secretRecord = byId.secret_word
+        if (secretRecord && !unlocked.has(`secret_word:${secretRecord.tiers[0].threshold}`)) {
+            const phrase = secretRecord.mechanic?.phrase?.toLowerCase()
+            if (phrase && message.content?.toLowerCase().includes(phrase)) {
+                unlocked.add(`secret_word:${secretRecord.tiers[0].threshold}`)
+                const unlockInfo = await tracker.grantRecord(client, message.guild, message.guild.id, author, "secret_word", secretRecord.tiers[0].threshold)
+                if (unlockInfo) pendingUnlocks.push(unlockInfo)
+            }
+        }
+
+        // Economía: cualquier mensaje del canal dedicado cuenta como participación.
+        const economyRecord = byId.economy_participation
+        const economyChannelId = economyRecord?.mechanic?.channelId
+        if (economyRecord && economyChannelId && String(message.channelId) === String(economyChannelId)) {
+            const threshold = economyRecord.tiers[0].threshold
+            const key = `${economyRecord.id}:${threshold}`
+            if (!unlocked.has(key)) {
+                unlocked.add(key)
+                const unlockInfo = await tracker.grantRecord(
+                    client, message.guild, message.guild.id, author,
+                    economyRecord.id, threshold,
+                )
+                if (unlockInfo) pendingUnlocks.push(unlockInfo)
+            }
+        }
+    } catch {}
+
+    // Enviar todos los desbloqueos de golpe (batching)
+    if (pendingUnlocks.length) {
+        try {
+            let avatarUrl = ""
+            try {
+                if (message.member && typeof message.member.displayAvatarURL === "function") {
+                    avatarUrl = message.member.displayAvatarURL({ format: "png", dynamic: true })
+                }
+            } catch {}
+            await tracker.sendBatchedUnlocks({ client, userId: author, avatarUrl, unlocks: pendingUnlocks })
+        } catch {}
+    }
 
     const milestoneRoleId = config.roles?.milestones?.id
     if (milestoneRoleId) {
@@ -96,8 +183,12 @@ async run(client, message, tools) {
     let multiplierData = tools.getMultiplier(message.member, settings, message.channel)
     if (multiplierData.multiplier <= 0) return
 
+    // Obtener el XP actual de la DB (incluye XP de récords añadidos por grantRecord)
+    // antes de calcular el XP del mensaje.
+    const freshUser = await client.db.fetch(message.guild.id, [`users.${author}.xp`]).exec()
+    let oldXP = freshUser?.users?.[author]?.xp ?? userData.xp
+    
     // randomly choose an amount of XP to give
-    let oldXP = userData.xp
     let xpRange = [settings.gain.min, settings.gain.max].map(x => Math.round(x * multiplierData.multiplier))
     let xpGained = tools.rng(...xpRange) // number between min and max, inclusive
 
@@ -113,15 +204,21 @@ async run(client, message, tools) {
     // if hidden from leaderboard, unhide since they're no longer inactive
     if (userData.hidden) userData.hidden = false
 
-    // database update
+    // database update: usa $inc para el XP del mensaje, así se suma al XP
+    // actual de la DB (incluyendo el XP de récords que pudo añadir grantRecord).
     client.db.update(message.guild.id, {
+        $inc: {
+            [`users.${author}.xp`]: awardedXP,
+            [`users.${author}.monthlyXP`]: awardedXP
+        },
         $set: {
-            [`users.${author}.xp`]: userData.xp,
             [`users.${author}.cooldown`]: userData.cooldown,
             [`users.${author}.hidden`]: userData.hidden || false
-        },
-        $inc: { [`users.${author}.monthlyXP`]: awardedXP }
+        }
     }).exec();
+
+    // Actualizar userData.xp en memoria para el level-up check
+    userData.xp = oldXP + awardedXP
 
     // check for level up
     let oldLevel = tools.getLevel(oldXP, settings)

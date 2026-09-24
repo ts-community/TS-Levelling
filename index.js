@@ -54,8 +54,8 @@ function getMemberScanStatus(guildId) {
 const client = new Discord.Client({
     allowedMentions: { parse: ["users"] },
     makeCache: Discord.Options.cacheWithLimits({ MessageManager: 0 }),
-    intents: ['Guilds', 'GuildMembers', 'GuildMessages', 'MessageContent', 'DirectMessages', 'GuildVoiceStates'].map(i => Discord.GatewayIntentBits[i]),
-    partials: ['Channel'].map(p => Discord.Partials[p]),
+    intents: ['Guilds', 'GuildMembers', 'GuildMessages', 'MessageContent', 'DirectMessages', 'GuildVoiceStates', 'GuildMessageReactions'].map(i => Discord.GatewayIntentBits[i]),
+    partials: ['Channel', 'Message', 'Reaction', 'User'].map(p => Discord.Partials[p]),
     failIfNotExists: false
 })
 
@@ -402,11 +402,215 @@ client.on("clientReady", () => {
     if (client.shard.id == 0 && config.enableWebServer) require("./web_app.js")(client)
 })
 
+// Records: sesiones de voz en memoria (sin DB hasta salir/cambiar de canal).
+const voiceSessions = new Map()
+const recordTracker = require("./classes/RecordTracker.js")
+const recordsCatalog = require("./config/records.js")
+
+// Envía el anuncio V2 de los desbloqueos recién concedidos (uno solo aunque
+// sean varios). Silencioso si no hay canal o permisos.
+async function announceRecordUnlocks(client, guild, userId, unlocks) {
+    try {
+        if (!unlocks?.length) return
+        let avatarUrl = ""
+        try {
+            const member = await guild?.members?.fetch(String(userId)).catch(() => null)
+            if (member && typeof member.displayAvatarURL === "function") {
+                avatarUrl = member.displayAvatarURL({ format: "png", dynamic: true })
+            }
+        } catch {}
+        await recordTracker.sendBatchedUnlocks({ client, userId: String(userId), avatarUrl, unlocks })
+    } catch {}
+}
+
+// Starboard: los posts los pone tu bot (starboardBotId) en starboardChannelId.
+// El texto trae el ID del mensaje original (editable a gusto): se extrae de
+// forma tolerante (link discord.com/channels/... o primer ID suelto) y se le
+// da el récord al autor original.
+async function handleStarboardPost(message) {
+    try {
+        const ids = recordTracker.getRecordIds()
+        if (!message.guild || message.author?.id !== ids.starboardBotId) return
+        const channelId = ids.starboardChannelId
+            || recordsCatalog.allRecords().find(x => x.record.id === "starboard")?.record.mechanic.channelId
+        if (!channelId || String(message.channelId) !== String(channelId)) return
+
+        const text = [message.content || ""]
+        for (const e of message.embeds || []) {
+            if (e.description) text.push(e.description)
+            if (e.footer?.text) text.push(e.footer.text)
+            if (e.url) text.push(e.url)
+            for (const f of e.fields || []) if (f.value) text.push(f.value)
+        }
+        const joined = text.join("\n")
+        const link = joined.match(/discord\.com\/channels\/\d+\/(\d+)\/(\d+)/)
+        let original = null
+        if (link) {
+            const originChannel = await message.guild.channels.fetch(link[1]).catch(() => null)
+            original = await originChannel?.messages?.fetch(link[2]).catch(() => null)
+        }
+        if (!original) {
+            const messageId = recordTracker.parseStarboardMessageId(joined, message.embeds)
+            if (!messageId) return
+            for (const channel of message.guild.channels.cache.values()) {
+                if (!channel?.messages?.fetch || !channel.isTextBased?.()) continue
+                original = await channel.messages.fetch(messageId).catch(() => null)
+                if (original) break
+            }
+        }
+        if (!original || original.author?.bot) return
+        const unlock = await recordTracker.grantRecord(client, message.guild, message.guild.id, original.author.id, "starboard", 1).catch(() => null)
+        if (unlock) await announceRecordUnlocks(client, message.guild, original.author.id, [unlock])
+    } catch {}
+}
+
 // on message
 client.on("messageCreate", async message => {
+    handleStarboardPost(message).catch(() => {})
     if (message.system || message.author.bot) return
     else if (!message.guild || !message.member) return // dm stuff
     else client.commands.get("message").run(client, message, client.globalTools)
+})
+
+// Reacciones: cuenta las enviadas y las recibidas en mensajes propios.
+client.on("messageReactionAdd", async (reaction, user) => {
+    try {
+        if (user?.bot) return
+        if (reaction.partial) await reaction.fetch().catch(() => null)
+        const msgUser = reaction.message?.author ? user : await client.users.fetch(user.id).catch(() => user)
+        if (!reaction.message?.guild) return
+        if (!recordTracker.isValidRecordReaction(reaction, msgUser)) return
+
+        const guildId = reaction.message.guild.id
+        await client.db.update(guildId, { $inc: { [`users.${user.id}.reactionsSent`]: 1 } }).exec().catch(() => {})
+        try {
+            const server = await client.db.fetch(guildId).exec().catch(() => null)
+            const userData = server?.users?.[user.id] || { reactionsSent: 1 }
+            const sentNow = Number(userData.reactionsSent) || 1
+            const byId = Object.fromEntries(recordsCatalog.allRecords().map(({ record }) => [record.id, record]))
+            const unlocked = recordTracker.unlockedIdSet(userData)
+            const pending = []
+            for (const threshold of recordTracker.newlyReachedThresholds(byId.reactions_sent, sentNow, unlocked)) {
+                const unlock = await recordTracker.grantRecord(client, reaction.message.guild, guildId, user.id, "reactions_sent", threshold).catch(() => null)
+                if (unlock) {
+                    pending.push(unlock)
+                    unlocked.add(`reactions_sent:${threshold}`)
+                }
+            }
+            if (pending.length) await announceRecordUnlocks(client, reaction.message.guild, user.id, pending)
+        } catch {}
+
+        // Reacciones recibidas: se acumulan para el autor del mensaje.
+        try {
+            const full = reaction.message.partial ? await reaction.message.fetch().catch(() => null) : reaction.message
+            if (!full || full.author?.bot) return
+            const authorId = String(full.author.id)
+            await client.db.update(guildId, { $inc: { [`users.${authorId}.reactionsReceived`]: 1 } }).exec().catch(() => {})
+            const fresh = await client.db.fetch(guildId).exec().catch(() => null)
+            const receivedNow = Number(fresh?.users?.[authorId]?.reactionsReceived) || 1
+            const receivedRecord = recordsCatalog.allRecords().find(x => x.record.id === "reactions_received")?.record
+            if (!receivedRecord) return
+            const unlocked = recordTracker.unlockedIdSet(fresh?.users?.[authorId] || {})
+            const pending = []
+            for (const threshold of recordTracker.newlyReachedThresholds(receivedRecord, receivedNow, unlocked)) {
+                const unlock = await recordTracker.grantRecord(client, full.guild, guildId, authorId, receivedRecord.id, threshold).catch(() => null)
+                if (unlock) {
+                    pending.push(unlock)
+                    unlocked.add(`${receivedRecord.id}:${threshold}`)
+                }
+            }
+            if (pending.length) await announceRecordUnlocks(client, full.guild, authorId, pending)
+        } catch {}
+    } catch {}
+})
+
+// Voz: minutos (sin AFK/eventos/solo) + fijos visitados.
+client.on("voiceStateUpdate", async (oldState, newState) => {
+    try {
+        const member = newState.member || oldState.member
+        const guild = newState.guild || oldState.guild
+        if (!member || member.user?.bot || !guild) return
+        const userId = member.id
+        const key = `${guild.id}:${userId}`
+        const now = Date.now()
+
+        const voiceRecords = Object.fromEntries(recordsCatalog.allRecords().map(({ record }) => [record.id, record]))
+        const allFixed = voiceRecords.voice_all_fixed?.mechanic?.fixedChannelIds || []
+        const excluded = new Set(voiceRecords.voice_time?.mechanic?.excludedChannelIds || [])
+
+        const oldChannelId = oldState.channelId
+        const newChannelId = newState.channelId
+        if (oldChannelId === newChannelId) return
+        const pending = []
+
+        // Salida del canal anterior: acumular minutos si contaba.
+        if (oldChannelId) {
+            const session = voiceSessions.get(key)
+            const joinedAt = session?.channelId === oldChannelId ? session.joinedAt : null
+            voiceSessions.delete(key)
+            if (joinedAt && !excluded.has(String(oldChannelId))) {
+                try {
+                    const channel = oldState.channel || await client.channels.fetch(oldChannelId).catch(() => null)
+                    const members = channel?.members
+                    // Contaba si había al menos otro humano además del usuario.
+                    let others = 0
+                    if (members) {
+                        for (const m of members.values()) {
+                            if (String(m.id) === String(userId)) continue
+                            if (m.user?.bot) continue
+                            others++
+                        }
+                        others++ // el que sale estaba dentro
+                    } else others = 2
+                    if (others >= 2) {
+                        const minutes = Math.floor(Math.min(now - joinedAt, 12 * 60 * 60 * 1000) / 60000)
+                        if (minutes > 0) {
+                            await client.db.update(guild.id, { $inc: { [`users.${userId}.voiceMinutes`]: minutes } }).exec().catch(() => {})
+                            const server = await client.db.fetch(guild.id).exec().catch(() => null)
+                            const total = Number(server?.users?.[userId]?.voiceMinutes) || minutes
+                            const unlocked = recordTracker.unlockedIdSet(server?.users?.[userId])
+                            for (const t of recordTracker.newlyReachedThresholds(voiceRecords.voice_time, total, unlocked)) {
+                                const unlock = await recordTracker.grantRecord(client, guild, guild.id, userId, "voice_time", t).catch(() => null)
+                                if (unlock) {
+                                    pending.push(unlock)
+                                    unlocked.add(`voice_time:${t}`)
+                                }
+                            }
+                        }
+                    }
+                } catch {}
+            }
+        }
+
+        // Entrada al canal nuevo: sesión + fijos.
+        if (newChannelId) {
+            voiceSessions.set(key, { channelId: newChannelId, joinedAt: now })
+            try {
+                await client.db.update(guild.id, { $addToSet: { [`users.${userId}.voiceJoined`]: String(newChannelId) } }).exec().catch(() => {})
+                const server = await client.db.fetch(guild.id).exec().catch(() => null)
+                const joined = new Set([].concat(server?.users?.[userId]?.voiceJoined || []))
+                joined.add(String(newChannelId))
+                const unlocked = recordTracker.unlockedIdSet(server?.users?.[userId])
+                const generalId = voiceRecords.voice_general?.mechanic?.channelId
+                if (generalId && String(newChannelId) === String(generalId) && !unlocked.has("voice_general:1")) {
+                    const unlock = await recordTracker.grantRecord(client, guild, guild.id, userId, "voice_general", 1).catch(() => null)
+                    if (unlock) {
+                        pending.push(unlock)
+                        unlocked.add("voice_general:1")
+                    }
+                }
+                if (allFixed.length && allFixed.every(id => joined.has(String(id))) && !unlocked.has("voice_all_fixed:1")) {
+                    const unlock = await recordTracker.grantRecord(client, guild, guild.id, userId, "voice_all_fixed", 1).catch(() => null)
+                    if (unlock) {
+                        pending.push(unlock)
+                        unlocked.add("voice_all_fixed:1")
+                    }
+                }
+            } catch {}
+        }
+
+        if (pending.length) await announceRecordUnlocks(client, guild, userId, pending)
+    } catch {}
 })
 
 client.on("guildMemberRemove", async member => {
@@ -467,6 +671,22 @@ client.on("interactionCreate", async int => {
 
     try {
         await foundCommand.run(client, int, tools)
+
+        // Logro oculto "Comando escondido": el uso real como slash no pasa por
+        // messageCreate, así que se concede aquí (message.js lo cubre si se escribe).
+        try {
+            if (int.isChatInputCommand?.()) {
+                const hiddenCmd = recordsCatalog.allRecords()
+                    .find(x => x.record.mechanic?.type === "hidden_command")?.record
+                if (hiddenCmd && int.commandName === hiddenCmd.mechanic.commandName) {
+                    const unlock = await recordTracker.grantRecord(
+                        client, int.guild, int.guild.id, int.user.id,
+                        hiddenCmd.id, hiddenCmd.tiers[0].threshold
+                    ).catch(() => null)
+                    if (unlock) await announceRecordUnlocks(client, int.guild, int.user.id, [unlock])
+                }
+            }
+        } catch {}
     } catch (e) {
         console.error(e)
 

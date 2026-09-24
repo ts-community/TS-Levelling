@@ -14,6 +14,7 @@ const Tools = require('./classes/Tools.js')
 const Model = require("./classes/DatabaseModel.js");
 const LevelUpEmbed = require('./classes/LevelUpEmbed.js')
 const LevelUpMessage = require("./classes/LevelUpMessage.js")
+const { unlockWebEasterEgg, resolveServerId } = require("./classes/WebEasterEgg.js")
 const auth = require('./config.json')
 const curvePresets = require('./json/curve_presets.json')
 const schemaData = require("./database_schema.js")
@@ -114,6 +115,274 @@ app.get(["/leaderboard/:id", "/rank/:id", "/roles/:id", "/levels/:id", "/records
 app.get("/", (req, res) => sendPage(res, "home"))
 
 app.get(["/settings", "/leaderboard", "/rank", "/roles", "/levels", "/records", "/servers"], (req, res) => sendRedirect(res, "/servers"))
+
+app.get("/easteregg", async function(req, res) {
+    const [user, guilds] = await getDiscordInfo(req)
+    const guildId = resolveServerId({ guildId: req.query.guild || req.query.server || req.query.guildId, guilds })
+
+    function renderPage({ title, message, status = "info", showConfetti = false }) {
+        return `
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>${title}</title>
+                <style>
+                    :root {
+                        --bg1: #070b1f;
+                        --bg2: #111b3b;
+                        --bg3: #1b0f2f;
+                        --panel: rgba(12, 20, 36, 0.76);
+                        --panel-border: rgba(149, 233, 255, 0.28);
+                        --text: #edf9ff;
+                        --muted: #bfd7f5;
+                        --accent: #87f3ff;
+                        --accent-2: #a78bfa;
+                        --success: #7ef0bc;
+                        --warning: #ffd166;
+                    }
+                    * { box-sizing: border-box; }
+                    html, body {
+                        margin: 0;
+                        min-height: 100%;
+                        font-family: Inter, "Segoe UI", sans-serif;
+                        background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 35%, var(--bg3) 100%);
+                        color: var(--text);
+                    }
+                    body {
+                        min-height: 100vh;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        overflow: hidden;
+                        position: relative;
+                        background-size: 180% 180%;
+                        animation: gradientFlow 16s ease-in-out infinite alternate;
+                    }
+                    @keyframes gradientFlow {
+                        0% { background-position: 0% 50%; }
+                        50% { background-position: 100% 50%; }
+                        100% { background-position: 0% 50%; }
+                    }
+                    .glow {
+                        position: absolute;
+                        width: min(32rem, 58vw);
+                        height: min(32rem, 58vw);
+                        border-radius: 999px;
+                        filter: blur(90px);
+                        opacity: 0.48;
+                        animation: floatGlow 10s ease-in-out infinite alternate;
+                        pointer-events: none;
+                    }
+                    .glow.one { background: radial-gradient(circle, rgba(103, 233, 255, 0.42), rgba(103, 233, 255, 0)); top: 8%; left: 8%; }
+                    .glow.two { background: radial-gradient(circle, rgba(167, 139, 250, 0.42), rgba(167, 139, 250, 0)); bottom: 10%; right: 10%; animation-delay: 2s; }
+                    .glow.three { background: radial-gradient(circle, rgba(126, 240, 188, 0.25), rgba(126, 240, 188, 0)); left: 42%; top: 10%; animation-delay: 4s; }
+                    @keyframes floatGlow {
+                        from { transform: translateY(0px) scale(1); }
+                        to { transform: translateY(-26px) scale(1.09); }
+                    }
+                    .card {
+                        position: relative;
+                        width: min(92vw, 680px);
+                        padding: 2.3rem 2rem 1.9rem;
+                        background: linear-gradient(180deg, rgba(16, 24, 40, 0.82), rgba(9, 14, 25, 0.88));
+                        border: 1px solid rgba(151, 215, 255, 0.2);
+                        border-radius: 30px;
+                        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+                        backdrop-filter: blur(14px);
+                        text-align: center;
+                        z-index: 1;
+                        animation: cardIn 0.75s cubic-bezier(.2,.8,.2,1) both;
+                    }
+                    @keyframes cardIn {
+                        from { opacity: 0; transform: translateY(18px) scale(0.98); }
+                        to { opacity: 1; transform: none; }
+                    }
+                    .badge {
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        width: 88px;
+                        height: 88px;
+                        border-radius: 50%;
+                        font-size: 2.4rem;
+                        background: linear-gradient(135deg, rgba(135,243,255,0.18), rgba(167,139,250,0.22));
+                        border: 1px solid rgba(255,255,255,0.18);
+                        box-shadow: 0 14px 30px rgba(135, 243, 255, 0.18);
+                        margin-bottom: 1rem;
+                    }
+                    .status-success .badge { box-shadow: 0 14px 30px rgba(126, 240, 188, 0.22); }
+                    .status-info .badge { box-shadow: 0 14px 30px rgba(135, 243, 255, 0.22); }
+                    h1 {
+                        margin: 0;
+                        font-size: clamp(2rem, 4vw, 3rem);
+                        line-height: 1.1;
+                        letter-spacing: -0.04em;
+                    }
+                    p {
+                        margin: 1rem auto 0;
+                        max-width: 48ch;
+                        color: var(--muted);
+                        font-size: 1.04rem;
+                        line-height: 1.7;
+                    }
+                    strong {
+                        color: var(--success);
+                    }
+                    .actions {
+                        margin-top: 1.5rem;
+                        display: flex;
+                        justify-content: center;
+                    }
+                    a {
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 0.5rem;
+                        padding: 0.85rem 1.4rem;
+                        border-radius: 999px;
+                        text-decoration: none;
+                        color: #081521;
+                        font-weight: 700;
+                        background: linear-gradient(135deg, var(--accent), #d5fbff);
+                        box-shadow: 0 12px 28px rgba(135, 243, 255, 0.28);
+                        transition: transform 0.18s ease, box-shadow 0.18s ease;
+                    }
+                    a:hover {
+                        transform: translateY(-1px);
+                        box-shadow: 0 18px 36px rgba(135, 243, 255, 0.32);
+                    }
+                    canvas {
+                        position: fixed;
+                        inset: 0;
+                        width: 100%;
+                        height: 100%;
+                        pointer-events: none;
+                        z-index: 3;
+                    }
+                </style>
+            </head>
+            <body class="status-${status}">
+                <div class="glow one"></div>
+                <div class="glow two"></div>
+                <div class="glow three"></div>
+
+                <div class="card">
+                    <div class="badge">${status === "success" ? "✅" : "🔎"}</div>
+                    <h1>${title}</h1>
+                    <p>${message}</p>
+                    <div class="actions">
+                        <a href="/servers">Volver al dashboard</a>
+                    </div>
+                </div>
+
+                ${showConfetti ? `
+                    <canvas id="confetti"></canvas>
+                    <script>
+                        const canvas = document.getElementById('confetti');
+                        const ctx = canvas.getContext('2d');
+                        const pieces = [];
+                        const colors = ['#7ef0bc', '#87f3ff', '#f5d76e', '#f78fb3', '#a78bfa', '#ffb86c'];
+
+                        function resizeCanvas() {
+                            canvas.width = window.innerWidth * window.devicePixelRatio;
+                            canvas.height = window.innerHeight * window.devicePixelRatio;
+                            canvas.style.width = window.innerWidth + 'px';
+                            canvas.style.height = window.innerHeight + 'px';
+                            ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+                        }
+
+                        function spawnBurst() {
+                            pieces.length = 0;
+                            for (let i = 0; i < 180; i++) {
+                                pieces.push({
+                                    x: window.innerWidth * (0.5 + (Math.random() - 0.5) * 0.18),
+                                    y: window.innerHeight * 0.18 + Math.random() * 30,
+                                    w: 8 + Math.random() * 10,
+                                    h: 14 + Math.random() * 16,
+                                    color: colors[Math.floor(Math.random() * colors.length)],
+                                    dx: (Math.random() - 0.5) * 7,
+                                    dy: 1.8 + Math.random() * 3.2,
+                                    rot: Math.random() * Math.PI,
+                                    spin: (Math.random() - 0.5) * 0.25,
+                                    alpha: 1,
+                                });
+                            }
+                        }
+
+                        function animateConfetti() {
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            for (const p of pieces) {
+                                p.x += p.dx;
+                                p.y += p.dy;
+                                p.rot += p.spin;
+                                p.dy += 0.04;
+                                p.alpha *= 0.996;
+
+                                ctx.save();
+                                ctx.translate(p.x, p.y);
+                                ctx.rotate(p.rot);
+                                ctx.globalAlpha = p.alpha;
+                                ctx.fillStyle = p.color;
+                                ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                                ctx.restore();
+                            }
+
+                            if (pieces.some(p => p.alpha > 0.02)) {
+                                requestAnimationFrame(animateConfetti);
+                            }
+                        }
+
+                        resizeCanvas();
+                        spawnBurst();
+                        animateConfetti();
+                        window.addEventListener('resize', resizeCanvas);
+                    </script>
+                ` : ""}
+            </body>
+            </html>
+        `;
+    }
+
+    if (!user) {
+        return res.status(401).send(renderPage({
+            title: "Easter egg",
+            message: "Haz login con Discord para registrar este logro en el servidor.",
+            status: "info",
+            showConfetti: false,
+        }));
+    }
+
+    if (!guildId) {
+        return res.status(400).send(renderPage({
+            title: "Easter egg",
+            message: "No pude detectar el servidor. Usa ?guild=TU_GUILD_ID o entra desde tu dashboard.",
+            status: "info",
+            showConfetti: false,
+        }));
+    }
+
+    const result = await unlockWebEasterEgg({
+        client,
+        guildId,
+        userId: user.id,
+        guild: client.guilds.cache.get(guildId) || null,
+        guilds,
+    })
+
+    const title = result.unlocked ? "¡Easter egg encontrado!" : "Este easter egg ya estaba descubierto"
+    const message = result.unlocked
+        ? "Has desbloqueado el logro <strong>Detective digital</strong> del servidor."
+        : "Ya habías completado este logro; no se repite."
+
+    return res.send(renderPage({
+        title,
+        message,
+        status: result.unlocked ? "success" : "info",
+        showConfetti: result.unlocked,
+    }));
+})
 
 if (auth.supportURL) app.get("/support", (req, res) => res.redirect(auth.supportURL))
 if (auth.changelogURL) app.get("/changelog", (req, res) => res.redirect(auth.changelogURL))

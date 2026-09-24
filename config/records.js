@@ -2,22 +2,52 @@
 //
 // Cómo leer este archivo:
 // - categories: una página por categoría en /records. Los récords van
-//   ordenados de más fácil a más difícil (los de mensajes, juntos).
+//   ordenados de más fácil a más difícil dentro de cada categoría.
+// - Cada categoría tiene: emoji (cabecera), menuEmoji (icono del desplegable,
+//   personalizado si hay uno que cuadre) y desc (texto del desplegable).
 // - Cada récord tiene: emoji (cabecera de su bloque), UN mechanic.type (los
 //   que funcionan parecido comparten tipo para no repetir lógica) y tiers.
 // - Cada nivel tiene threshold (lógica), xp + roleId opcional (recompensa),
-//   name (título) y desc (frase clara de lo que hay que hacer).
+//   name (título) y desc (frase clara de lo que hay que hacer, con punto).
 // - La recompensa es xp, rol o ambas: se entrega lo definido. Si un nivel
 //   solo da rol, pon xp: 0.
 // - La categoría hidden no se muestra hasta desbloquear (solo cuántos hay).
 //
 // Balance de XP (ganancia media del bot: ~75 XP por mensaje):
-// - Recompensas redondas e igualadas entre récords de esfuerzo parecido.
-// - El total de TODO son ~266.500 XP (≈ nivel 51; para un top de 20M es ~1,3%).
-//   Se nota al conseguirlos, no desbalancea.
+// - Recompensas redondas y visibles: 1.000, 3.000, 5.000, 10.000, 15.000,
+//   30.000, 50.000, 75.000 y 100.000 XP. La dificultad equivalente conserva
+//   una recompensa parecida.
+// - Los ocultos pagan mejor porque requieren descubrir una condición que no
+//   se puede seguir desde la interfaz.
+// - Con la curva por defecto, todo el catálogo ronda la experiencia de los
+//   niveles 60-70: es un bonus importante, no una segunda progresión.
 
 const RECORDS_EMOJI = "<:records:1549908515399929959>"
 const MESSAGES_EMOJI = "<:messages:1467163578699354235>"
+const MENU_HYPER = "<:hypercharge_drop:1467236546317914349>"
+const MENU_MEMBER = "<:member:1467596629787021415>"
+const MENU_SHHHH = "<:shhhh:1343371124725252179>"
+
+// IDs del servidor para los récords (única fuente de verdad: las
+// descripciones de abajo los usan con <#id> / <@id>, sin duplicar).
+const CHANNELS = {
+    channelId: "1551570600135229440", // anuncio de récords
+    countingChannelId: "1113502565599019108",
+    economyChannelId: "1532157047674638478",
+    iaChannelId: "1544029379284443146",
+    iaBotId: "1250114494081007697", // Nova
+    starboardChannelId: "1317531432909930639",
+    starboardBotId: "1292238307656470621", // también counting
+    
+    // Canales de voz fijos
+    voiceGeneralId: "1466156901615272098",
+    voiceMusicaId: "1466156978895323220",
+    voiceDuoId: "1163774017975631892",
+    voiceTrioId: "1163777101426597948",
+    voiceAmistosoId: "1163778987122761728",
+    voiceAfkId: "1466153711259619596",
+    voiceEventosId: "1466156595208650967",
+}
 
 // Catálogo de mecánicas (para la futura lógica de completado) y QUÉ estadística
 // de DB necesita cada una para saber si se alcanza. La clave <recordId>:<threshold>
@@ -28,6 +58,7 @@ const MESSAGES_EMOJI = "<:messages:1467163578699354235>"
 //   member_tenure         -> member.joinedAt     (sin DB)
 //   streak_days           -> streak = { current, lastDay }  (día en TZ del servidor)
 //   reactions_sent        -> reactionsSent       (contador total de reacciones enviadas)
+//   reactions_received    -> reactionsReceived   (contador total recibido en mensajes propios)
 //   talk_to_user          -> flag en records     (evento: la IA responde)
 //   distinct_channels     -> channels            (set de channelIds donde ha escrito)
 //   counting_numbers      -> countingSent        (o contador por canal en channels)
@@ -35,17 +66,20 @@ const MESSAGES_EMOJI = "<:messages:1467163578699354235>"
 //   voice_join_channel    -> voiceJoined         (set de fijos a los que ha entrado)
 //   voice_join_all_fixed  -> voiceJoined         (mismo set: al completar los 5)
 //   starboard_featured    -> flag en records     (evento: entra al starboard)
-//   message_reactions     -> flag en records     (evento: un mensaje llega a count)
+//   reactions_received    -> reactionsReceived   (contador total en mensajes propios)
 //   night_message         -> flag en records     (evento: mensaje en franja)
 //   hidden_command        -> flag en records     (evento: usa el comando)
 //   web_easter_egg        -> flag en records     (evento: encuentra el easter egg)
 //   secret_phrase         -> flag en records     (evento: escribe la frase)
+//   economy_participation -> flag en records     (evento: participa en economía)
 
 const categories = [
     {
-        id: "mensajes",
-        name: "Mensajes",
+        id: "actividad",
+        name: "Actividad",
         emoji: "💬",
+        menuEmoji: MESSAGES_EMOJI,
+        desc: "Mensajes, ritmo y presencia en el chat.",
         records: [
             {
                 id: "messages",
@@ -54,54 +88,32 @@ const categories = [
                 mechanic: { type: "messages_total" },
                 unit: "mensajes", unitOne: "mensaje", suffix: "",
                 tiers: [
-                    { threshold: 10, xp: 250, name: "Primeros pasos", desc: "Envía 10 mensajes" },
-                    { threshold: 100, xp: 1250, name: "Calentando motores", desc: "Envía 100 mensajes" },
-                    { threshold: 1000, xp: 6000, name: "Charlatán", desc: "Envía 1.000 mensajes" },
-                    { threshold: 10000, xp: 25000, name: "Tertuliano", desc: "Envía 10.000 mensajes" },
-                    { threshold: 50000, xp: 60000, name: "Leyenda del chat", desc: "Envía 50.000 mensajes" },
+                    { threshold: 10, xp: 1000, name: "Primeros pasos", desc: "Envía 10 mensajes en el servidor." },
+                    { threshold: 100, xp: 3000, name: "Presencia notable", desc: "Envía 100 mensajes en el servidor." },
+                    { threshold: 1000, xp: 10000, name: "Conversador", desc: "Envía 1.000 mensajes en el servidor." },
+                    { threshold: 10000, xp: 30000, name: "Pilar del chat", desc: "Envía 10.000 mensajes en el servidor." },
+                    { threshold: 50000, xp: 100000, name: "Leyenda del chat", desc: "Envía 50.000 mensajes en el servidor." },
                 ]
             },
             {
                 id: "monthly_messages",
-                label: "Mensajes en un mes",
+                label: "Mensual",
                 emoji: MESSAGES_EMOJI,
                 mechanic: { type: "messages_monthly" },
                 unit: "mensajes", unitOne: "mensaje", suffix: "en un mes",
                 tiers: [
-                    { threshold: 500, xp: 2500, name: "Mes movidito", desc: "Envía 500 mensajes en un mes" },
-                    { threshold: 2000, xp: 10000, name: "Sin freno", desc: "Envía 2.000 mensajes en un mes" },
-                    { threshold: 5000, xp: 25000, name: "Modo turbo", desc: "Envía 5.000 mensajes en un mes" },
-                ]
-            },
-        ]
-    },
-    {
-        id: "constancia",
-        name: "Constancia",
-        emoji: "🔥",
-        records: [
-            {
-                id: "streak",
-                label: "Racha de actividad",
-                emoji: "🔥",
-                mechanic: { type: "streak_days" },
-                unit: "días", unitOne: "día", suffix: "seguidos",
-                tiers: [
-                    { threshold: 3, xp: 1250, name: "Constancia", desc: "Actívate 3 días seguidos" },
-                    { threshold: 7, xp: 4000, name: "Semana perfecta", desc: "Actívate 7 días seguidos" },
-                    { threshold: 14, xp: 10000, name: "Imparable", desc: "Actívate 14 días seguidos" },
+                    { threshold: 500, xp: 3000, name: "Mes activo", desc: "Envía 500 mensajes en un mismo mes." },
+                    { threshold: 2000, xp: 10000, name: "Ritmo imparable", desc: "Envía 2.000 mensajes en un mismo mes." },
+                    { threshold: 5000, xp: 30000, name: "Mes legendario", desc: "Envía 5.000 mensajes en un mismo mes." },
                 ]
             },
             {
-                id: "reactions_sent",
-                label: "Reacciones enviadas",
-                emoji: "❤️",
-                mechanic: { type: "reactions_sent" },
-                unit: "reacciones", unitOne: "reacción", suffix: "enviadas",
+                id: "talk_to",
+                label: "Habla con Nova",
+                emoji: "🤖",
+                mechanic: { type: "talk_to_user", userId: CHANNELS.iaBotId, channelId: CHANNELS.iaChannelId },
                 tiers: [
-                    { threshold: 10, xp: 250, name: "Me gusta esto", desc: "Envía 10 reacciones" },
-                    { threshold: 50, xp: 750, name: "Aplausos", desc: "Envía 50 reacciones" },
-                    { threshold: 100, xp: 2000, name: "Fan destacado", desc: "Envía 100 reacciones" },
+                    { threshold: 1, xp: 3000, name: "Primer contacto", desc: "Menciona o responde a Nova." },
                 ]
             },
         ]
@@ -110,34 +122,65 @@ const categories = [
         id: "comunidad",
         name: "Comunidad",
         emoji: "🤝",
+        menuEmoji: MENU_MEMBER,
+        desc: "Reacciones, rachas y antigüedad.",
         records: [
             {
-                id: "talk_to",
-                label: "Habla con la IA",
-                emoji: "🤖",
-                mechanic: { type: "talk_to_user", userId: "1250114494081007697" },
+                id: "reactions_sent",
+                label: "Reacciones",
+                emoji: "❤️",
+                mechanic: { type: "reactions_sent" },
+                unit: "reacciones", unitOne: "reacción", suffix: "",
                 tiers: [
-                    { threshold: 1, xp: 1250, name: "Test de Turing", desc: "Habla con <@1250114494081007697>" },
+                    { threshold: 10, xp: 1000, name: "Primer gesto", desc: "Envía 10 reacciones a mensajes." },
+                    { threshold: 50, xp: 3000, name: "Apoyo constante", desc: "Envía 50 reacciones a mensajes." },
+                    { threshold: 100, xp: 10000, name: "Oleada de apoyo", desc: "Envía 100 reacciones a mensajes." },
+                ]
+            },
+            {
+                id: "reactions_received",
+                label: "Reacciones recibidas",
+                emoji: "💘",
+                mechanic: { type: "reactions_received" },
+                unit: "reacciones", unitOne: "reacción", suffix: "recibidas",
+                tiers: [
+                    { threshold: 10, xp: 3000, name: "Mensaje apreciado", desc: "Recibe 10 reacciones en tus mensajes." },
+                    { threshold: 50, xp: 10000, name: "Muy valorado", desc: "Recibe 50 reacciones en tus mensajes." },
+                    { threshold: 100, xp: 30000, name: "Favorito de la comunidad", desc: "Recibe 100 reacciones en tus mensajes." },
+                ]
+            },
+            {
+                id: "streak",
+                label: "Racha",
+                emoji: "🔥",
+                mechanic: { type: "streak_days" },
+                unit: "días", unitOne: "día", suffix: "seguidos",
+                tiers: [
+                    { threshold: 3, xp: 3000, name: "Racha iniciada", desc: "Envía mensajes durante 3 días seguidos." },
+                    { threshold: 7, xp: 10000, name: "Semana constante", desc: "Envía mensajes durante 7 días seguidos." },
+                    { threshold: 14, xp: 30000, name: "Racha imparable", desc: "Envía mensajes durante 14 días seguidos." },
                 ]
             },
             {
                 id: "tenure",
-                label: "Tiempo en el servidor",
+                label: "Antigüedad",
                 emoji: "🏅",
                 mechanic: { type: "member_tenure", unit: "years" },
                 unit: "años", unitOne: "año", suffix: "en el servidor",
                 tiers: [
-                    { threshold: 1, xp: 6000, name: "Veterano", desc: "Lleva 1 año en el servidor" },
-                    { threshold: 2, xp: 10000, name: "Histórico", desc: "Lleva 2 años en el servidor" },
-                    { threshold: 3, xp: 25000, name: "Institución", desc: "Lleva 3 años en el servidor" },
+                    { threshold: 1, xp: 10000, name: "Miembro veterano", desc: "Lleva 1 año en el servidor." },
+                    { threshold: 2, xp: 30000, name: "Parte de la historia", desc: "Lleva 2 años en el servidor." },
+                    { threshold: 3, xp: 75000, name: "Institución", desc: "Lleva 3 años en el servidor." },
                 ]
             },
         ]
     },
     {
-        id: "channels",
+        id: "canales",
         name: "Canales",
-        emoji: "📺",
+        emoji: "🧭",
+        menuEmoji: "🧭",
+        desc: "Explora el servidor y participa en sus sistemas.",
         records: [
             {
                 id: "distinct_channels",
@@ -146,73 +189,83 @@ const categories = [
                 mechanic: { type: "distinct_channels" },
                 unit: "canales", unitOne: "canal", suffix: "distintos",
                 tiers: [
-                    { threshold: 5, xp: 1250, name: "Explorador", desc: "Habla en 5 canales distintos" },
+                    { threshold: 5, xp: 3000, name: "Explorador", desc: "Envía mensajes en 5 canales distintos." },
+                ]
+            },
+            {
+                id: "economy_participation",
+                label: "Economía",
+                emoji: "💰",
+                mechanic: { type: "economy_participation", channelId: CHANNELS.economyChannelId },
+                tiers: [
+                    { threshold: 1, xp: 3000, name: "Primer movimiento", desc: `Envía un mensaje en <#${CHANNELS.economyChannelId}>.` },
                 ]
             },
             {
                 id: "counting",
                 label: "Counting",
                 emoji: "🔢",
-                mechanic: { type: "counting_numbers", channelId: "1113502565599019108" },
+                mechanic: { type: "counting_numbers", channelId: CHANNELS.countingChannelId },
                 unit: "números", unitOne: "número", suffix: "en counting",
                 tiers: [
-                    { threshold: 10, xp: 250, name: "Contable aprendiz", desc: "Envía 10 números en counting" },
-                    { threshold: 100, xp: 1250, name: "Contable experto", desc: "Envía 100 números en counting" },
-                    { threshold: 500, xp: 5000, name: "Máquina de contar", desc: "Envía 500 números en counting" },
+                    { threshold: 10, xp: 1000, name: "Primeras cuentas", desc: `Completa el 10 en <#${CHANNELS.countingChannelId}>.` },
+                    { threshold: 100, xp: 5000, name: "Contador experto", desc: `Completa el 100 en <#${CHANNELS.countingChannelId}>.` },
+                    { threshold: 500, xp: 15000, name: "Maestro del conteo", desc: `Completa el 500 en <#${CHANNELS.countingChannelId}>.` },
                 ]
             },
         ]
     },
     {
-        id: "voice",
+        id: "voz",
         name: "Voz",
         emoji: "🎙️",
+        menuEmoji: "🎙️",
+        desc: "Tiempo en voz y presencia en los canales de audio.",
         records: [
             {
                 id: "voice_general",
                 label: "General de voz",
                 emoji: "🔊",
-                mechanic: { type: "voice_join_channel", channelId: "1466156901615272098" },
+                mechanic: { type: "voice_join_channel", channelId: CHANNELS.voiceGeneralId },
                 tiers: [
-                    { threshold: 1, xp: 750, name: "Debut en General", desc: "Entra al canal General de voz" },
+                    { threshold: 1, xp: 1000, name: "Primera llamada", desc: `Entra al <#${CHANNELS.voiceGeneralId}>.` },
                 ]
             },
             {
                 id: "voice_all_fixed",
-                label: "Todos los fijos",
+                label: "Tour de voz",
                 emoji: "🎧",
                 mechanic: {
                     type: "voice_join_all_fixed",
                     fixedChannelIds: [
-                        "1466156901615272098", // general
-                        "1466156978895323220", // música
-                        "1163774017975631892", // crear dúo
-                        "1163777101426597948", // crear trío
-                        "1163778987122761728", // crear amistoso
+                        CHANNELS.voiceGeneralId,
+                        CHANNELS.voiceMusicaId,
+                        CHANNELS.voiceDuoId,
+                        CHANNELS.voiceTrioId,
+                        CHANNELS.voiceAmistosoId,
                     ],
-                    afkChannelId: "1466153711259619596",
-                    excludedChannelIds: ["1466156595208650967"], // eventos
+                    afkChannelId: CHANNELS.voiceAfkId,
+                    excludedChannelIds: [CHANNELS.voiceEventosId],
                 },
                 tiers: [
-                    { threshold: 1, xp: 4000, name: "Tour completo", desc: "Entra a todos los fijos" },
+                    { threshold: 1, xp: 5000, name: "Ruta completa", desc: "Entra en los 5 canales fijos de voz." },
                 ]
             },
             {
                 id: "voice_time",
                 label: "Tiempo en voz",
                 emoji: "🎙️",
-                // Sin contar AFK, eventos ni estar solo en el canal.
                 mechanic: {
                     type: "voice_minutes",
                     excludeAfk: true,
                     excludeAlone: true,
-                    excludedChannelIds: ["1466153711259619596", "1466156595208650967"],
+                    excludedChannelIds: [CHANNELS.voiceAfkId, CHANNELS.voiceEventosId],
                 },
                 divisor: 60, unit: "horas", unitOne: "hora", suffix: "en voz",
                 tiers: [
-                    { threshold: 300, xp: 2500, name: "Calentando la voz", desc: "Pasa 5 horas en un canal de voz" },
-                    { threshold: 1800, xp: 10000, name: "Voz habitual", desc: "Pasa 30 horas en un canal de voz" },
-                    { threshold: 6000, xp: 30000, name: "Residente de voz", desc: "Pasa 100 horas en un canal de voz" },
+                    { threshold: 300, xp: 5000, name: "Tiempo compartido", desc: "Pasa 5 horas en voz válida." },
+                    { threshold: 1800, xp: 15000, name: "Voz habitual", desc: "Pasa 30 horas en voz válida." },
+                    { threshold: 6000, xp: 50000, name: "Residente de voz", desc: "Pasa 100 horas en voz válida." },
                 ]
             },
         ]
@@ -221,44 +274,35 @@ const categories = [
         id: "hidden",
         name: "Ocultos",
         emoji: "🕵️",
+        menuEmoji: MENU_SHHHH,
+        desc: "Logros secretos que se revelan al descubrirlos.",
         hidden: true,
         records: [
             {
                 id: "starboard",
-                label: "Starboard",
+                label: "Estrella",
                 emoji: "⭐",
-                mechanic: { type: "starboard_featured" },
+                mechanic: { type: "starboard_featured", channelId: CHANNELS.starboardChannelId, botId: CHANNELS.starboardBotId },
                 tiers: [
-                    { threshold: 1, xp: 5000, name: "Estrella del servidor", desc: "Aparece en el Starboard" },
-                ]
-            },
-            {
-                id: "loved_message",
-                label: "Mensaje querido",
-                emoji: "💘",
-                mechanic: { type: "message_reactions", count: 10 },
-                unit: "reacciones", unitOne: "reacción", suffix: "en un mensaje",
-                tiers: [
-                    { threshold: 10, xp: 4000, name: "Aclamado", desc: "Recibe 10 reacciones en un mensaje" },
+                    { threshold: 1, xp: 30000, name: "Mensaje destacado", desc: `Consigue que uno de tus mensajes aparezca en <#${CHANNELS.starboardChannelId}>.` },
                 ]
             },
             {
                 id: "night_owl",
-                label: "Nocturnidad",
+                label: "Ritmo nocturno",
                 emoji: "🦉",
                 mechanic: { type: "night_message", startHour: 4, endHour: 5, timezone: "Europe/Madrid" },
                 tiers: [
-                    { threshold: 1, xp: 2500, name: "Búho nocturno", desc: "Escribe de 4:00 a 5:00" },
+                    { threshold: 1, xp: 5000, name: "Búho nocturno", desc: "Envía un mensaje entre las 04:00 y las 05:00, hora española." },
                 ]
             },
             {
                 id: "hidden_command",
-                label: "Comando escondido",
+                label: "Comando oculto",
                 emoji: "⌨️",
-                // TODO: picks el nombre del comando escondido cuando exista
-                mechanic: { type: "hidden_command", commandName: null },
+                mechanic: { type: "hidden_command", commandName: "roger" },
                 tiers: [
-                    { threshold: 1, xp: 2500, name: "Curioso", desc: "Usa un comando escondido" },
+                    { threshold: 1, xp: 15000, name: "Comando secreto", desc: "Descubre y utiliza el comando oculto." },
                 ]
             },
             {
@@ -267,17 +311,16 @@ const categories = [
                 emoji: "🌐",
                 mechanic: { type: "web_easter_egg" },
                 tiers: [
-                    { threshold: 1, xp: 4000, name: "Detective digital", desc: "Encuentra un easter egg" },
+                    { threshold: 1, xp: 20000, name: "Detective digital", desc: "Encuentra el secreto escondido en la web." },
                 ]
             },
             {
                 id: "secret_word",
                 label: "Palabra secreta",
                 emoji: "🔮",
-                // TODO: picks la frase secreta (no picks pistas en el nombre)
-                mechanic: { type: "secret_phrase", phrase: null },
+                mechanic: { type: "secret_phrase", phrase: "lentejas" },
                 tiers: [
-                    { threshold: 1, xp: 2500, name: "Palabra mágica", desc: "Escribe la palabra secreta" },
+                    { threshold: 1, xp: 5000, name: "Palabra inesperada", desc: "Escribe la palabra secreta en un mensaje." },
                 ]
             },
         ]
@@ -306,6 +349,7 @@ function totalXp(entries) {
 
 module.exports = {
     RECORDS_EMOJI,
+    CHANNELS,
     categories,
     allRecords,
     visibleRecords,

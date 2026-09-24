@@ -141,7 +141,7 @@ test("overtake: con mas de 3 adelantados se resume fuera", () => {
     // dentro solo el primero, el resto resumido
     const inside5 = JSON.stringify(m.container.toJSON())
     assert.ok(inside5.includes("<@u2>") && !inside5.includes("<@u3>"))
-    assert.ok(inside5.includes("(+4 más)"))
+    assert.ok(inside5.includes("(+4)"))
     assert.ok(inside5.includes("Adelantados:"))
 })
 
@@ -152,7 +152,7 @@ test("overtake: con 2 adelantados sale el de mas arriba y en plural", () => {
     })
     assert.equal(m.invalid, undefined)
     const inside = JSON.stringify(m.container.toJSON())
-    assert.ok(inside.includes("Adelantados:** <@u2> (+1 más)"))
+    assert.ok(inside.includes("Adelantados:** <@u2> (+1)"))
     assert.ok(!inside.includes("<@u3>"))
     // ping solo al autor y al mencionado
     assert.deepEqual([...m.msg.allowedMentions.users].sort(), ["u1", "u2"])
