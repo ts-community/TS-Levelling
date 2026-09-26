@@ -235,8 +235,7 @@ class LevelUpMessage {
         }
         const totalMsgs = tools.commafy(tools.getMessages(this.userData))
         const monthlyMsgs = tools.commafy(tools.getMonthlyMessages(this.userData))
-        // TODO: completados reales cuando exista la lógica de récords.
-        const recordsTotal = recordsConfig.countTiers(recordsConfig.visibleRecords())
+        const recordsTotal = recordsConfig.countTiers(recordsConfig.allRecords())
         const subLines = [
             `**${EMOJI.XP}** **Nivel ${tools.commafy(this.level)}** (${tools.commafy(xp)} XP)`,
             `**${EMOJI.MESSAGES}** ${formatMessagesLine(totalMsgs, monthlyMsgs)}`,

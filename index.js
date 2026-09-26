@@ -249,6 +249,31 @@ async function processMonthlyMessages(guild, knownServer, knownMembers) {
         const server = knownServer || await client.db.fetch(guild.id).exec()
         if (!server?.users) return
 
+        // Reset diario (mensajes y XP del día, hora española): va antes del
+        // return mensual para correr todos los días, no solo al cambiar de mes.
+        // Sin snapshot ni anuncio: es solo el contador del día, mucho más ruidoso.
+        try {
+            const currentDay = recordTracker.getMadridDay(new Date())
+            if (server.info?.dailyMessagesPeriod !== currentDay) {
+                const dailyUsers = Object.keys(server.users)
+                for (let index = 0; index < dailyUsers.length; index += memberCleanupBatchSize) {
+                    const batch = dailyUsers.slice(index, index + memberCleanupBatchSize)
+                    const updates = Object.fromEntries(batch.flatMap(userId => [
+                        [`users.${userId}.dailyMessages`, 0],
+                        [`users.${userId}.dailyXP`, 0]
+                    ]))
+                    await client.db.update(guild.id, {
+                        $set: updates
+                    }).exec()
+                }
+                await client.db.update(guild.id, {
+                    $set: { "info.dailyMessagesPeriod": currentDay }
+                }).exec()
+            }
+        } catch (e) {
+            console.warn(`Could not reset daily counters for ${guild.id}:`, e.message)
+        }
+
         const previousPeriod = server.info?.monthlyMessagesPeriod
         if (previousPeriod === currentPeriod) return
 
@@ -501,9 +526,10 @@ client.on("messageReactionAdd", async (reaction, user) => {
         } catch {}
 
         // Reacciones recibidas: se acumulan para el autor del mensaje.
+        // Las auto-reacciones no cuentan (igual que en enviadas).
         try {
             const full = reaction.message.partial ? await reaction.message.fetch().catch(() => null) : reaction.message
-            if (!full || full.author?.bot) return
+            if (!recordTracker.isValidReceivedReaction(full, user)) return
             const authorId = String(full.author.id)
             await client.db.update(guildId, { $inc: { [`users.${authorId}.reactionsReceived`]: 1 } }).exec().catch(() => {})
             const fresh = await client.db.fetch(guildId).exec().catch(() => null)

@@ -44,6 +44,55 @@
             font-weight: 600;
             margin-top: 10px !important;
         }
+
+        /* Easter egg: huevo escondido abajo a la derecha */
+        #secretEasterTrigger {
+            position: fixed;
+            right: 18px;
+            bottom: 16px;
+            width: 30px;
+            height: 38px;
+            /* forma de huevo: mas estrecho arriba, redondo abajo */
+            border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+            border: 1px solid rgba(135, 243, 255, 0.35);
+            background:
+                radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.85) 0%, rgba(255,255,255,0) 32%),
+                radial-gradient(circle at 50% 55%, rgba(135, 243, 255, 0.55), rgba(167, 139, 250, 0.28) 70%),
+                linear-gradient(160deg, rgba(20, 32, 54, 0.9), rgba(38, 28, 64, 0.9));
+            opacity: 0.38;
+            filter: blur(2px);
+            cursor: pointer;
+            z-index: 40;
+            transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+            animation: eggIdle 3.6s ease-in-out infinite;
+        }
+        #secretEasterTrigger:hover,
+        #secretEasterTrigger:focus-visible {
+            opacity: 1;
+            filter: blur(0);
+            transform: scale(1.28) rotate(-6deg);
+            box-shadow: 0 0 18px rgba(135, 243, 255, 0.85), 0 0 42px rgba(167, 139, 250, 0.45);
+            outline: none;
+            animation: eggWiggle 0.6s ease-in-out;
+        }
+        #secretEasterTrigger:active {
+            transform: scale(1.12);
+        }
+        @keyframes eggIdle {
+            0%, 100% { translate: 0 0; rotate: 0deg; }
+            50% { translate: 0 -4px; rotate: 3deg; }
+        }
+        @keyframes eggWiggle {
+            0% { transform: scale(1.28) rotate(0deg); }
+            25% { transform: scale(1.34) rotate(-10deg); }
+            50% { transform: scale(1.3) rotate(8deg); }
+            75% { transform: scale(1.32) rotate(-5deg); }
+            100% { transform: scale(1.28) rotate(-6deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #secretEasterTrigger { animation: none; }
+            #secretEasterTrigger:hover { animation: none; }
+        }
     </style>
 </head>
 <body>
@@ -69,7 +118,7 @@
 
     <div id="everything" style="display: none">
 
-    <button id="secretEasterTrigger" type="button" aria-label="Easter egg" title="¿Qué es esto?" style="position: fixed; right: 14px; bottom: 12px; width: 16px; height: 16px; border: 1px solid rgba(255,255,255,0.14); border-radius: 50%; background: radial-gradient(circle, rgba(135,243,255,0.8), rgba(135,243,255,0.1)); opacity: 0.08; cursor: pointer; z-index: 40; transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;">
+    <button id="secretEasterTrigger" type="button" aria-label="Easter egg" title="¿Qué es esto?">
     </button>
 
     <div class="lbLayout">
@@ -365,16 +414,6 @@
         if (secretTrigger) {
             secretTrigger.addEventListener('click', () => {
                 window.location.href = guildId ? `/easteregg?guild=${guildId}` : '/easteregg';
-            });
-            secretTrigger.addEventListener('mouseenter', () => {
-                secretTrigger.style.opacity = '1';
-                secretTrigger.style.transform = 'scale(1.2)';
-                secretTrigger.style.boxShadow = '0 0 14px rgba(135,243,255,0.7)';
-            });
-            secretTrigger.addEventListener('mouseleave', () => {
-                secretTrigger.style.opacity = '0.08';
-                secretTrigger.style.transform = 'scale(1)';
-                secretTrigger.style.boxShadow = 'none';
             });
         }
     </script>

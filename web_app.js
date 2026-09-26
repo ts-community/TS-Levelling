@@ -14,7 +14,7 @@ const Tools = require('./classes/Tools.js')
 const Model = require("./classes/DatabaseModel.js");
 const LevelUpEmbed = require('./classes/LevelUpEmbed.js')
 const LevelUpMessage = require("./classes/LevelUpMessage.js")
-const { unlockWebEasterEgg, resolveServerId } = require("./classes/WebEasterEgg.js")
+const { unlockWebEasterEgg, resolveServerId, DEFAULT_EASTEREGG_GUILD_ID } = require("./classes/WebEasterEgg.js")
 const auth = require('./config.json')
 const curvePresets = require('./json/curve_presets.json')
 const schemaData = require("./database_schema.js")
@@ -118,9 +118,13 @@ app.get(["/settings", "/leaderboard", "/rank", "/roles", "/levels", "/records", 
 
 app.get("/easteregg", async function(req, res) {
     const [user, guilds] = await getDiscordInfo(req)
-    const guildId = resolveServerId({ guildId: req.query.guild || req.query.server || req.query.guildId, guilds })
+    const guildId = resolveServerId({ guildId: req.query.guild || req.query.server || req.query.guildId, guilds, defaultGuildId: DEFAULT_EASTEREGG_GUILD_ID })
 
-    function renderPage({ title, message, status = "info", showConfetti = false, actionHref = "/servers", actionLabel = "Volver al dashboard" }) {
+    function escapeHtml(s) {
+        return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
+    }
+
+    function renderPage({ title, message, detailsHtml = "", status = "info", showConfetti = false, actionHref = "/servers", actionLabel = "Volver al dashboard", secondaryHref = null, secondaryLabel = null }) {
         return `
             <!DOCTYPE html>
             <html lang="es">
@@ -222,7 +226,7 @@ app.get("/easteregg", async function(req, res) {
                     }
                     p {
                         margin: 1rem auto 0;
-                        max-width: 48ch;
+                        max-width: 52ch;
                         color: var(--muted);
                         font-size: 1.04rem;
                         line-height: 1.7;
@@ -230,10 +234,31 @@ app.get("/easteregg", async function(req, res) {
                     strong {
                         color: var(--success);
                     }
+                    .details {
+                        margin: 1.4rem auto 0;
+                        max-width: 560px;
+                        display: grid;
+                        gap: 0.6rem;
+                        text-align: left;
+                    }
+                    .detail {
+                        display: grid;
+                        gap: 0.15rem;
+                        padding: 0.8rem 1rem;
+                        border-radius: 16px;
+                        background: rgba(135, 243, 255, 0.07);
+                        border: 1px solid rgba(135, 243, 255, 0.14);
+                    }
+                    .detail > span { font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.7; }
+                    .detail > strong { font-size: 1.02rem; color: var(--text); }
+                    .detail > strong img { height: 1.3em; width: auto; vertical-align: -0.25em; margin-right: 0.15em; }
+                    .detail > small { color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
                     .actions {
                         margin-top: 1.5rem;
                         display: flex;
                         justify-content: center;
+                        gap: 0.7rem;
+                        flex-wrap: wrap;
                     }
                     a {
                         display: inline-flex;
@@ -252,6 +277,12 @@ app.get("/easteregg", async function(req, res) {
                     a:hover {
                         transform: translateY(-1px);
                         box-shadow: 0 18px 36px rgba(135, 243, 255, 0.32);
+                    }
+                    a.secondary {
+                        background: transparent;
+                        color: var(--text);
+                        border: 1px solid rgba(135, 243, 255, 0.35);
+                        box-shadow: none;
                     }
                     canvas {
                         position: fixed;
@@ -272,8 +303,10 @@ app.get("/easteregg", async function(req, res) {
                     <div class="badge">${status === "success" ? "✅" : "🔎"}</div>
                     <h1>${title}</h1>
                     <p>${message}</p>
+                    ${detailsHtml ? `<div class="details">${detailsHtml}</div>` : ""}
                     <div class="actions">
                         <a href="${actionHref}">${actionLabel}</a>
+                        ${secondaryHref ? `<a class="secondary" href="${secondaryHref}">${secondaryLabel}</a>` : ""}
                     </div>
                 </div>
 
@@ -365,24 +398,70 @@ app.get("/easteregg", async function(req, res) {
         }));
     }
 
+    const avatarUrl = user.avatar ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${String(user.avatar).startsWith("a_") ? "gif" : "png"}?size=128` : ""
     const result = await unlockWebEasterEgg({
         client,
         guildId,
         userId: user.id,
         guild: client.guilds.cache.get(guildId) || null,
         guilds,
+        avatarUrl,
     })
 
-    const title = result.unlocked ? "¡Easter egg encontrado!" : "Este easter egg ya estaba descubierto"
-    const message = result.unlocked
-        ? "Has desbloqueado el logro <strong>Detective digital</strong> del servidor."
-        : "Ya habías completado este logro; no se repite."
+    const guildName = escapeHtml(client.guilds.cache.get(guildId)?.name || (Array.isArray(guilds) ? guilds.find(g => String(g.id) === String(guildId))?.name : null) || guildId)
+    const meta = result.meta || result.result && { record: result.result.record, category: result.result.category, tier: result.result.tier } || null
+    const tierXp = Number(meta?.tier?.xp ?? result.result?.tier?.xp ?? 20000)
+    const recordEmoji = escapeHtml(meta?.record?.emoji || "🌐")
+    const recordName = escapeHtml(meta?.tier?.name || meta?.record?.label || "Detective digital")
+    const recordDesc = escapeHtml(meta?.tier?.desc || "Encuentra el secreto escondido en la web.")
+    const categoryName = escapeHtml(meta?.category?.name || "Ocultos")
+    const xpStr = `+${tierXp.toLocaleString("es-ES")} XP`
+
+    function buildDetails({ withProgress }) {
+        const rows = []
+        rows.push(`<div class="detail"><span>🖥️ Servidor</span><strong>${guildName}</strong><small>ID ${escapeHtml(guildId)} · El logro se ha guardado en este servidor.</small></div>`)
+        rows.push(`<div class="detail"><span>🏆 Record conseguido</span><strong>${recordEmoji} ${recordName}</strong><small>${recordDesc}</small></div>`)
+        rows.push(`<div class="detail"><span>✨ Recompensa</span><strong><img src="/assets/icons/xp.png" alt="XP">${escapeHtml(xpStr)}</strong><small>${result.unlocked ? "Ya sumada a tu XP y a tu XP mensual." : "Ya la recibiste la primera vez; no se suma de nuevo."}</small></div>`)
+        rows.push(`<div class="detail"><span>🕵️ Tipo</span><strong>Record oculto</strong><small>Los Records son logros del servidor. Este es de la categoría ${categoryName} y solo se revela al descubrirlo.</small></div>`)
+        if (withProgress && result.result) {
+            const done = result.result.done ?? 1
+            const total = result.result.total ?? 1
+            const completed = result.result.totalCompleted ?? done
+            const visible = result.result.totalVisible ?? total
+            rows.push(`<div class="detail"><span>📊 Tu progreso</span><strong><img src="/assets/icons/records.png" alt="Records">${completed}/${visible} Records</strong><small>Este logro: ${done}/${total} fases. Míralos con /records en Discord.</small></div>`)
+        }
+        if (result.unlocked) {
+            rows.push(`<div class="detail"><span>📣 Discord</span><strong>${result.announced ? "Anuncio enviado" : "Anuncio en camino"}</strong><small>${result.announced ? "Se ha publicado tu Record en el canal de Records del servidor." : "Si el canal de Records está configurado, aparecerá en Discord en unos segundos."}</small></div>`)
+        }
+        return rows.join("")
+    }
+
+    const leaderboardHref = `/leaderboard/${encodeURIComponent(guildId)}`
+
+    if (result.unlocked) {
+        return res.send(renderPage({
+            title: "¡Easter egg encontrado!",
+            message: `Has desbloqueado el logro <strong>${recordEmoji} ${recordName}</strong> en <strong>${guildName}</strong>. Los <strong>Records</strong> son logros del servidor con recompensa de XP: este era un <strong>Record oculto</strong>, por eso no aparecía en la lista hasta descubrirlo.`,
+            detailsHtml: buildDetails({ withProgress: true }),
+            status: "success",
+            showConfetti: true,
+            actionHref: leaderboardHref,
+            actionLabel: "Ver mi clasificación",
+            secondaryHref: "/servers",
+            secondaryLabel: "Volver al dashboard",
+        }));
+    }
 
     return res.send(renderPage({
-        title,
-        message,
-        status: result.unlocked ? "success" : "info",
-        showConfetti: result.unlocked,
+        title: "Este easter egg ya estaba descubierto",
+        message: `Ya habías completado el logro <strong>${recordEmoji} ${recordName}</strong> en <strong>${guildName}</strong>; no se repite ni da más XP. Los <strong>Records</strong> son logros del servidor y este era un <strong>Record oculto</strong> de la categoría ${categoryName}.`,
+        detailsHtml: buildDetails({ withProgress: false }),
+        status: "info",
+        showConfetti: false,
+        actionHref: leaderboardHref,
+        actionLabel: "Ver mi clasificación",
+        secondaryHref: "/servers",
+        secondaryLabel: "Volver al dashboard",
     }));
 })
 

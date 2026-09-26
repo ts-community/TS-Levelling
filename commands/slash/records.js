@@ -80,6 +80,9 @@ function getProgress(record, userData, member, commafy) {
     if (type === "messages_monthly") {
         return makeProgress(Number(userData?.monthlyMessages) || 0, record.tiers, v => commafy(v))
     }
+    if (type === "messages_daily") {
+        return makeProgress(Number(userData?.dailyMessages) || 0, record.tiers, v => commafy(v))
+    }
     if (type === "member_tenure") {
         if (!member?.joinedTimestamp) return null
         const years = (Date.now() - member.joinedTimestamp) / MS_PER_YEAR
@@ -133,29 +136,29 @@ function countUnlocked(entries, unlockedIds) {
     return entries.reduce((sum, { record }) => sum + record.tiers.filter(t => unlockedIds.has(`${record.id}:${t.threshold}`)).length, 0)
 }
 
-// Los ocultos solo suman al total una vez descubiertos: 0/27 al empezar,
-// 1/28 al completar el primero, 33/33 con todo.
+// Los ocultos siempre cuentan en el total: 0/36 al empezar,
+// 1/36 al completar el primero, 36/36 con todo.
 function titleCounts(unlockedIds) {
     const doneVisible = countUnlocked(records.visibleRecords(), unlockedIds)
     const doneHidden = countUnlocked(records.hiddenRecords(), unlockedIds)
-    return { done: doneVisible + doneHidden, total: records.countTiers(records.visibleRecords()) + doneHidden }
+    return { done: doneVisible + doneHidden, total: records.countTiers(records.allRecords()) }
 }
 
 function buildTitle(unlockedIds) {
     const { done, total } = titleCounts(unlockedIds)
-    return `# ${records.RECORDS_EMOJI} Mis records (${done}/${total})`
+    return `# ${records.RECORDS_EMOJI} Mis Records (${done}/${total})`
 }
 
 function formatReward(tier, commafy) {
     const rewards = []
-    if (tier.xp > 0) rewards.push(`${XP_EMOJI} +${commafy(tier.xp)}`)
+    if (tier.xp > 0) rewards.push(`${XP_EMOJI} **+${commafy(tier.xp)} XP**`)
     if (tier.roleId) rewards.push(`<@&${tier.roleId}>`)
     return rewards.join(" + ")
 }
 
-// Un bloque por logro con estructura fija: ### etiqueta, nivel con
-// contador en niveles, - descripción, números actuales si hay progreso y
-// recompensa en cita. Sin barras por ahora.
+// Un bloque por logro con el render compartido del mensaje de desbloqueo:
+// ### en una sola línea con guion (puede saltar en móvil), descripción
+// citada y recompensa en pequeño. Sin línea de progreso por ahora.
 // Solo se muestra el nivel actual (el siguiente a desbloquear).
 function buildRecordBlock(record, unlockedIds, progress, commafy) {
     const tiers = record.tiers
@@ -174,28 +177,27 @@ function buildRecordBlock(record, unlockedIds, progress, commafy) {
         completed = tiers.filter(t => unlockedIds.has(`${record.id}:${t.threshold}`)).length
         currentTier = tiers[Math.min(completed, total - 1)]
     }
+
     const allDone = completed >= total
 
-    const lines = [`### ${record.emoji} **${record.label}**`]
-    lines.push(`**${currentTier.name}** - ${completed}/${total} niveles${allDone ? " ✅" : ""}`)
-    lines.push(`-# - ${currentTier.desc}`)
-    if (!allDone && progress && progress.tier === currentTier) {
-        // 99% de tope visual: el 100% solo sale completando el nivel.
-        // En negrita y tamaño normal: es tu progreso, que se vea.
-        const isVoice = record.mechanic?.type === "voice_minutes"
-        const progressLabel = isVoice
-            ? `${progress.currentLabel}/${progress.targetLabel}`
-            : `${progress.currentLabel}/${progress.targetLabel}${record.unit ? ` ${record.unit}` : ""}`
-        const pct = Math.min(99, Math.round(progress.frac * 100))
-        lines.push(`**${progressLabel} · ${pct}%**`)
-    }
-    lines.push(`> **Recompensa:** ${formatReward(currentTier, commafy)}`)
+    const lines = [allDone
+        ? `### ~~${record.emoji} **${currentTier.name}** - ${completed}/${total} fases~~`
+        : `### ${record.emoji} **${currentTier.name}** - ${completed}/${total} fases`]
+    lines.push(allDone ? `> ~~${currentTier.desc}~~` : `> ${currentTier.desc}`)
+    lines.push(allDone
+        ? `-# ~~${formatReward(currentTier, commafy)}~~`
+        : `-# ${formatReward(currentTier, commafy)}`)
     return lines.join("\n")
 }
 
-// La dificultad manda siempre: el último umbral es la meta real del récord.
+// Los completados van arriba; el resto por dificultad (el último umbral
+// es la meta real del récord). Así se ve de un vistazo lo conseguido.
 function sortRecordsByProgress(category, unlockedIds) {
+    const isDone = r => r.tiers.every(t => unlockedIds.has(`${r.id}:${t.threshold}`))
     return [...category.records].sort((a, b) => {
+        const ad = isDone(a) ? 0 : 1
+        const bd = isDone(b) ? 0 : 1
+        if (ad !== bd) return ad - bd
         const aDifficulty = a.tiers[a.tiers.length - 1]?.threshold || 0
         const bDifficulty = b.tiers[b.tiers.length - 1]?.threshold || 0
         return bDifficulty - aDifficulty
@@ -212,17 +214,29 @@ function buildCategoryBlocks(category, userData, member, unlockedIds, commafy) {
 }
 
 function buildHiddenBlocks(hiddenCategory, unlockedIds, commafy) {
-    const tiers = hiddenCategory.records.flatMap(r => r.tiers.map(t => ({ record: r, tier: t })))
-    const found = tiers.filter(({ record, tier }) => unlockedIds.has(`${record.id}:${tier.threshold}`)).length
-    const header = `## ❓ Ocultos (**${found}**/${tiers.length})`
-    // Lista compacta en un solo texto: la página entera cabe siempre en el
-    // contenedor (límite de 10 componentes) y no filtra nada sin descubrir.
-    const lines = tiers.map(({ record, tier }) => {
-        const key = `${record.id}:${tier.threshold}`
-        if (!unlockedIds.has(key)) return `❓ ?????`
-        return `-# ${record.emoji} **${tier.name}** - ✅ · ${formatReward(tier, commafy)}`
-    })
-    return [header, lines.join("\n")]
+    // Sin cabecera: va pegado al título como las demás páginas (el contador
+    // ya sale en el menú). Lo no descubierto muestra su propio misterio
+    // (uno por Record, sin filtrar nada); lo descubierto, el render completo
+    // con nombre y recompensa pero descripción sustituida por misterio.
+    // Un bloque por nivel para separarlos como en las demás páginas.
+    const blocks = []
+    for (const record of hiddenCategory.records) {
+        const total = record.tiers.length
+        const completed = record.tiers.filter(t => unlockedIds.has(`${record.id}:${t.threshold}`)).length
+        for (const tier of record.tiers) {
+            const key = `${record.id}:${tier.threshold}`
+            if (!unlockedIds.has(key)) {
+                blocks.push(`-# 🔍 *${record.mystery || "Un secreto aún por descubrir…"}*`)
+                continue
+            }
+            blocks.push([
+                `### ${record.emoji} **${tier.name}** - ${completed}/${total} fases`,
+                `-# ❓ *El secreto sigue a salvo…*`,
+                `-# ${formatReward(tier, commafy)}`,
+            ].join("\n"))
+        }
+    }
+    return blocks
 }
 
 // Página Estadísticas: valores útiles incluso cuando todavía están a cero.
@@ -249,27 +263,37 @@ function buildInfoTexts(userData, member, unlockedIds, tools) {
         const days = Math.max(0, Math.floor((Date.now() - member.joinedTimestamp) / (24 * 3600 * 1000)))
         tenure = `${show(days)} días`
     }
-    const { done, total } = titleCounts(unlockedIds)
-    const stats = [
-        `${records.RECORDS_EMOJI} **Récords completados:** ${done}/${total}`,
-        `<:messages:1467163578699354235> **Mensajes totales:** ${msgs}`,
-        `📅 **Mensajes este mes:** ${monthlyMsgs}`,
-        `❤️ **Reacciones enviadas:** ${show(userData?.reactionsSent)}`,
-        `💘 **Reacciones recibidas:** ${show(userData?.reactionsReceived)}`,
-        `🔥 **Racha actual:** ${streak}`,
-        `🏆 **Racha máxima:** ${maxStreak}`,
-        `🧭 **Canales con mensajes:** ${channels}`,
-        `🔢 **Números en Counting:** ${show(userData?.countingSent)}`,
-        `🎙️ **Tiempo en voz:** ${voice}`,
-        `🏅 **Antigüedad servidor:** ${tenure}`,
-        `-# En juego: **${tools.commafy(records.totalXp(records.allRecords()))} XP** en ${records.countTiers(records.allRecords())} niveles`,
+    const groups = [
+        [
+            `### 💬 Actividad`,
+            `<:messages:1467163578699354235> **Mensajes totales:** ${msgs}`,
+            `📅 **Mensajes este mes:** ${monthlyMsgs}`,
+            `☀️ **Mensajes hoy:** ${show(Number(userData?.dailyMessages) || 0)}`,
+        ].join("\n"),
+        [
+            `### 🤝 Comunidad`,
+            `❤️ **Reacciones enviadas:** ${show(userData?.reactionsSent)}`,
+            `💘 **Reacciones recibidas:** ${show(userData?.reactionsReceived)}`,
+            `🔥 **Racha actual:** ${streak}`,
+            `🏆 **Racha máxima:** ${maxStreak}`,
+            `🏅 **Antigüedad servidor:** ${tenure}`,
+        ].join("\n"),
+        [
+            `### 🧭 Canales`,
+            `🧭 **Canales con mensajes:** ${channels}`,
+            `🔢 **Números en Counting:** ${show(userData?.countingSent)}`,
+        ].join("\n"),
+        [
+            `### 🎙️ Voz`,
+            `🎙️ **Tiempo en voz:** ${voice}`,
+        ].join("\n"),
     ]
     const help = [
-        `-# Completa niveles y gana XP extra.`,
+        `-# Completa fases y gana XP extra.`,
         `-# Ves tu siguiente nivel, con progreso real.`,
         `-# Los ocultos se revelan solos.`,
     ]
-    return [stats.join("\n"), help.join("\n")]
+    return [groups, help.join("\n")]
 }
 
 // Detalle del botón de estadísticas en Components V2: qué son y cómo van.
@@ -278,10 +302,10 @@ function buildInfoDetailBlocks(tools) {
     const totalXp = tools.commafy(records.totalXp(records.allRecords()))
     const tiers = records.countTiers(records.allRecords())
     return [
-        `# ${records.RECORDS_EMOJI} ¿Qué son los récords?`,
+        `# ${records.RECORDS_EMOJI} ¿Qué son los Records?`,
         [
             `## 🎯 Cómo funcionan`,
-            `-# Cada logro tiene niveles con XP extra.`,
+            `-# Cada logro tiene fases con XP extra.`,
             `-# Siempre ves tu siguiente nivel.`,
             `-# Al completarlo, el XP se suma solo.`,
         ].join("\n"),
@@ -289,7 +313,7 @@ function buildInfoDetailBlocks(tools) {
             `## 🗂️ Las páginas`,
             `-# Stats, actividad, comunidad, canales y voz.`,
             `-# Los ocultos se revelan solos.`,
-            `-# Hay **${totalXp} XP** en ${tiers} niveles.`,
+            `-# Hay **${totalXp} XP** en ${tiers} fases.`,
         ].join("\n"),
         `-# Muévete con el menú del mensaje.`,
     ]
@@ -342,7 +366,7 @@ function buildCatSelect(currentId, unlockedIds, disabled = false) {
 module.exports = {
 metadata: {
     name: "records",
-    description: "View your server records (achievements).",
+    description: "View your server Records (achievements).",
     args: [
         { type: "user", name: "member", description: "Which member to inspect", required: false },
     ],
@@ -367,16 +391,22 @@ async run(client, int, tools) {
         const container = new ContainerBuilder().setAccentColor(ACCENTS[id] ?? ACCENTS.stats)
 
         const category = id !== INFO_ID ? records.categories.find(c => c.id === id) : null
-        const stats = id === INFO_ID ? buildInfoTexts(userData, member, unlockedIds, tools)[0] : null
+        const statGroups = id === INFO_ID ? buildInfoTexts(userData, member, unlockedIds, tools)[0] : null
         const pageBlocks = category
             ? (category.hidden
                 ? buildHiddenBlocks(category, unlockedIds, tools.commafy)
                 : buildCategoryBlocks(category, userData, member, unlockedIds, tools.commafy))
             : null
-        const categoryIntro = pageBlocks ? `${pageBlocks[0]}\n\n${pageBlocks[1]}` : null
+        // Sin cabecera de categoría (salvo ocultos, que ya vienen sin ella):
+        // el primer récord (pageBlocks[1]) va pegado al título en el mismo
+        // TextDisplay, como en el mensaje de nuevo Record. En stats el título
+        // va solo: los grupos empiezan después del separador.
+        const categoryIntro = pageBlocks
+            ? (category.hidden ? pageBlocks[0] : pageBlocks[1])
+            : null
         const titleContent = [
             buildTitle(unlockedIds),
-            stats || categoryIntro,
+            statGroups ? statGroups[0] : categoryIntro,
         ].filter(Boolean).join("\n\n")
         const titleText = new TextDisplayBuilder().setContent(titleContent)
         const avatarUrl = typeof member?.displayAvatarURL === "function" ? member.displayAvatarURL() : ""
@@ -390,22 +420,17 @@ async run(client, int, tools) {
         container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
 
         if (id === INFO_ID) {
-            const [, help] = buildInfoTexts(userData, member, unlockedIds, tools)
-            container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
-            container.addTextDisplayComponents(new TextDisplayBuilder().setContent(help))
-            container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
-            container.addActionRowComponents(new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId(INFO_BUTTON_ID)
-                    .setLabel("¿Cómo funcionan los récords?")
-                    .setStyle(ButtonStyle.Secondary)
-                    .setDisabled(disabled),
-            ))
+            // El primer grupo ya va pegado al título; el resto con
+            // separadores. Sin ayuda ni botón.
+            for (const text of statGroups.slice(1)) {
+                container.addTextDisplayComponents(new TextDisplayBuilder().setContent(text))
+                container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+            }
         } else {
-            // La cabecera viaja pegada al primer bloque: así ninguna página
-            // supera el límite de 10 componentes del contenedor y cada récord
-            // queda separado por su propio divisor.
-            const texts = pageBlocks.slice(2)
+            // El título y el primer bloque comparten TextDisplay y cada bloque
+            // queda separado por su propio divisor, incluido el final: misma
+            // lógica en todas las páginas (/top ya envía containers mayores).
+            const texts = category.hidden ? pageBlocks.slice(1) : pageBlocks.slice(2)
             for (const text of texts) {
                 container.addTextDisplayComponents(new TextDisplayBuilder().setContent(text))
                 container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
@@ -436,7 +461,7 @@ async run(client, int, tools) {
     collector.on("collect", async interaction => {
         if (interaction.user.id !== int.user.id) {
             return interaction.reply({
-                content: `Este menú es de otra persona. Usa ${tools.commandTag("records")} para ver tus récords.`,
+                content: `Este menú es de otra persona. Usa ${tools.commandTag("records")} para ver tus Records.`,
                 ephemeral: true,
             }).catch(() => {})
         }

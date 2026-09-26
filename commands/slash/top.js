@@ -6,6 +6,8 @@ const {
     MessageFlags,
     SeparatorBuilder,
     SeparatorSpacingSize,
+    StringSelectMenuBuilder,
+    StringSelectMenuOptionBuilder,
     TextDisplayBuilder
 } = require("discord.js")
 const ranks = require("../../consts/ranks.js")
@@ -123,6 +125,133 @@ function monthlyMessageVariants(monthly, xp) {
     ]
 }
 
+function dailyMessageVariants(msgs, xp) {
+    const E = "<:messages:1467163578699354235>"
+    const X = "<:XP:1467192533812645939>"
+    const full = isSingleMessage(msgs) ? "mensaje" : "mensajes"
+    const abbr = isSingleMessage(msgs) ? "msg" : "msgs"
+    return [
+        `-# ${E} **${msgs}** ${full} hoy  -  ${X} **${xp}** XP hoy`,
+        `-# ${E} **${msgs}** ${abbr} hoy  -  ${X} **${xp}** XP hoy`,
+        `-# ${E} **${msgs}** ${full}  -  ${X} **${xp}** XP`,
+        `-# ${E} **${msgs}** ${abbr}  -  ${X} **${xp}** XP`,
+        `-# ${E} **${msgs}** m  -  ${X} **${xp}** XP`,
+        `-# ${E} **${msgs}**  -  ${X} **${xp}**`
+    ]
+}
+
+function statLineVariants(emoji, value, unit, abbr) {
+    return [
+        `-# ${emoji} **${value}** ${unit}`,
+        `-# ${emoji} **${value}** ${abbr}`,
+        `-# ${emoji} **${value}**`
+    ]
+}
+
+// Tops por estadística (misma fuente que /records): valor numérico para
+// ordenar + unidad para pintar. Sin antigüedad: vive en el miembro de
+// Discord, no en la DB, y rankear exigiría descargar el servidor entero.
+function statNumber(raw) {
+    if (raw == null) return 0
+    if (typeof raw === "object") return Number(raw.current ?? raw.days) || 0
+    return Number(raw) || 0
+}
+
+function statChannelCount(raw) {
+    if (raw == null) return 0
+    if (typeof raw === "number") return raw
+    if (raw instanceof Set || raw instanceof Map) return raw.size
+    if (Array.isArray(raw)) return raw.length
+    if (typeof raw === "object") return Object.keys(raw).length
+    return 0
+}
+
+const STAT_MODES = {
+    mensajes: {
+        menuEmoji: "💬", label: "Mensajes", title: "Top de mensajes",
+        unit: "mensajes", abbr: "msjs", emoji: "<:messages:1467163578699354235>",
+        one: "mensaje", get: u => Number(u.messages) || 0,
+    },
+    mensajes_mes: {
+        menuEmoji: "📅", label: "Mensajes del mes", title: "Top de mensajes del mes",
+        unit: "mensajes este mes", abbr: "msgs mes", emoji: "<:messages:1467163578699354235>",
+        one: "mensaje este mes", get: u => Number(u.monthlyMessages) || 0,
+    },
+    mensajes_dia: {
+        menuEmoji: "☀️", label: "Mensajes del día", title: "Top de mensajes del día",
+        unit: "mensajes hoy", abbr: "msgs hoy", emoji: "☀️",
+        one: "mensaje hoy", get: u => Number(u.dailyMessages) || 0,
+    },
+    reacciones_enviadas: {
+        menuEmoji: "❤️", label: "Reacciones enviadas", title: "Top de reacciones enviadas",
+        unit: "reacciones enviadas", abbr: "reacciones", emoji: "❤️",
+        one: "reacción enviada", get: u => Number(u.reactionsSent) || 0,
+    },
+    reacciones_recibidas: {
+        menuEmoji: "💘", label: "Reacciones recibidas", title: "Top de reacciones recibidas",
+        unit: "reacciones recibidas", abbr: "reacciones", emoji: "💘",
+        one: "reacción recibida", get: u => Number(u.reactionsReceived) || 0,
+    },
+    racha: {
+        menuEmoji: "🔥", label: "Racha actual", title: "Top de racha actual",
+        unit: "días de racha", abbr: "días", emoji: "🔥",
+        one: "día de racha", get: u => statNumber(u.streak),
+    },
+    racha_max: {
+        menuEmoji: "🏆", label: "Racha máxima", title: "Top de racha máxima",
+        unit: "días de racha máx.", abbr: "días", emoji: "🏆",
+        one: "día de racha máx.", get: u => {
+            const raw = u.streak
+            if (raw == null) return 0
+            if (typeof raw === "object") return Number(raw.max ?? raw.maximum ?? raw.best ?? raw.current ?? raw.days) || 0
+            return Number(raw) || 0
+        },
+    },
+    canales: {
+        menuEmoji: "🧭", label: "Canales", title: "Top de canales",
+        unit: "canales", abbr: "can.", emoji: "🧭",
+        one: "canal", get: u => statChannelCount(u.channels),
+    },
+    counting: {
+        menuEmoji: "🔢", label: "Counting", title: "Top de counting",
+        unit: "números", abbr: "núms.", emoji: "🔢",
+        one: "número", get: u => Number(u.countingSent) || 0,
+    },
+    voz: {
+        menuEmoji: "🎙️", label: "Voz", title: "Top de voz",
+        unit: "min en voz", abbr: "min", emoji: "🎙️",
+        one: "min en voz", get: u => Number(u.voiceMinutes) || 0,
+    },
+}
+
+function statUnit(mode, value) {
+    if (Number(value) === 1 && mode.one) return mode.one
+    return mode.unit
+}
+
+// Un solo control para cambiar de vista: XP total, XP del mes, XP del día
+// y una entrada por estadística (testeable sin interacción).
+const VIEW_MODES = [
+    { value: "xp", label: "XP total", menuEmoji: "📊" },
+    { value: "xp_mes", label: "XP del mes", menuEmoji: "🗓️" },
+    { value: "xp_dia", label: "XP del día", menuEmoji: "✨" },
+]
+
+function buildViewMenu(viewKey, disabled = false) {
+    return new StringSelectMenuBuilder()
+        .setCustomId("top-view")
+        .setPlaceholder("Ver top por…")
+        .setDisabled(disabled)
+        .addOptions(
+            ...VIEW_MODES.map(v =>
+                new StringSelectMenuOptionBuilder()
+                    .setLabel(v.label).setValue(v.value).setEmoji(v.menuEmoji).setDefault(viewKey === v.value)),
+            ...Object.entries(STAT_MODES).map(([key, mode]) =>
+                new StringSelectMenuOptionBuilder()
+                    .setLabel(mode.label).setValue(key).setEmoji(mode.menuEmoji).setDefault(viewKey === key))
+        )
+}
+
 module.exports = {
 metadata: {
     name: "top",
@@ -148,7 +277,7 @@ async run(client, int, tools) {
     }
 
     let pageSize = 8
-    let monthlyMode = !!int.options.get("monthly")?.value
+    let viewKey = int.options.get("monthly")?.value ? "xp_mes" : "xp"
 
     let minLeaderboardXP = db.settings.leaderboard.minLevel > 1 ? tools.xpForLevel(db.settings.leaderboard.minLevel, db.settings) : 0
     const hasLeaderboardLevel = userData => Number(userData?.xp) > 0 && tools.getLevel(Number(userData.xp), db.settings) > 0
@@ -159,7 +288,32 @@ async run(client, int, tools) {
                 || tools.getMonthlyMessages(b) - tools.getMonthlyMessages(a)
                 || b.xp - a.xp
             : b.xp - a.xp)
-    let rankings = buildRankings(monthlyMode)
+    let rankings = buildRankings(false)
+
+    // El botón rota global -> mensual -> diario. El diario ordena por XP del
+    // día (desempate por mensajes del día y luego XP total, como el mensual).
+    const buildDailyRankings = () => tools.xpObjToArray(db.users || {})
+        .filter(x => hasLeaderboardLevel(x) && !x.hidden && tools.getDailyXP(x) > 0)
+        .sort((a, b) => tools.getDailyXP(b) - tools.getDailyXP(a)
+            || tools.getDailyMessages(b) - tools.getDailyMessages(a)
+            || b.xp - a.xp)
+
+    const buildStatRankings = key => {
+        const mode = STAT_MODES[key]
+        if (!mode) return []
+        return tools.xpObjToArray(db.users || {})
+            .filter(x => hasLeaderboardLevel(x) && !x.hidden && mode.get(x) > 0)
+            .sort((a, b) => mode.get(b) - mode.get(a) || b.xp - a.xp)
+    }
+
+    const buildViewRankings = key => {
+        if (key === "xp_mes") return buildRankings(true)
+        if (key === "xp_dia") return buildDailyRankings()
+        if (key && STAT_MODES[key]) return buildStatRankings(key)
+        return buildRankings(false)
+    }
+
+    rankings = buildViewRankings(viewKey)
 
     let totalPages = Math.max(1, Math.ceil(rankings.length / pageSize))
     let pageNumber = 1
@@ -215,7 +369,12 @@ async run(client, int, tools) {
         const dominantRankName = [...pageRankCounts.entries()]
             .sort((a, b) => b[1] - a[1])[0]?.[0]
         const dominantRank = ranks.find(rankData => rankData.rank === dominantRankName)
-        const pageAccentColor = monthlyMode
+        const statMode = STAT_MODES[viewKey] || null
+        const pageAccentColor = statMode
+            ? accentColor
+            : viewKey === "xp_dia"
+            ? 0xffd166
+            : viewKey === "xp_mes"
             ? 0x8ecae6
             : dominantRank
             ? parseInt(dominantRank.color.replace("#", ""), 16)
@@ -230,6 +389,9 @@ async run(client, int, tools) {
             const totalMessages = tools.commafy(tools.getMessages(entry))
             const monthlyMessages = tools.commafy(tools.getMonthlyMessages(entry))
             const monthlyXP = tools.commafy(tools.getMonthlyXP(entry))
+            const dailyMessages = tools.commafy(tools.getDailyMessages(entry))
+            const dailyXP = tools.commafy(tools.getDailyXP(entry))
+            const statValue = statMode ? statMode.get(entry) : 0
             const member = resolvedMembers.get(userId)
             const user = member?.user || client.users.cache.get(userId)
             const displayName = member?.displayName || user?.globalName || user?.username
@@ -244,7 +406,11 @@ async run(client, int, tools) {
                     : ""
             entryComponents.push(new TextDisplayBuilder().setContent([
                 `${rankRole?.emoji || "<:top:1467967277251956887>"} **#${position} - Nivel ${level} - ${memberDisplay}**${memberMarker}`,
-                monthlyMode
+                statMode
+                    ? fitLine(...statLineVariants(statMode.emoji, tools.commafy(statValue), statUnit(statMode, statValue), statMode.abbr))
+                    : viewKey === "xp_dia"
+                    ? fitMonthlyLine(...dailyMessageVariants(dailyMessages, dailyXP))
+                    : viewKey === "xp_mes"
                     ? fitMonthlyLine(...monthlyMessageVariants(monthlyMessages, monthlyXP))
                     : fitLine(...globalMessageVariants(totalMessages, monthlyMessages))
             ].join("\n")))
@@ -266,6 +432,7 @@ async run(client, int, tools) {
         const lastMember = Math.min(page * pageSize, rankings.length)
         const memberRange = rankings.length ? `Miembros **${firstMember}-${lastMember}** de **${rankings.length}**` : "**0 miembros**"
         const canNavigate = rankings.length > pageSize
+        const viewMenu = buildViewMenu(viewKey, disabled)
         const navigation = [
             new ButtonBuilder()
                 .setCustomId("top-prev")
@@ -277,17 +444,12 @@ async run(client, int, tools) {
                 .setLabel(`Página ${nextPage} >>`)
                 .setStyle(page >= totalPages ? ButtonStyle.Secondary : ButtonStyle.Success)
                 .setDisabled(!canNavigate || disabled),
-            new ButtonBuilder()
-                .setCustomId("top-toggle")
-                .setLabel(monthlyMode ? "Cambiar a top global" : "Cambiar a top mensual")
-                .setStyle(ButtonStyle.Primary)
-                .setDisabled(disabled),
         ]
 
         const container = new ContainerBuilder()
             .setAccentColor(pageAccentColor || tools.COLOR)
             .addTextDisplayComponents(new TextDisplayBuilder().setContent([
-                `# <:top:1467967277251956887> ${monthlyMode ? `Top de ${getCurrentSpanishMonth().charAt(0).toUpperCase() + getCurrentSpanishMonth().slice(1)}` : "Top"} de ${int.guild.name}`
+                `# <:top:1467967277251956887> ${statMode ? statMode.title : viewKey === "xp_dia" ? "Top diario" : viewKey === "xp_mes" ? `Top de ${getCurrentSpanishMonth().charAt(0).toUpperCase() + getCurrentSpanishMonth().slice(1)}` : "Top"} de ${int.guild.name}`
             ].join("\n")))
 
         container.addSeparatorComponents(new SeparatorBuilder()
@@ -306,7 +468,8 @@ async run(client, int, tools) {
                     .setSpacing(SeparatorSpacingSize.Small))
                 .addTextDisplayComponents(new TextDisplayBuilder().setContent(
                     `-# Página **${page}** de **${totalPages}**  -  ${memberRange}`))
-                .addActionRowComponents(new ActionRowBuilder().addComponents(navigation)),
+                .addActionRowComponents(new ActionRowBuilder().addComponents(navigation))
+                .addActionRowComponents(new ActionRowBuilder().addComponents(viewMenu)),
             pageUserIds
         }
     }
@@ -345,9 +508,10 @@ async run(client, int, tools) {
 
             if (button.customId === "top-prev") pageNumber = pageNumber <= 1 ? totalPages : pageNumber - 1
             if (button.customId === "top-next") pageNumber = pageNumber >= totalPages ? 1 : pageNumber + 1
-            if (button.customId === "top-toggle") {
-                monthlyMode = !monthlyMode
-                rankings = buildRankings(monthlyMode)
+            if (button.isStringSelectMenu?.() && button.customId === "top-view") {
+                const picked = button.values?.[0]
+                viewKey = picked === "xp_mes" || picked === "xp_dia" || (picked && STAT_MODES[picked]) ? picked : "xp"
+                rankings = buildViewRankings(viewKey)
                 pageNumber = 1
                 totalPages = Math.max(1, Math.ceil(rankings.length / pageSize))
             }
@@ -382,4 +546,11 @@ module.exports.estimateVisualWidth = estimateVisualWidth
 module.exports.fitLine = fitLine
 module.exports.fitMonthlyLine = fitMonthlyLine
 module.exports.globalMessageVariants = globalMessageVariants
+module.exports.monthlyMessageVariants = monthlyMessageVariants
+module.exports.dailyMessageVariants = dailyMessageVariants
+module.exports.statLineVariants = statLineVariants
+module.exports.STAT_MODES = STAT_MODES
+module.exports.statUnit = statUnit
+module.exports.buildViewMenu = buildViewMenu
+module.exports.VIEW_MODES = VIEW_MODES
 module.exports.monthlyMessageVariants = monthlyMessageVariants

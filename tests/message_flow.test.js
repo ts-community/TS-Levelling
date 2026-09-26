@@ -212,14 +212,16 @@ test("message flow: first message grants xp and bumps counters", async () => {
     const user = h.db.doc.users.u1
     assert.equal(user.messages, 1)
     assert.equal(user.monthlyMessages, 1)
+    assert.equal(user.dailyMessages, 1)
     assert.equal(user.xp, 100) // rng() is stubbed to 100
     assert.equal(user.monthlyXP, 100)
+    assert.equal(user.dailyXP, 100)
     assert.equal(user.cooldown, NOW + 60 * 1000)
     assert.equal(user.hidden, false)
 })
 
 test("message flow: economy channel grants participation record", async () => {
-    const h = makeHarness({}, {}, { channelId: "1532157047674638478" })
+    const h = makeHarness({}, {}, { channelId: "1553080048855289858" })
     await h.run()
     assert.equal(h.db.doc.users.u1.records["economy_participation:1"], true)
 })
@@ -249,8 +251,10 @@ test("message flow: cooldown blocks xp on the second message", async () => {
     const user = h.db.doc.users.u1
     assert.equal(user.messages, 2)
     assert.equal(user.monthlyMessages, 2)
+    assert.equal(user.dailyMessages, 2)
     assert.equal(user.xp, 100) // no extra xp inside the cooldown
     assert.equal(user.monthlyXP, 100)
+    assert.equal(user.dailyXP, 100)
 })
 
 test("message flow: 0x ban role blocks xp but still counts the message", async () => {
@@ -259,8 +263,10 @@ test("message flow: 0x ban role blocks xp but still counts the message", async (
     const user = h.db.doc.users.u1
     assert.equal(user.messages, 1)
     assert.equal(user.monthlyMessages, 1)
+    assert.equal(user.dailyMessages, 1)
     assert.equal(user.xp || 0, 0)
     assert.equal(user.monthlyXP || 0, 0)
+    assert.equal(user.dailyXP || 0, 0)
 })
 
 test("message flow: crossing a level sends the level-up message and syncs roles", async () => {
@@ -289,4 +295,42 @@ test("message flow: hidden user gets unhidden", async () => {
     const h = makeHarness({ users: { u1: { xp: 0, cooldown: 0, hidden: true } } })
     await h.run()
     assert.equal(h.db.doc.users.u1.hidden, false)
+})
+
+test("withAuthorLock serializes same-author work", async () => {
+    const order = []
+    const slow = async id => {
+        order.push(`start-${id}`)
+        await new Promise(r => setTimeout(r, 20))
+        order.push(`end-${id}`)
+        return id
+    }
+    const [a, b] = await Promise.all([
+        NewMessage.withAuthorLock("g1", "u1", () => slow("a")),
+        NewMessage.withAuthorLock("g1", "u1", () => slow("b")),
+    ])
+    assert.equal(a, "a")
+    assert.equal(b, "b")
+    assert.deepEqual(order, ["start-a", "end-a", "start-b", "end-b"])
+})
+
+test("withAuthorLock isolates different authors and guilds", async () => {
+    const order = []
+    const slow = async id => {
+        order.push(`start-${id}`)
+        await new Promise(r => setTimeout(r, 20))
+        order.push(`end-${id}`)
+    }
+    await Promise.all([
+        NewMessage.withAuthorLock("g1", "u1", () => slow("a")),
+        NewMessage.withAuthorLock("g1", "u2", () => slow("b")),
+        NewMessage.withAuthorLock("g2", "u1", () => slow("c")),
+    ])
+    assert.deepEqual(order.slice(0, 3), ["start-a", "start-b", "start-c"])
+})
+
+test("withAuthorLock releases after failure", async () => {
+    await assert.rejects(NewMessage.withAuthorLock("g1", "u9", async () => { throw new Error("x") }))
+    const ok = await NewMessage.withAuthorLock("g1", "u9", async () => "fine")
+    assert.equal(ok, "fine")
 })

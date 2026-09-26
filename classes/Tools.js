@@ -89,18 +89,25 @@ class Tools {
             return userData?.monthlyMessages || 0
         }
 
+        this.getDailyMessages = function(userData) {
+            return userData?.dailyMessages || 0
+        }
+
+        this.getDailyXP = function(userData) {
+            return userData?.dailyXP || 0
+        }
+
         this.getMonthlyXP = function(userData) {
             return userData?.monthlyXP || 0
         }
 
-        // cuenta cuántos récords completos tiene el usuario
+        // cuenta cuántos récords completos tiene el usuario (visibles + ocultos)
         this.getRecordsCompleted = function(userData) {
             if (!userData?.records) return 0
             let count = 0
-            // recorremos todos los récords visibles y cuentan los tiers completados
+            // recorremos todos los récords y cuentan los tiers completados
             const allRecords = recordsConfig.allRecords()
             for (const { record } of allRecords) {
-                if (record.hidden) continue // solo cuentas los visibles en este conteo básico
                 for (const tier of record.tiers) {
                     const key = `${record.id}:${tier.threshold}`
                     if (userData.records[key]) count++

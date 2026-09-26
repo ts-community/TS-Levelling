@@ -7,7 +7,9 @@
 //   node reset-records.js --apply          -> ejecuta (pide confirmación)
 //   node reset-records.js --apply --yes    -> ejecuta sin preguntar
 //   node reset-records.js --guild <id>     -> solo ese servidor
-//   node reset-records.js --user <id>      -> solo ese usuario (requiere --guild)
+//   node reset-records.js --user <id>      -> solo ese usuario (en todos los
+//      servidores salvo que se combine con --guild). Con --user no se borran
+//      mensajes del canal: solo se revierte su XP y sus flags.
 //   node reset-records.js --keep-progress  -> conserva el progreso (racha,
 //      reacciones, canales, counting, voz) y solo quita flags + XP de récords
 //   node reset-records.js --no-delete-msgs -> no borra mensajes del canal
@@ -17,9 +19,9 @@
 //   records, streak, reactionsSent, channels, countingSent,
 //   voiceMinutes, voiceJoined
 // Lo que AJUSTA (resta el XP dado por los logros, con mínimo 0):
-//   xp, monthlyXP
+//   xp, monthlyXP, dailyXP
 // Lo que NO toca nunca:
-//   messages, monthlyMessages, cooldown, hidden, settings, info
+//   messages, monthlyMessages, dailyMessages, cooldown, hidden, settings, info
 //   (el XP de mensajes y los contadores de mensajes se conservan intactos)
 
 require('dotenv').config();
@@ -61,10 +63,6 @@ function parseArgs(argv) {
             process.exit(1);
         }
     }
-    if (args.user && !args.guild) {
-        console.error(`${colors.red}❌ --user requiere --guild${colors.reset}`);
-        process.exit(1);
-    }
     return args;
 }
 
@@ -76,7 +74,8 @@ Uso: node reset-records.js [opciones]
   --apply                 Ejecuta los cambios (pide confirmación)
   --yes                   No pide confirmación (usar con --apply)
   --guild <id>            Solo ese servidor
-  --user <id>             Solo ese usuario (requiere --guild)
+  --user <id>             Solo ese usuario (en todos los servidores salvo
+                          que se combine con --guild; no borra mensajes)
   --keep-progress         Conserva racha/reacciones/canales/counting/voz
   --no-delete-msgs        No borra los mensajes del bot en el canal de récords
   --help, -h              Esta ayuda
@@ -264,9 +263,10 @@ async function main() {
             serversDone++;
         }
 
-        // Borrar mensajes del bot en el canal de récords
+        // Borrar mensajes del bot en el canal de récords (solo en resets
+        // globales: con --user no se toca el historial de los demás).
         let totalDeleted = 0;
-        if (args.deleteMsgs) {
+        if (args.deleteMsgs && !args.user) {
             console.log(`\n${colors.blue}🧹 Borrando mensajes del bot en el canal de récords...${colors.reset}`);
             for (const s of serverPlans) {
                 const deleted = await deleteBotMessagesFromRecordsChannel(s.guildId);
@@ -284,7 +284,7 @@ async function main() {
     }
 }
 
-module.exports = { planUserReset, PROGRESS_FIELDS };
+module.exports = { planUserReset, PROGRESS_FIELDS, parseArgs };
 
 if (require.main === module) {
     main().catch(e => { console.error(e); process.exit(1) });

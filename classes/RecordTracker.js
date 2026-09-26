@@ -134,6 +134,16 @@ function isValidRecordReaction(reaction, user) {
     return true
 }
 
+// ¿La reacción cuenta como RECIBIDA para el autor del mensaje?
+// Como en el lado de enviadas: las auto-reacciones no cuentan.
+// (Las reacciones de bots al autor sí se mantienen como antes.)
+function isValidReceivedReaction(message, reactor) {
+    const authorId = message?.author?.id
+    if (!authorId || message?.author?.bot) return false
+    if (!reactor) return false
+    return String(authorId) !== String(reactor.id)
+}
+
 // Umbrales recién alcanzados por un contador (sin contar los ya desbloqueados).
 function newlyReachedThresholds(record, progressValue, unlockedIds) {
     const value = Number(progressValue) || 0
@@ -194,6 +204,12 @@ function getOvertakenIds(oldUsers, newUsers, authorId, settings) {
     }
 }
 
+// Candado por (servidor, usuario, logro): dos eventos concurrentes (dos
+// mensajes seguidos, doble clic en /easteregg, reacción + mensaje...) no
+// pueden conceder el mismo nivel dos veces. El segundo espera al primero
+// y revalida el flag antes de decidir.
+const inflightGrants = new Map()
+
 // Entrega un nivel: marca flag + suma XP (+ mensual) + rol de
 // récord. Devuelve el objeto de desbloqueo si fue nuevo, o null si ya estaba.
 // El envío del anuncio se hace aparte para poder agrupar varios.
@@ -205,8 +221,30 @@ async function grantRecord(client, guild, guildId, userId, recordId, threshold) 
     const resolvedGuildId = String(guild?.id || guildId || "")
     if (!resolvedGuildId) return null
 
-    const fresh = await client.db.fetch(resolvedGuildId).exec().catch(() => null)
     const key = `${recordId}:${threshold}`
+    const lockKey = `${resolvedGuildId}:${String(userId)}:${key}`
+
+    while (inflightGrants.has(lockKey)) {
+        try { await inflightGrants.get(lockKey) } catch {}
+        const check = await client.db.fetch(resolvedGuildId).exec().catch(() => null)
+        if (check?.users?.[String(userId)]?.records?.[key]) return null
+    }
+
+    let release
+    inflightGrants.set(lockKey, new Promise(resolve => { release = resolve }))
+    try {
+        return await grantRecordInner(client, guild, resolvedGuildId, userId, found, tier, key)
+    } finally {
+        inflightGrants.delete(lockKey)
+        release()
+    }
+}
+
+async function grantRecordInner(client, guild, resolvedGuildId, userId, found, tier, key) {
+    const recordId = found.record.id
+    const threshold = tier.threshold
+
+    const fresh = await client.db.fetch(resolvedGuildId).exec().catch(() => null)
     if (fresh?.users?.[String(userId)]?.records?.[key]) return null
 
     const settings = fresh?.settings
@@ -256,14 +294,14 @@ async function grantRecord(client, guild, guildId, userId, recordId, threshold) 
     // Prepara info del desbloqueo para que el caller lo envíe (batching).
     const keys = Object.keys(afterUser.records || {})
     const done = keys.filter(k => k.startsWith(`${recordId}:`)).length || 1
-    // Totales globales del usuario (como /records: visibles + ocultos ya descubiertos).
+    // Totales globales del usuario (como /records: los ocultos siempre cuentan en el total).
     const unlockedKeys = new Set(keys)
     const doneVisible = recordsConfig.visibleRecords().reduce((n, { record }) =>
         n + record.tiers.filter(t => unlockedKeys.has(`${record.id}:${t.threshold}`)).length, 0)
     const doneHidden = recordsConfig.hiddenRecords().reduce((n, { record }) =>
         n + record.tiers.filter(t => unlockedKeys.has(`${record.id}:${t.threshold}`)).length, 0)
     const totalCompleted = doneVisible + doneHidden
-    const totalVisible = recordsConfig.countTiers(recordsConfig.visibleRecords()) + doneHidden
+    const totalVisible = recordsConfig.countTiers(recordsConfig.allRecords())
 
     // Sync de roles de nivel con el XP nuevo (igual que el flujo de mensajes).
     try {
@@ -325,7 +363,9 @@ function recordXpForKey(key) {
 
 // Update mongo que revierte SOLO lo de récords: quita flags y
 // resta el XP que dieron los logros (clamp a 0). No toca messages,
-// monthlyMessages, rachas, reacciones, canales, counting, voz ni cooldown.
+// monthlyMessages, dailyMessages, rachas, reacciones, canales, counting,
+// voz ni cooldown. El dailyXP sí se ajusta (lleva XP de récords, igual que
+// xp y monthlyXP); de todos modos se resetea cada medianoche.
 // Devuelve null si el usuario no tiene nada que revertir.
 function buildRecordResetUpdate(userId, userData) {
     const keys = Object.keys(userData?.records || {})
@@ -339,6 +379,7 @@ function buildRecordResetUpdate(userId, userData) {
             $set: {
                 [`users.${userId}.xp`]: Math.max(0, Math.round((Number(userData?.xp) || 0) - removedXp)),
                 [`users.${userId}.monthlyXP`]: Math.max(0, Math.round((Number(userData?.monthlyXP) || 0) - removedXp)),
+                [`users.${userId}.dailyXP`]: Math.max(0, Math.round((Number(userData?.dailyXP) || 0) - removedXp)),
             },
         },
         removedXp,
@@ -424,6 +465,7 @@ module.exports = {
     didTalkToIA,
     parseStarboardMessageId,
     isValidRecordReaction,
+    isValidReceivedReaction,
     isProRank,
     getOvertakenIds,
     newlyReachedThresholds,

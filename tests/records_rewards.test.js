@@ -77,6 +77,32 @@ test("grantRecord suma el XP del tier a xp y monthlyXP", async () => {
     assert.equal(doc.users.u1.xp, 1000)
 })
 
+test("grantRecord concurrente concede el mismo tier una sola vez", async () => {
+    const doc = { _id: "g1", users: { u1: { xp: 0 } }, settings: testSettings() }
+    const client = fakeClient(doc)
+
+    const [a, b] = await Promise.all([
+        tracker.grantRecord(client, null, "g1", "u1", "messages", 10),
+        tracker.grantRecord(client, null, "g1", "u1", "messages", 10),
+    ])
+    assert.equal([a, b].filter(Boolean).length, 1, "solo uno gana la carrera")
+    assert.equal(doc.users.u1.records["messages:10"], true)
+    assert.equal(doc.users.u1.xp, 1000, "el XP no se suma dos veces")
+    assert.equal(doc.users.u1.monthlyXP, 1000)
+})
+
+test("grantRecord concurrente no bloquea tiers distintos", async () => {
+    const doc = { _id: "g1", users: { u1: { xp: 0 } }, settings: testSettings() }
+    const client = fakeClient(doc)
+
+    const [a, b] = await Promise.all([
+        tracker.grantRecord(client, null, "g1", "u1", "messages", 10),
+        tracker.grantRecord(client, null, "g1", "u1", "messages", 100),
+    ])
+    assert.ok(a && b, "tiers distintos no compiten por el candado")
+    assert.equal(doc.users.u1.xp, 1000 + 3000)
+})
+
 test("grantRecord dispara level-up al cruzar de rango con XP de récord", async () => {
     const doc = {
         _id: "g1",
@@ -181,15 +207,58 @@ test("unlock agrupa tiers del mismo record: último nombre (+N), sin ✅", () =>
         ],
     })
     const json = JSON.stringify(msg.msg.components.map(c => c.toJSON()))
-    // Un solo bloque por record: solo el nombre del último tier + (+N).
-    assert.ok(json.includes("**Conversador** (+3)"), "último tier + contador")
+    // Un solo bloque por record: fases + (+N) al final de su línea.
+    assert.ok(json.includes("**Conversador** - 3/5 fases (+3)"), "fases + contador de tiers subidos")
+    assert.ok(json.includes("— <:XP:1467192533812645939> **+14.000 XP**"), "categoría primero y XP con formato")
     assert.ok(!json.includes("Primeros pasos"), "no lista cada tier")
     assert.ok(!json.includes("✅"), "sin tick verde")
     // Título estilo /rank con ## y totales del usuario.
-    assert.ok(json.includes("##") && json.includes("10/40 records"), "título con los totales más recientes del lote")
+    assert.ok(json.includes("##") && json.includes("10/40 Records"), "título con los totales más recientes del lote")
     // Línea de categoría (no nombre del record).
     assert.ok(json.includes("Actividad"), "categoría en la línea de recompensa")
-    assert.ok(json.includes("¡4 récords nuevos!"), "mención en plural")
+    assert.ok(json.includes("¡4 Records completados!"), "mención en plural")
+})
+
+test("unlock singular: mención y cabecera sin nombre ni (+N)", () => {
+    const RecordUnlockMessage = require("../classes/RecordUnlockMessage.js")
+    const byId = Object.fromEntries(recordsConfig.allRecords().map(({ record }) => [record.id, record]))
+    const catOf = id => recordsConfig.allRecords().find(x => x.record.id === id).category
+    const msg = new RecordUnlockMessage({
+        client: null, userId: "u1", avatarUrl: "",
+        unlocks: [
+            { record: byId.secret_word, category: catOf("secret_word"), tier: byId.secret_word.tiers[0], done: 1, total: 1, totalCompleted: 5, totalVisible: 36 },
+        ],
+    })
+    const json = JSON.stringify(msg.msg.components.map(c => c.toJSON()))
+    assert.ok(json.includes("<@u1> ¡Record completado! 🎉"), "mención en singular")
+    assert.ok(json.includes("## 🎉 ¡Nuevo Record!"), "cabecera sin nombre de récord")
+    assert.ok(json.includes("5/36 Records"), "totales globales")
+    assert.ok(!json.includes("(+"), "sin contador si solo sube un nivel")
+    assert.ok(!json.includes("✅"), "sin tick verde")
+})
+
+test("unlock multi-categoría: un container por categoría con su color", () => {
+    const RecordUnlockMessage = require("../classes/RecordUnlockMessage.js")
+    const byId = Object.fromEntries(recordsConfig.allRecords().map(({ record }) => [record.id, record]))
+    const catOf = id => recordsConfig.allRecords().find(x => x.record.id === id).category
+    const msg = new RecordUnlockMessage({
+        client: null, userId: "u1", avatarUrl: "",
+        unlocks: [
+            { record: byId.messages, category: catOf("messages"), tier: byId.messages.tiers[0], done: 1, total: 5, totalCompleted: 2, totalVisible: 36 },
+            { record: byId.voice_time, category: catOf("voice_time"), tier: byId.voice_time.tiers[0], done: 1, total: 3, totalCompleted: 2, totalVisible: 36 },
+        ],
+    })
+    // mención + 2 containers
+    assert.equal(msg.msg.components.length, 3)
+    const [mention, first, second] = msg.msg.components.map(c => c.toJSON())
+    assert.ok(JSON.stringify(mention).includes("¡2 Records completados!"), "mención en plural")
+    assert.equal(first.accent_color, RecordUnlockMessage.ACCENTS.actividad)
+    assert.equal(second.accent_color, RecordUnlockMessage.ACCENTS.voz)
+    assert.ok(JSON.stringify(first).includes("¡Nuevo Record!"), "título solo en el primero")
+    assert.ok(!JSON.stringify(second).includes("¡Nuevo Record!"), "el segundo sin título")
+    // el pie va en el último container
+    assert.ok(JSON.stringify(second).includes("para ver tus logros"), "pie en el último container")
+    assert.ok(!JSON.stringify(first).includes("para ver tus logros"), "pie solo una vez")
 })
 
 test("getRecordIds expone los 6 IDs de records", () => {

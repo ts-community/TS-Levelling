@@ -33,7 +33,7 @@ const MENU_SHHHH = "<:shhhh:1343371124725252179>"
 const CHANNELS = {
     channelId: "1551570600135229440", // anuncio de récords
     countingChannelId: "1113502565599019108",
-    economyChannelId: "1532157047674638478",
+    economyChannelId: "1553080048855289858",
     iaChannelId: "1544029379284443146",
     iaBotId: "1250114494081007697", // Nova
     starboardChannelId: "1317531432909930639",
@@ -105,6 +105,18 @@ const categories = [
                     { threshold: 500, xp: 3000, name: "Mes activo", desc: "Envía 500 mensajes en un mismo mes." },
                     { threshold: 2000, xp: 10000, name: "Ritmo imparable", desc: "Envía 2.000 mensajes en un mismo mes." },
                     { threshold: 5000, xp: 30000, name: "Mes legendario", desc: "Envía 5.000 mensajes en un mismo mes." },
+                ]
+            },
+            {
+                id: "daily_messages",
+                label: "Diario",
+                emoji: "☀️",
+                mechanic: { type: "messages_daily" },
+                unit: "mensajes", unitOne: "mensaje", suffix: "en un día",
+                tiers: [
+                    { threshold: 50, xp: 1000, name: "Día activo", desc: "Envía 50 mensajes en un mismo día." },
+                    { threshold: 150, xp: 3000, name: "Constancia diaria", desc: "Envía 150 mensajes en un mismo día." },
+                    { threshold: 300, xp: 5000, name: "Jornada completa", desc: "Envía 300 mensajes en un mismo día." },
                 ]
             },
             {
@@ -283,6 +295,7 @@ const categories = [
                 label: "Estrella",
                 emoji: "⭐",
                 mechanic: { type: "starboard_featured", channelId: CHANNELS.starboardChannelId, botId: CHANNELS.starboardBotId },
+                mystery: "Lo mejor acaba a la vista…",
                 tiers: [
                     { threshold: 1, xp: 30000, name: "Mensaje destacado", desc: `Consigue que uno de tus mensajes aparezca en <#${CHANNELS.starboardChannelId}>.` },
                 ]
@@ -292,6 +305,7 @@ const categories = [
                 label: "Ritmo nocturno",
                 emoji: "🦉",
                 mechanic: { type: "night_message", startHour: 4, endHour: 5, timezone: "Europe/Madrid" },
+                mystery: "Hay horas que casi nadie ve…",
                 tiers: [
                     { threshold: 1, xp: 5000, name: "Búho nocturno", desc: "Envía un mensaje entre las 04:00 y las 05:00, hora española." },
                 ]
@@ -301,6 +315,7 @@ const categories = [
                 label: "Comando oculto",
                 emoji: "⌨️",
                 mechanic: { type: "hidden_command", commandName: "roger" },
+                mystery: "Hay gestos que el bot entiende…",
                 tiers: [
                     { threshold: 1, xp: 15000, name: "Comando secreto", desc: "Descubre y utiliza el comando oculto." },
                 ]
@@ -310,6 +325,7 @@ const categories = [
                 label: "Easter egg",
                 emoji: "🌐",
                 mechanic: { type: "web_easter_egg" },
+                mystery: "Hay más mundo fuera de aquí…",
                 tiers: [
                     { threshold: 1, xp: 20000, name: "Detective digital", desc: "Encuentra el secreto escondido en la web." },
                 ]
@@ -319,6 +335,7 @@ const categories = [
                 label: "Palabra secreta",
                 emoji: "🔮",
                 mechanic: { type: "secret_phrase", phrase: "lentejas" },
+                mystery: "Dicen que una palabra basta…",
                 tiers: [
                     { threshold: 1, xp: 5000, name: "Palabra inesperada", desc: "Escribe la palabra secreta en un mensaje." },
                 ]

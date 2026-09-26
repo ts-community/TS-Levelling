@@ -212,7 +212,15 @@ function fakeClient() {
     }
 }
 
-test("getRecordsCompleted counts only visible completed records", () => {
+test("getDailyMessages and getDailyXP default to zero", () => {
+    assert.equal(tools.getDailyMessages(undefined), 0)
+    assert.equal(tools.getDailyMessages({}), 0)
+    assert.equal(tools.getDailyMessages({ dailyMessages: 7 }), 7)
+    assert.equal(tools.getDailyXP(undefined), 0)
+    assert.equal(tools.getDailyXP({ dailyXP: 350 }), 350)
+})
+
+test("getRecordsCompleted counts completed records including hidden ones", () => {
     assert.equal(tools.getRecordsCompleted(undefined), 0)
     assert.equal(tools.getRecordsCompleted({}), 0)
     assert.equal(tools.getRecordsCompleted({ records: {} }), 0)

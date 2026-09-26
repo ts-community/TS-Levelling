@@ -10,9 +10,34 @@ const tracker = require("../../classes/RecordTracker.js")
 const { isProRank, getOvertakenIds } = tracker
 const MS_PER_YEAR = 365.25 * 24 * 3600 * 1000
 
+// Candado por (servidor, autor): los eventos del mismo usuario se procesan
+// en serie. Sin esto, dos mensajes (o dos /addxp) seguidos pueden leerse
+// mutuamente antes de que el write del XP llegue a la DB y anunciar dos
+// veces el mismo level-up o el mismo adelantamiento.
+const authorLocks = new Map()
+
+async function withAuthorLock(guildId, userId, fn) {
+    const key = `${guildId}:${userId}`
+    const prev = authorLocks.get(key)
+    if (prev) { try { await prev } catch {} }
+    let release
+    const mine = new Promise(resolve => { release = resolve })
+    authorLocks.set(key, mine)
+    try {
+        return await fn()
+    } finally {
+        if (authorLocks.get(key) === mine) authorLocks.delete(key)
+        release()
+    }
+}
+
 module.exports = {
 
 async run(client, message, tools) {
+    return withAuthorLock(message.guild?.id, message.author?.id, () => module.exports.runInner(client, message, tools))
+},
+
+async runInner(client, message, tools) {
 
     if (config.lockBotToDevOnly && !tools.isDev(message.author)) return
 
@@ -36,7 +61,8 @@ async run(client, message, tools) {
     await client.db.update(message.guild.id, {
         $inc: {
             [`users.${author}.messages`]: 1,
-            [`users.${author}.monthlyMessages`]: 1
+            [`users.${author}.monthlyMessages`]: 1,
+            [`users.${author}.dailyMessages`]: 1
         }
     }).exec()
 
@@ -63,6 +89,7 @@ async run(client, message, tools) {
         // Snapshot en memoria para comprobar umbrales sin otra lectura.
         const messagesNow = (userData.messages || 0) + 1
         const monthlyNow = (userData.monthlyMessages || 0) + 1
+        const dailyNow = (userData.dailyMessages || 0) + 1
         const countingNow = (userData.countingSent || 0) + (isCounting ? 1 : 0)
         const streakNow = streakUpdate.current
         const channelsNow = tracker.countDistinctChannels(userData.channels) +
@@ -75,6 +102,7 @@ async run(client, message, tools) {
         const counterChecks = [
             [byId.messages, messagesNow],
             [byId.monthly_messages, monthlyNow],
+            [byId.daily_messages, dailyNow],
             [byId.counting, countingNow],
             [byId.streak, streakNow],
             [byId.distinct_channels, channelsNow],
@@ -209,7 +237,8 @@ async run(client, message, tools) {
     client.db.update(message.guild.id, {
         $inc: {
             [`users.${author}.xp`]: awardedXP,
-            [`users.${author}.monthlyXP`]: awardedXP
+            [`users.${author}.monthlyXP`]: awardedXP,
+            [`users.${author}.dailyXP`]: awardedXP
         },
         $set: {
             [`users.${author}.cooldown`]: userData.cooldown,
@@ -282,3 +311,4 @@ async run(client, message, tools) {
 
 module.exports.isProRank = isProRank
 module.exports.getOvertakenIds = getOvertakenIds
+module.exports.withAuthorLock = withAuthorLock

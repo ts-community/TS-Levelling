@@ -1,6 +1,6 @@
 const LevelUpMessage = require("../../classes/LevelUpMessage.js")
 const OvertakeMessage = require("../../classes/OvertakeMessage.js")
-const { isProRank, getOvertakenIds } = require("../events/message.js")
+const { isProRank, getOvertakenIds, withAuthorLock } = require("../events/message.js")
 
 module.exports = {
 metadata: {    permission: "ManageGuild",
@@ -19,6 +19,12 @@ metadata: {    permission: "ManageGuild",
 },
 
 async run(client, int, tools) {
+    const lockUser = int.options.get("member")?.member?.user
+    if (!lockUser) return tools.warn("I couldn't find that member!")
+    return withAuthorLock(int.guild?.id, lockUser.id, () => module.exports.runInner(client, int, tools))
+},
+
+async runInner(client, int, tools) {
 
     const member = int.options.get("member")?.member
     const amount = int.options.get("xp")?.value
