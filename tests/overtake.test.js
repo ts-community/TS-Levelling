@@ -265,6 +265,60 @@ test("overtake: flujo Pro que adelanta envia aviso", async () => {
     assert.equal(await h.run(), 1)
 })
 
+test("overtake: dos mensajes seguidos no repiten el mismo cruce (A B, no A B B)", async () => {
+    // La escritura de XP tarda un tick (como una DB real): sin await en el
+    // $inc, el segundo mensaje leería el XP anterior y reanunciaría a u2.
+    const doc = { _id: "g1", users: { u1: { xp: 850, cooldown: 0 }, u2: { xp: 900, cooldown: 0 } }, settings: lbSettings(), info: {} }
+    const db = {
+        fetch: () => ({ exec: async () => deepClone(doc) }),
+        update: (id, data) => ({
+            exec: async () => {
+                await new Promise(r => setImmediate(r))
+                if (data.$set) for (const [p, v] of Object.entries(data.$set)) setPath(doc, p, v)
+                if (data.$inc) for (const [p, v] of Object.entries(data.$inc)) setPath(doc, p, (getPath(doc, p) ?? 0) + v)
+                return doc
+            }
+        }),
+        create: async () => {},
+    }
+    let overtakeSends = 0
+    const origSend = OvertakeMessage.prototype.send
+    const LevelUpMessage = require("../classes/LevelUpMessage.js")
+    const origLvl = LevelUpMessage.prototype.send
+    OvertakeMessage.prototype.send = function () { overtakeSends++; return Promise.resolve() }
+    LevelUpMessage.prototype.send = function () { return Promise.resolve() }
+    try {
+        const member = { id: "u1", displayName: "Pro", displayAvatarURL: () => "", roles: { cache: new Map(), add: async () => {} } }
+        const message = {
+            id: "m1", content: "hola",
+            author: { id: "u1", bot: false, username: "pro", displayName: "Pro" },
+            guild: { id: "g1", roles: { cache: new Map() }, memberCount: 3 },
+            member, channel: { id: "c1", isThread: () => false },
+        }
+        const tools = {
+            isDev: () => false,
+            fetchSettings: async (uid) => {
+                const s = await db.fetch().exec()
+                const data = { settings: s.settings, users: {} }
+                if (s.users[uid] !== undefined) data.users[uid] = s.users[uid]
+                return data
+            },
+            getMultiplier: () => ({ multiplier: 1 }),
+            rng: () => 100,
+            getLevel: (...a) => Tools.global.getLevel(...a),
+            checkLevelRoles: () => ({}),
+            syncLevelRoles: async () => {},
+        }
+        const client = { db, monthlyMaintenance: async () => {} }
+        await NewMessage.run(client, { ...message, id: "m1" }, tools)
+        await NewMessage.run(client, { ...message, id: "m2" }, tools)
+        assert.equal(overtakeSends, 1, "el cruce se anuncia una sola vez")
+    } finally {
+        OvertakeMessage.prototype.send = origSend
+        LevelUpMessage.prototype.send = origLvl
+    }
+})
+
 test("overtake: flujo sin adelantar no envia", async () => {
     const h = makeHarness(
         { u1: { xp: 500, cooldown: 0 }, u2: { xp: 900, cooldown: 0 } },

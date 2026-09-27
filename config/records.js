@@ -3,15 +3,16 @@
 // Cómo leer este archivo:
 // - categories: una página por categoría en /records. Los récords van
 //   ordenados de más fácil a más difícil dentro de cada categoría.
-// - Cada categoría tiene: emoji (cabecera), menuEmoji (icono del desplegable,
-//   personalizado si hay uno que cuadre) y desc (texto del desplegable).
+// - Cada categoría tiene: emoji (cabecera y desplegable) y desc (texto del desplegable).
 // - Cada récord tiene: emoji (cabecera de su bloque), UN mechanic.type (los
 //   que funcionan parecido comparten tipo para no repetir lógica) y tiers.
 // - Cada nivel tiene threshold (lógica), xp + roleId opcional (recompensa),
 //   name (título) y desc (frase clara de lo que hay que hacer, con punto).
 // - La recompensa es xp, rol o ambas: se entrega lo definido. Si un nivel
 //   solo da rol, pon xp: 0.
-// - La categoría hidden no se muestra hasta desbloquear (solo cuántos hay).
+// - Los ocultos añaden mystery (pista en /records y en el mensaje público,
+//   siempre). La condición real solo la ve el autor: por DM al desbloquear
+//   y en la web cuando ya lo tiene.
 //
 // Balance de XP (ganancia media del bot: ~75 XP por mensaje):
 // - Recompensas redondas y visibles: 1.000, 3.000, 5.000, 10.000, 15.000,
@@ -25,8 +26,6 @@
 const RECORDS_EMOJI = "<:records:1549908515399929959>"
 const MESSAGES_EMOJI = "<:messages:1467163578699354235>"
 const MENU_HYPER = "<:hypercharge_drop:1467236546317914349>"
-const MENU_MEMBER = "<:member:1467596629787021415>"
-const MENU_SHHHH = "<:shhhh:1343371124725252179>"
 
 // IDs del servidor para los récords (única fuente de verdad: las
 // descripciones de abajo los usan con <#id> / <@id>, sin duplicar).
@@ -78,7 +77,6 @@ const categories = [
         id: "actividad",
         name: "Actividad",
         emoji: "💬",
-        menuEmoji: MESSAGES_EMOJI,
         desc: "Mensajes, ritmo y presencia en el chat.",
         records: [
             {
@@ -134,7 +132,6 @@ const categories = [
         id: "comunidad",
         name: "Comunidad",
         emoji: "🤝",
-        menuEmoji: MENU_MEMBER,
         desc: "Reacciones, rachas y antigüedad.",
         records: [
             {
@@ -191,7 +188,6 @@ const categories = [
         id: "canales",
         name: "Canales",
         emoji: "🧭",
-        menuEmoji: "🧭",
         desc: "Explora el servidor y participa en sus sistemas.",
         records: [
             {
@@ -231,7 +227,6 @@ const categories = [
         id: "voz",
         name: "Voz",
         emoji: "🎙️",
-        menuEmoji: "🎙️",
         desc: "Tiempo en voz y presencia en los canales de audio.",
         records: [
             {
@@ -287,7 +282,6 @@ const categories = [
         id: "hidden",
         name: "Ocultos",
         emoji: "🕵️",
-        menuEmoji: MENU_SHHHH,
         desc: "Logros secretos que se revelan al descubrirlos.",
         hidden: true,
         records: [
@@ -318,7 +312,7 @@ const categories = [
                 mechanic: { type: "hidden_command", commandName: "roger" },
                 mystery: "Hay gestos que el bot entiende…",
                 tiers: [
-                    { threshold: 1, xp: 15000, name: "Señas", desc: "Descubre y utiliza el comando oculto." },
+                    { threshold: 1, xp: 15000, name: "Señas", desc: "Descubre y utiliza el comando oculto /roger." },
                 ]
             },
             {
@@ -338,7 +332,7 @@ const categories = [
                 mechanic: { type: "secret_phrase", phrase: "lentejas" },
                 mystery: "Dicen que una palabra basta…",
                 tiers: [
-                    { threshold: 1, xp: 5000, name: "De pasada", desc: "Escribe la palabra secreta en un mensaje." },
+                    { threshold: 1, xp: 5000, name: "De pasada", desc: "Escribe la palabra secreta, \"lentejas\",  en un mensaje." },
                 ]
             },
         ]

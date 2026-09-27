@@ -1,4 +1,4 @@
-const { grantRecord, sendBatchedUnlocks, getRecordIds } = require("./RecordTracker.js")
+const { grantRecord, sendBatchedUnlocks, sendHiddenDm, getRecordIds } = require("./RecordTracker.js")
 const recordsConfig = require("../config/records.js")
 
 const DEFAULT_EASTEREGG_GUILD_ID = "1093864130030612521"
@@ -107,6 +107,9 @@ async function unlockWebEasterEgg({ client, guildId, userId, guild, guilds, defa
             announced = !!result.recordsChannel
         } else {
             announced = await announceViaShards(client, resolvedGuildId, String(userId), avatar, toSerializableUnlock(result))
+            // El anuncio por shards no manda DM: se hace desde aquí (la API
+            // llega igual aunque la guild no esté en este shard).
+            await sendHiddenDm(client, String(userId), [result], avatar)
         }
     } catch {}
 

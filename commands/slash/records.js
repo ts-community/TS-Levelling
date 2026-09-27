@@ -198,25 +198,34 @@ function formatProgress(record, progress, commafy, unitOverride) {
 // Listón de ancho para las líneas pequeñas (-#): el mismo que usa el test
 // de móvil y /top (MOBILE_LINE_WIDTH).
 const PROGRESS_LINE_WIDTH = 37.9
+// El primer bloque va pegado al título dentro de la sección con thumbnail
+// (más estrecha): su línea -# usa este listón. Medido con el caso real del
+// Leyenda ("117,5k/50k msgs" = 31,62 saltaba en la sección): 30 lo deja en
+// sin unidad, que cabe de sobra.
+const FIRST_BLOCK_LINE_WIDTH = 30
 
-// En récords de mensajes la unidad larga ("mensajes") puede saltar de línea
-// en móvil con números grandes: si la línea completa supera el listón, se
-// reescribe con "msgs" (como la cascada de /top con fitLine). Las menciones
-// de rol se miden como "@rol", igual que en el test.
-function fitProgressLine(record, progress, currentTier, commafy) {
+// Cascada de la línea -#: completa → corta → sin unidad (como /top con
+// fitLine). En mensajes la corta es "msgs"; el resto no tiene corta y pasa
+// directo a sin unidad. Las menciones de rol se miden como "@rol", igual
+// que en el test.
+function fitProgressLine(record, progress, currentTier, commafy, lineWidth = PROGRESS_LINE_WIDTH) {
     const reward = formatReward(currentTier, commafy)
     const full = `${formatProgress(record, progress, commafy)} - ${reward}`
-    if (record.unit !== "mensajes") return full
-    const rendered = `-# ${full}`.replace(/<@&\d+>/g, "@rol")
-    if (estimateVisualWidth(rendered) <= PROGRESS_LINE_WIDTH) return full
-    return `${formatProgress(record, progress, commafy, "msgs")} - ${reward}`
+    const measure = text => estimateVisualWidth(`-# ${text}`.replace(/<@&\d+>/g, "@rol"))
+    if (measure(full) <= lineWidth) return full
+    if (record.unit === "mensajes") {
+        const short = `${formatProgress(record, progress, commafy, "msgs")} - ${reward}`
+        if (measure(short) <= lineWidth) return short
+    }
+    // Último recurso: sin unidad (el contexto va en la descripción).
+    return `${formatProgress(record, progress, commafy, "")} - ${reward}`
 }
 
 // Un bloque por logro con el render compartido del mensaje de desbloqueo:
 // ### en una sola línea con guion (puede saltar en móvil), descripción
 // citada y recompensa en pequeño. Sin línea de progreso por ahora.
 // Solo se muestra el nivel actual (el siguiente a desbloquear).
-function buildRecordBlock(record, unlockedIds, progress, commafy) {
+function buildRecordBlock(record, unlockedIds, progress, commafy, lineWidth = PROGRESS_LINE_WIDTH) {
     const tiers = record.tiers
     // Algunos récords miden el avance en fases propias (p. ej. Ruta completa:
     // 5 canales con un solo tier de recompensa).
@@ -248,7 +257,7 @@ function buildRecordBlock(record, unlockedIds, progress, commafy) {
         target: 1,
         targetLabel: commafy(1),
     } : progress
-    const progressLine = fitProgressLine(record, binaryProgress, currentTier, commafy)
+    const progressLine = fitProgressLine(record, binaryProgress, currentTier, commafy, lineWidth)
     lines.push(allDone ? `-# ~~${progressLine}~~` : `-# ${progressLine}`)
     return lines.join("\n")
 }
@@ -267,22 +276,25 @@ function sortRecordsByProgress(category, unlockedIds) {
     })
 }
 
-function buildCategoryBlocks(category, userData, member, unlockedIds, commafy) {
+function buildCategoryBlocks(category, userData, member, unlockedIds, commafy, narrowFirst = false) {
     const blocks = [`## ${category.emoji} ${category.name}`]
     const sortedRecords = sortRecordsByProgress(category, unlockedIds)
-    for (const record of sortedRecords) {
-        blocks.push(buildRecordBlock(record, unlockedIds, getProgress(record, userData, member, commafy), commafy))
-    }
+    sortedRecords.forEach((record, index) => {
+        // El primer bloque va en la sección con thumbnail (más estrecha)
+        // cuando hay avatar: su línea -# usa el listón estrecho.
+        const width = narrowFirst && index === 0 ? FIRST_BLOCK_LINE_WIDTH : PROGRESS_LINE_WIDTH
+        blocks.push(buildRecordBlock(record, unlockedIds, getProgress(record, userData, member, commafy), commafy, width))
+    })
     return blocks
 }
 
-function buildHiddenBlocks(hiddenCategory, unlockedIds, commafy, userData = {}, member = null) {
-    // Sin cabecera: va pegado al título como las demás páginas (el contador
-    // ya sale en el menú). Render idéntico al de un récord normal, pero con
-    // UNA sola descripción misteriosa que no revela la condición, esté o no
-    // desbloqueado (así lo descubierto tampoco filtra cómo se consigue).
+function buildHiddenBlocks(hiddenCategory, unlockedIds, commafy, userData = {}, member = null, narrowFirst = false) {
+    // Como las demás páginas: completados arriba. Pero la descripción es
+    // siempre el misterio, esté o no desbloqueado (así lo descubierto
+    // tampoco filtra cómo se consigue; el anuncio solo insinúa).
     const blocks = []
-    for (const record of hiddenCategory.records) {
+    const sortedRecords = sortRecordsByProgress(hiddenCategory, unlockedIds)
+    sortedRecords.forEach((record, index) => {
         const masked = {
             ...record,
             tiers: record.tiers.map(tier => ({
@@ -290,8 +302,9 @@ function buildHiddenBlocks(hiddenCategory, unlockedIds, commafy, userData = {}, 
                 desc: record.mystery || "Un secreto aún por descubrir…",
             })),
         }
-        blocks.push(buildRecordBlock(masked, unlockedIds, getProgress(record, userData, member, commafy), commafy))
-    }
+        const width = narrowFirst && index === 0 ? FIRST_BLOCK_LINE_WIDTH : PROGRESS_LINE_WIDTH
+        blocks.push(buildRecordBlock(masked, unlockedIds, getProgress(record, userData, member, commafy), commafy, width))
+    })
     return blocks
 }
 
@@ -301,11 +314,22 @@ function formatCount(value, singular, plural = singular === "mes" ? "meses" : `$
 
 function formatVoiceTime(minutes) {
     const totalMinutes = Math.max(0, Math.floor(Number(minutes) || 0))
+    if (!totalMinutes) return formatCount(0, "minuto")
     const hours = Math.floor(totalMinutes / 60)
     const remainingMinutes = totalMinutes % 60
     if (!remainingMinutes) return formatCount(hours, "hora")
     if (!hours) return formatCount(remainingMinutes, "minuto")
     return `${formatCount(hours, "hora")} y ${formatCount(remainingMinutes, "minuto")}`
+}
+
+function formatVoiceTimeShort(minutes) {
+    const totalMinutes = Math.max(0, Math.floor(Number(minutes) || 0))
+    if (!totalMinutes) return "0 min"
+    const hours = Math.floor(totalMinutes / 60)
+    const remainingMinutes = totalMinutes % 60
+    if (!remainingMinutes) return `${hours} h`
+    if (!hours) return `${remainingMinutes} min`
+    return `${hours} h y ${remainingMinutes} min`
 }
 
 function getActiveVoiceMinutes(userData, member) {
@@ -349,43 +373,88 @@ function formatTenure(joinedTimestamp, now = Date.now()) {
     return parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} y ${parts.at(-1)}`
 }
 
+// Ancho de las líneas normales en móvil. Las stats van en TextDisplays a
+// ancho completo (el thumbnail solo estrecha el título), así que su listón
+// se apura a 36 (verificado en móvil: cabe hasta ~36 sin saltar; si alguna
+// línea larga salta en un dispositivo estrecho, bajar). La última palabra
+// de cada estadística se adapta (completa → corta → nada).
+const INFO_LINE_WIDTH = 36
+
+function fitInfoLine(...variants) {
+    return variants.find(v => estimateVisualWidth(v) <= INFO_LINE_WIDTH)
+        ?? variants[variants.length - 1]
+}
+
 // Página Estadísticas: valores útiles incluso cuando todavía están a cero.
+// Misma lógica en todas las líneas: "**Etiqueta:** valor unidad", con
+// singular/plural correcto. La unidad se acorta sola si no cabe en móvil.
 function buildInfoTexts(userData, member, unlockedIds, tools) {
-    const show = v => tools.commafy(Number(v) || 0)
-    const msgs = show(tools.getMessages(userData))
-    const monthlyMsgs = show(tools.getMonthlyMessages(userData))
+    const num = v => Number(v) || 0
+    const show = v => tools.commafy(num(v))
+    const E_MSG = "<:messages:1467163578699354235>"
+    const totalNum = num(tools.getMessages(userData))
+    const monthlyNum = num(tools.getMonthlyMessages(userData))
+    const dailyNum = num(userData?.dailyMessages)
+    const sentNum = num(userData?.reactionsSent)
+    const receivedNum = num(userData?.reactionsReceived)
+    const countingNum = num(userData?.countingSent)
     const streakRaw = userData?.streak
     const streakDays = typeof streakRaw === "object" ? Number(streakRaw?.current ?? streakRaw?.days) || 0 : Number(streakRaw) || 0
     const streakMax = typeof streakRaw === "object"
         ? Number(streakRaw?.max ?? streakRaw?.maximum ?? streakRaw?.best) || streakDays
         : streakDays
-    const streak = `${show(streakDays)} días`
-    const maxStreak = `${show(streakMax)} días`
-    const voice = formatVoiceTime(Number(userData?.voiceMinutes) + getActiveVoiceMinutes(userData, member))
+    const streak = `${show(streakDays)} ${streakDays === 1 ? "día" : "días"}`
+    const maxStreak = `${show(streakMax)} ${streakMax === 1 ? "día" : "días"}`
+    const voiceMinutes = num(userData?.voiceMinutes) + getActiveVoiceMinutes(userData, member)
+    const voice = formatVoiceTime(voiceMinutes)
+    const voiceShort = formatVoiceTimeShort(voiceMinutes)
     const tenure = member?.joinedTimestamp ? formatTenure(member.joinedTimestamp) : formatCount(0, "día")
-    // "msgs" en corto: con "mensajes" estas líneas saltan en móvil (listón 31).
+    const msgLine = (emoji, label, shortLabel, value) => fitInfoLine(
+        `- ${emoji} **${label}:** ${show(value)} ${value === 1 ? "mensaje" : "mensajes"}`,
+        `- ${emoji} **${label}:** ${show(value)} ${value === 1 ? "msg" : "msgs"}`,
+        `- ${emoji} **${shortLabel}:** ${show(value)} ${value === 1 ? "mensaje" : "mensajes"}`,
+        `- ${emoji} **${label}:** ${show(value)}`,
+    )
     const groups = [
         [
             `### 💬 Actividad`,
-            `- <:messages:1467163578699354235> **Mensajes totales:** ${msgs} msgs`,
-            `- 📅 **Mensajes este mes:** ${monthlyMsgs} msgs`,
-            `- ☀️ **Mensajes diarios:** ${show(Number(userData?.dailyMessages) || 0)} msgs`,
+            msgLine(E_MSG, "Mensajes totales", "Total", totalNum),
+            msgLine("📅", "Mensajes este mes", "Este mes", monthlyNum),
+            msgLine("☀️", "Mensajes diarios", "Diarios", dailyNum),
         ].join("\n"),
         [
             `### 🤝 Comunidad`,
-            `- ❤️ **Reacciones enviadas:** ${show(userData?.reactionsSent)}`,
-            `- 💘 **Reacciones recibidas:** ${show(userData?.reactionsReceived)}`,
+            // La etiqueta es fija ("Reacciones enviadas/recibidas"): lo que
+            // se adapta es la unidad (reacciones → reaccs → nada).
+            fitInfoLine(
+                `- ❤️ **Reacciones enviadas:** ${show(sentNum)} ${sentNum === 1 ? "reacción" : "reacciones"}`,
+                `- ❤️ **Reacciones enviadas:** ${show(sentNum)} reaccs`,
+                `- ❤️ **Reacciones enviadas:** ${show(sentNum)}`,
+            ),
+            fitInfoLine(
+                `- 💘 **Reacciones recibidas:** ${show(receivedNum)} ${receivedNum === 1 ? "reacción" : "reacciones"}`,
+                `- 💘 **Reacciones recibidas:** ${show(receivedNum)} reaccs`,
+                `- 💘 **Reacciones recibidas:** ${show(receivedNum)}`,
+            ),
             `- 🔥 **Racha actual:** ${streak}`,
             `- 🏆 **Racha máxima:** ${maxStreak}`,
             `- 🏅 **Antigüedad:** ${tenure}`,
         ].join("\n"),
         [
             `### 🧭 Canales`,
-            `- 🔢 **Counting:** ${show(userData?.countingSent)} números`,
+            fitInfoLine(
+                `- 🔢 **Números en counting:** ${show(countingNum)} ${countingNum === 1 ? "número" : "números"}`,
+                `- 🔢 **Números en counting:** ${show(countingNum)} ${countingNum === 1 ? "núm." : "núms."}`,
+                `- 🔢 **En counting:** ${show(countingNum)} ${countingNum === 1 ? "número" : "números"}`,
+                `- 🔢 **Números en counting:** ${show(countingNum)}`,
+            ),
         ].join("\n"),
         [
             `### 🎙️ Voz`,
-            `- 🎙️ **Tiempo en voz:** ${voice}`,
+            fitInfoLine(
+                `- 🎙️ **Tiempo en voz:** ${voice}`,
+                `- 🎙️ **Tiempo en voz:** ${voiceShort}`,
+            ),
         ].join("\n"),
     ]
     const help = [
@@ -466,28 +535,35 @@ async run(client, int, tools) {
         const id = order[page]
         const container = new ContainerBuilder().setAccentColor(ACCENTS[id] ?? ACCENTS.stats)
 
+        const avatarUrl = typeof member?.displayAvatarURL === "function" ? member.displayAvatarURL() : ""
+        // Con avatar el título va en sección con thumbnail (más estrecha):
+        // el primer bloque, que comparte ese TextDisplay, usa el listón
+        // estrecho en su línea -# para no saltar.
+        const narrowFirst = Boolean(avatarUrl)
         const category = id !== INFO_ID ? records.categories.find(c => c.id === id) : null
         const statGroups = id === INFO_ID ? buildInfoTexts(userData, member, unlockedIds, tools)[0] : null
         const pageBlocks = category
             ? (category.hidden
-                ? buildHiddenBlocks(category, unlockedIds, tools.commafy, userData, member)
-                : buildCategoryBlocks(category, userData, member, unlockedIds, tools.commafy))
+                ? buildHiddenBlocks(category, unlockedIds, tools.commafy, userData, member, narrowFirst)
+                : buildCategoryBlocks(category, userData, member, unlockedIds, tools.commafy, narrowFirst))
             : null
         // Sin cabecera de categoría (salvo ocultos, que ya vienen sin ella):
         // el primer récord (pageBlocks[1]) va pegado al título en el mismo
-        // TextDisplay. En stats el nombre de la primera categoría va pegado
-        // al título (sin separador encima) y todo lo demás lleva
-        // separadores como en el resto de grupos.
+        // TextDisplay. En stats, Actividad va en el mismo TextDisplay que
+        // el título para aprovechar el hueco junto al thumbnail en PC.
         const categoryIntro = pageBlocks
             ? (category.hidden ? pageBlocks[0] : pageBlocks[1])
             : null
-        const firstHeading = statGroups ? statGroups[0].split("\n")[0] : null
+        // Primera línea no vacía por robustez: un "\n" inicial delante de la
+        // cabecera la dejaría vacía y Actividad caería tras el separador.
+        const firstHeading = statGroups
+            ? (statGroups[0].split("\n").find(l => l.trim()) ?? null)
+            : null
         const titleContent = [
             buildTitle(unlockedIds),
             firstHeading ?? categoryIntro,
         ].filter(Boolean).join("\n\n")
         const titleText = new TextDisplayBuilder().setContent(titleContent)
-        const avatarUrl = typeof member?.displayAvatarURL === "function" ? member.displayAvatarURL() : ""
         if (avatarUrl) {
             container.addSectionComponents(new SectionBuilder()
                 .addTextDisplayComponents(titleText)
@@ -499,12 +575,15 @@ async run(client, int, tools) {
 
         if (id === INFO_ID) {
             // La cabecera de Actividad ya va en el título: aquí solo sus
-            // stats; el resto de grupos con cabecera, separador, stats y
-            // separador, como siempre.
+            // stats. Este separador global es el único divisor bajo
+            // Actividad; el resto de grupos van con cabecera, separador,
+            // stats y separador.
             statGroups.forEach((group, index) => {
-                const [heading, ...stats] = group.split("\n")
-                if (index > 0) container.addTextDisplayComponents(new TextDisplayBuilder().setContent(heading))
-                container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+                const [heading, ...stats] = group.split("\n").filter(l => l.trim())
+                if (index > 0) {
+                    container.addTextDisplayComponents(new TextDisplayBuilder().setContent(heading))
+                    container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+                }
                 container.addTextDisplayComponents(new TextDisplayBuilder().setContent(stats.join("\n")))
                 container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
             })
@@ -580,11 +659,16 @@ module.exports.formatReward = formatReward
 module.exports.formatProgress = formatProgress
 module.exports.fitProgressLine = fitProgressLine
 module.exports.PROGRESS_LINE_WIDTH = PROGRESS_LINE_WIDTH
+module.exports.FIRST_BLOCK_LINE_WIDTH = FIRST_BLOCK_LINE_WIDTH
 module.exports.buildRecordBlock = buildRecordBlock
 module.exports.buildCategoryBlocks = buildCategoryBlocks
 module.exports.buildHiddenBlocks = buildHiddenBlocks
 module.exports.buildCatSelect = buildCatSelect
 module.exports.buildInfoTexts = buildInfoTexts
+module.exports.fitInfoLine = fitInfoLine
+module.exports.INFO_LINE_WIDTH = INFO_LINE_WIDTH
+module.exports.formatVoiceTime = formatVoiceTime
+module.exports.formatVoiceTimeShort = formatVoiceTimeShort
 module.exports.ACCENTS = ACCENTS
 module.exports.INFO_ID = INFO_ID
 module.exports.INFO_EMOJI = INFO_EMOJI

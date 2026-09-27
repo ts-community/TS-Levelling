@@ -39,6 +39,8 @@ function commandMention(client, name) {
 // Render compartido de un Record desbloqueado (mismo que /records):
 // título ### en una sola línea con guion (puede saltar en móvil),
 // descripción citada y línea de categoría + XP sumado.
+// En ocultos la descripción es el misterio (igual que en /records);
+// la condición real solo le llega al autor por DM.
 // El (+N) solo aparece cuando se han subido varios niveles del mismo Record.
 function renderRecord({ record, category, tiers, total, done }) {
     tiers.sort((a, b) => a.threshold - b.threshold)
@@ -53,9 +55,14 @@ function renderRecord({ record, category, tiers, total, done }) {
     if (tierRoles) rewards.push(tierRoles)
 
     const phaseWord = total === 1 ? "fase" : "fases"
+    // Tope por si llegan datos raros (flags huérfanos): nunca x/y con x>y.
+    const shown = Math.min(Math.max(done, 0), total)
+    const desc = category.hidden
+        ? (record.mystery || "Un secreto aún por descubrir…")
+        : lastTier.desc
     return [
-        `### ${record.emoji} **${lastTier.name}** - ${done}/${total} ${phaseWord}${multi}`,
-        `> ${lastTier.desc}`,
+        `### ${record.emoji} **${lastTier.name}** - ${shown}/${total} ${phaseWord}${multi}`,
+        `> ${desc}`,
         rewards.length ? `-# ${catEmoji} ${category.name} - ${rewards.join(" + ")}` : `-# ${catEmoji} ${category.name}`,
     ].join("\n")
 }
@@ -112,7 +119,7 @@ class RecordUnlockMessage {
         const last = unlocks[unlocks.length - 1]
         const totalCompleted = last.totalCompleted ?? unlocks.length
         const totalVisible = last.totalVisible ?? unlocks.reduce((sum, u) => sum + u.total, 0)
-        const title = unlocks.length > 1 ? "¡Nuevos Records!" : "¡Nuevo Record!"
+        const title = unlocks.length > 1 ? "¡Records cumplidos!" : "¡Record cumplido!"
         const titleLine = `## 🎉 ${title}   ${RECORDS_EMOJI} ${totalCompleted}/${totalVisible} Records`
 
         const sep = () => new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)

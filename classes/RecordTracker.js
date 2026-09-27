@@ -3,11 +3,14 @@
 // voiceMinutes, voiceJoined) y el flag completado en users.<id>.records["id:threshold"].
 
 const recordsConfig = require("../config/records.js")
+const { ContainerBuilder, TextDisplayBuilder, ThumbnailBuilder, SectionBuilder, SeparatorBuilder, SeparatorSpacingSize, MessageFlags } = require("discord.js")
 const RecordUnlockMessage = require("./RecordUnlockMessage.js")
 const Tools = require("./Tools.js")
 const ranks = require("../consts/ranks.js")
 const LevelUpMessage = require("./LevelUpMessage.js")
 const OvertakeMessage = require("./OvertakeMessage.js")
+
+const XP_EMOJI = "<:XP:1467192533812645939>"
 
 // IDs canónicos en config/records.js (CHANNELS). Se acepta el antiguo
 // config.json.records como fallback por si alguien no ha migrado.
@@ -293,9 +296,14 @@ async function grantRecordInner(client, guild, resolvedGuildId, userId, found, t
 
     // Prepara info del desbloqueo para que el caller lo envíe (batching).
     const keys = Object.keys(afterUser.records || {})
-    const done = keys.filter(k => k.startsWith(`${recordId}:`)).length || 1
-    // Totales globales del usuario (como /records: los ocultos siempre cuentan en el total).
     const unlockedKeys = new Set(keys)
+    // done cuenta solo tiers del catálogo actual: los flags huérfanos de
+    // catálogos viejos no deben inflar el "x/y fases" (p. ej. 4/3).
+    const done = Math.min(
+        found.record.tiers.filter(t => unlockedKeys.has(`${recordId}:${t.threshold}`)).length || 1,
+        found.record.tiers.length
+    )
+    // Totales globales del usuario (como /records: los ocultos siempre cuentan en el total).
     const doneVisible = recordsConfig.visibleRecords().reduce((n, { record }) =>
         n + record.tiers.filter(t => unlockedKeys.has(`${record.id}:${t.threshold}`)).length, 0)
     const doneHidden = recordsConfig.hiddenRecords().reduce((n, { record }) =>
@@ -431,6 +439,57 @@ async function grantEconomyParticipation(client, guild, guildId, userId) {
 
 // Envía todos los desbloqueos pendientes de golpe en un solo mensaje.
 // unlocks: array de lo que devuelve grantRecord (con recordsChannel, member, etc.)
+// Envía todos los desbloqueos pendientes de golpe en un solo mensaje.
+// unlocks: array de lo que devuelve grantRecord (con recordsChannel, member, etc.)
+// Además avisa por DM al autor con la condición real de cada oculto (en
+// público solo sale el announce): así sabe por qué lo consiguió sin
+// filtrarlo. Si tiene los DMs cerrados no llega y no pasa nada.
+async function sendHiddenDm(client, userId, unlocks, avatarUrl = "") {
+    const hidden = (unlocks || []).filter(u => u.category?.hidden || u.category?.id === "hidden")
+    if (!hidden.length) return false
+    try {
+        const user = await client?.users?.fetch(String(userId)).catch(() => null)
+        if (!user?.send) return false
+        // Sin totales X/Y: el DM es del desbloqueo de ahora (ya salen en el
+        // canal) y así no hay que cuadrar saltos de línea.
+        const titleLine = `## 🎉 ¡Record oculto desbloqueado!`
+        const blocks = hidden.map(u => {
+            const total = u.total ?? 1
+            const rewards = []
+            if ((u.tier?.xp || 0) > 0) rewards.push(`${XP_EMOJI} **+${Tools.global.commafy(u.tier.xp)} XP**`)
+            return [
+                `### ${u.record?.emoji || "🕵️"} **${u.tier?.name}** - ${u.done ?? 1}/${total} ${total === 1 ? "fase" : "fases"}`,
+                `> ${u.tier?.desc}`,
+                rewards.length ? `-# 🕵️ Ocultos - ${rewards.join(" + ")}` : `-# 🕵️ Ocultos`,
+            ].join("\n")
+        })
+        const recordsChannelId = getRecordIds().channelId
+        const where = recordsChannelId ? `<#${recordsChannelId}>` : "#records"
+        const footer = `-# En ${where} no se dice cómo lo conseguiste… aquí sí. Shhh, no lo cuentes por ahí.`
+        const sep = () => new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
+        const text = content => new TextDisplayBuilder().setContent(content)
+        const container = new ContainerBuilder().setAccentColor(0x8a8f98)
+        // Cabecera y primer bloque comparten TextDisplay (igual que #records).
+        const first = `${titleLine}\n${blocks[0]}`
+        if (avatarUrl) {
+            container.addSectionComponents(new SectionBuilder()
+                .addTextDisplayComponents(text(first))
+                .setThumbnailAccessory(new ThumbnailBuilder({ media: { url: avatarUrl } })))
+        } else {
+            container.addTextDisplayComponents(text(first))
+        }
+        for (const block of blocks.slice(1)) {
+            container.addSeparatorComponents(sep())
+            container.addTextDisplayComponents(text(block))
+        }
+        container.addSeparatorComponents(sep())
+        container.addTextDisplayComponents(text(footer))
+        await user.send({ components: [container], flags: MessageFlags.IsComponentsV2 }).catch(() => {})
+        return true
+    } catch {}
+    return false
+}
+
 async function sendBatchedUnlocks({ client, userId, avatarUrl, unlocks }) {
     if (!unlocks?.length) return
     // Tomar el primer canal válido (deberían ser todos iguales)
@@ -452,6 +511,7 @@ async function sendBatchedUnlocks({ client, userId, avatarUrl, unlocks }) {
         })),
     })
     await unlockMsg.send(channel).catch(() => {})
+    await sendHiddenDm(client, userId, unlocks, avatarUrl)
 }
 
 module.exports = {
@@ -476,5 +536,6 @@ module.exports = {
     buildRecordResetUpdate,
     PROGRESS_FIELDS,
     planUserReset,
+    sendHiddenDm,
     sendBatchedUnlocks,
 }

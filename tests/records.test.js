@@ -150,18 +150,49 @@ test("every rendered line fits on mobile", () => {
     for (const block of command.buildHiddenBlocks(records.categories.find(c => c.id === "hidden"), new Set(), tools.commafy)) {
         checkLines(block)
     }
+    // El primer bloque va pegado al título en la sección con thumbnail (más
+    // estrecha) cuando hay avatar: con narrowFirst su línea -# usa el
+    // listón estrecho (incluido el caso real 117,5k/50k mensajes).
+    const narrowSamples = [...userSamples, { messages: 117500, monthlyMessages: 6000 }]
+    const checkNarrow = (block, label) => {
+        const strict = block.split("\n").filter(l => !l.startsWith("###") && !l.startsWith(">")).join("\n")
+        for (const line of strict.split("\n")) {
+            if (!line.trim()) continue
+            const limit = line.startsWith("-#") ? command.FIRST_BLOCK_LINE_WIDTH : NORMAL_LINE_WIDTH
+            assert.ok(estimateVisualWidth(rendered(line)) <= limit, `salta en thumbnail (${label}): ${line}`)
+        }
+    }
+    for (const category of records.categories.filter(c => !c.hidden)) {
+        for (const userData of narrowSamples) {
+            const blocks = command.buildCategoryBlocks(category, userData, null, new Set(), tools.commafy, true)
+            checkNarrow(blocks[1], category.id)
+        }
+    }
+    const hiddenCat = records.categories.find(c => c.id === "hidden")
+    for (const userData of narrowSamples) {
+        const blocks = command.buildHiddenBlocks(hiddenCat, new Set(), tools.commafy, userData, null, true)
+        checkNarrow(blocks[0], "hidden")
+    }
     // Página Info con varios perfiles (con/sin datos, con/sin miembro,
-    // y con todos los campos de récords rellenos).
+    // y con todos los campos de récords rellenos). Sus líneas van a ancho
+    // completo (sin thumbnail al lado), así que usan INFO_LINE_WIDTH.
     const fullFields = {
         xp: 1108940, messages: 110894, monthlyMessages: 3240, monthlyXP: 115080,
         reactionsSent: 250, reactionsReceived: 40, streak: { current: 9 },
         channels: { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6 }, countingSent: 120, voiceMinutes: 900,
     }
+    const checkInfoLines = text => {
+        for (const line of text.split("\n")) {
+            if (!line.trim()) continue
+            const limit = line.startsWith("-#") ? MAX_LINE_WIDTH : command.INFO_LINE_WIDTH
+            assert.ok(estimateVisualWidth(rendered(line)) <= limit, `salta: ${line}`)
+        }
+    }
     for (const userData of [{}, { xp: 950, messages: 10, monthlyMessages: 3, monthlyXP: 300 }, fullFields]) {
         for (const member of [null, { joinedTimestamp: Date.now() - 400 * 86400000 }]) {
             const [groups, helpText] = command.buildInfoTexts(userData, member, new Set(), tools)
             for (const text of [...groups, helpText]) {
-                checkLines(text)
+                checkInfoLines(text)
             }
         }
     }
@@ -318,6 +349,30 @@ test("long message lines fall back to msgs instead of wrapping", () => {
     assert.ok(short.includes("**7/10 mensajes**"))
 })
 
+test("first block in thumbnail section drops the unit", () => {
+    const commafy = tools.commafy
+    const { record } = records.allRecords().find(({ record }) => record.id === "messages")
+    const progress = command.getProgress(record, { messages: 117500 }, null, commafy)
+    // A ancho completo cabe en "mensajes" (35,45 <= 37,9)...
+    const normal = command.buildRecordBlock(record, new Set(), progress, commafy).split("\n").at(-1)
+    assert.ok(normal.includes("**117,5k/50k mensajes**"), normal)
+    // ...pero en la sección con thumbnail ni en "msgs" cabe (31,62 saltaba):
+    // sin unidad, que sí entra en el listón 30.
+    const narrow = command.buildRecordBlock(record, new Set(), progress, commafy, command.FIRST_BLOCK_LINE_WIDTH).split("\n").at(-1)
+    assert.ok(narrow.includes("**117,5k/50k**"), narrow)
+    assert.ok(!narrow.includes("mensajes") && !narrow.includes("msgs"))
+    assert.ok(estimateVisualWidth(narrow.replace(/<@&\d+>/g, "@rol")) <= command.FIRST_BLOCK_LINE_WIDTH, `salta: ${narrow}`)
+    // Las cortas conservan "mensajes" también en estrecho.
+    const small = command.buildRecordBlock(record, new Set(), command.getProgress(record, { messages: 7 }, null, commafy), commafy, command.FIRST_BLOCK_LINE_WIDTH).split("\n").at(-1)
+    assert.ok(small.includes("**7/10 mensajes**"), small)
+    // Y el container lo aplica al primer bloque cuando hay avatar.
+    const member = { displayAvatarURL: () => "https://x/y.png" }
+    const blocks = command.buildCategoryBlocks(
+        records.categories.find(c => c.id === "actividad"),
+        { messages: 117500 }, member, new Set(), commafy, true)
+    assert.ok(!blocks[1].split("\n").at(-1).includes("msgs"), blocks[1].split("\n").at(-1))
+})
+
 test("completed records sort first and render struck through", () => {
     const category = records.categories.find(c => c.id === "actividad")
     // buildCategoryBlocks[0] es la cabecera; los récords empiezan en [1].
@@ -363,7 +418,7 @@ test("hidden page renders like the rest with mystery descriptions", () => {
     const mysteries = hiddenCat.records.map(r => r.mystery)
     assert.equal(new Set(mysteries).size, hiddenCat.records.length, "cada oculto con su misterio")
     for (const m of mysteries) assert.ok(lockedText.includes(m), `falta el misterio: ${m}`)
-    // ...y la descripción real no se filtra ni bloqueado ni desbloqueado.
+    // ...y la descripción real no se filtra mientras está bloqueado.
     for (const { record } of records.hiddenRecords()) {
         assert.ok(!lockedText.includes(record.label), `filtra etiqueta: ${record.id}`)
         for (const tier of record.tiers) {
@@ -374,6 +429,7 @@ test("hidden page renders like the rest with mystery descriptions", () => {
     const unlocked = command.buildHiddenBlocks(hiddenCat, new Set(["starboard:1"]), tools.commafy)
     assert.equal(unlocked.length, 5)
     const unlockedText = unlocked.join("\n")
+    assert.ok(unlocked[0].includes("Bajo los focos"), "completados arriba, como en el resto")
     assert.ok(unlockedText.includes("### ~~⭐ **Bajo los focos** - 1/1 fase~~"), "desbloqueado tachado")
     assert.ok(unlockedText.includes(`> ~~${star.mystery}~~`), "misterio también al descubrirlo")
     assert.ok(unlockedText.includes("-# ~~📊 **1/1** - <:XP:1467192533812645939> **+30.000 XP**~~"), "progreso y recompensa tachados")
@@ -394,15 +450,20 @@ test("info page shows record stats without faking missing data", () => {
     const [groups, help] = command.buildInfoTexts(
         { messages: 10, monthlyMessages: 3, dailyMessages: 7, reactionsSent: 25 }, member, new Set(), tools)
     assert.equal(groups.length, 4, "actividad, comunidad, canales, voz")
+    // Cada grupo empieza por su cabecera (sin líneas vacías delante): el
+    // container pega la primera al título y el resto van con separador.
+    for (const group of groups) {
+        assert.ok(group.split("\n")[0].startsWith("###"), `grupo sin cabecera: ${JSON.stringify(group.slice(0, 30))}`)
+    }
     const stats = groups.join("\n")
     assert.ok(!stats.includes("Nivel"), "el nivel/XP no pinta aquí")
     assert.ok(!stats.includes("-#"), "estadísticas sin pequeño")
     assert.ok(!stats.includes("General"), "sin grupo general")
-    assert.ok(stats.includes("**Mensajes totales:** 10"))
-    assert.ok(stats.includes("**Mensajes este mes:** 3"))
-    assert.ok(stats.includes("**Mensajes diarios:** 7"))
-    assert.ok(stats.includes("**Reacciones enviadas:** 25"))
-    assert.ok(stats.includes("**Reacciones recibidas:** 0"))
+    assert.ok(stats.includes("**Mensajes totales:** 10 mensajes"))
+    assert.ok(stats.includes("**Mensajes este mes:** 3 mensajes"))
+    assert.ok(stats.includes("**Mensajes diarios:** 7 mensajes"))
+    assert.ok(stats.includes("**Reacciones enviadas:** 25 reacciones"))
+    assert.ok(stats.includes("**Reacciones recibidas:** 0 reacciones"))
     assert.ok(stats.includes("**Racha actual:** 0 días"))
     assert.ok(groups[0].includes("### 💬 Actividad"), "cabecera de actividad")
     assert.ok(groups[1].includes("### 🤝 Comunidad"), "cabecera de comunidad")
@@ -417,11 +478,47 @@ test("info page shows record stats without faking missing data", () => {
         { messages: 110894, monthlyMessages: 3240, reactionsSent: 250, reactionsReceived: 40,
             streak: { current: 9 }, channels: { a: 1, b: 2 }, countingSent: 120, voiceMinutes: 900 },
         member, new Set(), tools)[0].join("\n")
-    assert.ok(full.includes("**Reacciones recibidas:** 40"))
+    assert.ok(full.includes("**Reacciones recibidas:** 40 reacciones"))
     assert.ok(full.includes("**Racha actual:** 9 días"))
     assert.ok(!full.includes("**Canales con mensajes:**"))
-    assert.ok(full.includes("**Counting:** 120 números"))
+    assert.ok(full.includes("**Números en counting:** 120 números"))
     assert.ok(full.includes("**Tiempo en voz:** 15 horas"))
+    assert.ok(full.includes("**Mensajes totales:** 110.894 mensajes"), "con listón apurado cabe completo")
+})
+
+test("info stats use singular and adapt the last word to fit mobile", () => {
+    const [groups] = command.buildInfoTexts(
+        { messages: 1, monthlyMessages: 1, dailyMessages: 1, reactionsSent: 1,
+            reactionsReceived: 1, streak: { current: 1, max: 1 }, countingSent: 1, voiceMinutes: 0 },
+        null, new Set(), tools)
+    const stats = groups.join("\n")
+    assert.ok(stats.includes("**Mensajes totales:** 1 mensaje"))
+    assert.ok(stats.includes("**Reacciones enviadas:** 1 reacción"))
+    assert.ok(stats.includes("**Reacciones recibidas:** 1 reacción"))
+    assert.ok(stats.includes("**Racha actual:** 1 día"))
+    assert.ok(stats.includes("**Racha máxima:** 1 día"))
+    assert.ok(stats.includes("**Números en counting:** 1 número"))
+    assert.ok(stats.includes("**Tiempo en voz:** 0 minutos"), "con 0 minutos, no 0 horas")
+    // Con valores grandes la última palabra se acorta o se omite, sin saltos.
+    const [big] = command.buildInfoTexts(
+        { messages: 110894, countingSent: 1234, voiceMinutes: 125, reactionsSent: 9999 }, null, new Set(), tools)
+    const bigStats = big.join("\n")
+    assert.ok(bigStats.includes("**Mensajes totales:** 110.894 mensajes"))
+    assert.ok(bigStats.includes("**Números en counting:** 1.234 números"))
+    assert.ok(bigStats.includes("**Reacciones enviadas:** 9.999 reaccs"), "unidad corta con etiqueta fija")
+    assert.ok(bigStats.includes("**Tiempo en voz:** 2 horas y 5 minutos"), "voz larga en completo")
+    for (const line of bigStats.split("\n")) {
+        if (!line.trim()) continue
+        const limit = line.startsWith("-#") ? MAX_LINE_WIDTH : command.INFO_LINE_WIDTH
+        assert.ok(estimateVisualWidth(line.replace(/<@&\d+>/g, "@rol")) <= limit, `salta: ${line}`)
+    }
+    // Valores pequeños: palabra completa aunque roce el listón (0 números = 31,8).
+    const [small] = command.buildInfoTexts(
+        { messages: 234, monthlyMessages: 40, countingSent: 0 }, null, new Set(), tools)
+    const smallStats = small.join("\n")
+    assert.ok(smallStats.includes("**Mensajes totales:** 234 mensajes"))
+    assert.ok(smallStats.includes("**Mensajes este mes:** 40 mensajes"))
+    assert.ok(smallStats.includes("**Números en counting:** 0 números"))
 })
 
 test("resolveRank finds the user rank banner", () => {
@@ -447,7 +544,8 @@ test("page composition stays within proven container sizes", () => {
     // Ocultos: título+primero(1) + sep + 4 bloques con sep + menú = 11.
     // Como /top (unos 20), los containers aguantan más de 10 sin problema.
     assert.equal(1 + 1 + (hidden.length - 1) * 2 + 1, 11)
-    // Info: título+act pegados(2) + 3 seps + resto de grupos + menú = 10.
-    // Como /top (unos 20), los containers aguantan más de 10 sin problema.
-    assert.equal(2 + 3 + 3 + 1 + 1, 10)
+    // Info: título+Actividad(1) + separador(1) + stats+sep(2) + 3 grupos
+    // x(cabecera+sep+stats+sep) + menú. Como /top (unos 20), los containers
+    // aguantan más de 10 sin problema.
+    assert.equal(1 + 1 + 2 + 3 * 4 + 1, 17)
 })

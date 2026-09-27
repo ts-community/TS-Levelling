@@ -792,8 +792,8 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
                     const key = `${record.id}:${tier.threshold}`
                     const complete = unlockedSet.has(key)
                     const hidden = category.hidden && !complete
-                    const tierName = hidden ? 'Secreto sin descubrir' : tier.name
-                    const description = hidden ? (record.mystery || 'Hay algo oculto aquí…') : tier.desc
+                    const tierName = tier.name
+                    const description = hidden ? (record.mystery || 'Un secreto aún por descubrir…') : tier.desc
                     const reward = tier.xp ? `+${commafy(tier.xp)} XP` : 'Sin XP'
                     index++
                     const progressCurrent = complete && hidden ? Math.max(current, record.mechanic?.type === "voice_minutes" ? tier.threshold / 60 : tier.threshold) : current

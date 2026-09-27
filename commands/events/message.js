@@ -242,7 +242,9 @@ async runInner(client, message, tools) {
 
     // database update: usa $inc para el XP del mensaje, así se suma al XP
     // actual de la DB (incluyendo el XP de récords que pudo añadir grantRecord).
-    client.db.update(message.guild.id, {
+    // Con await: el siguiente mensaje del mismo autor (en serie por
+    // withAuthorLock) ya lee este XP y no vuelve a anunciar el mismo cruce.
+    await client.db.update(message.guild.id, {
         $inc: {
             [`users.${author}.xp`]: awardedXP,
             [`users.${author}.monthlyXP`]: awardedXP,
@@ -252,7 +254,7 @@ async runInner(client, message, tools) {
             [`users.${author}.cooldown`]: userData.cooldown,
             [`users.${author}.hidden`]: userData.hidden || false
         }
-    }).exec();
+    }).exec().catch(() => {});
 
     // Actualizar userData.xp en memoria para el level-up check
     userData.xp = oldXP + awardedXP

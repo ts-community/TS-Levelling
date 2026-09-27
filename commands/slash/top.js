@@ -310,14 +310,30 @@ metadata: {
 },
 
 async run(client, int, tools) {
-    // Un solo deferReply (más abajo, con el flag ephemeral ya resuelto):
-    // un segundo defer revienta con "already been sent or deferred".
+    // Los bots no tienen XP: respuesta efímera antes del defer (después
+    // ya no se puede hacer efímero).
+    if (tools.getTargetUser()?.bot) return int.reply({ content: tools.errors.noBotView, ephemeral: true })
+    // Defer INMEDIATO, antes del trabajo pesado (fetchAll del doc entero +
+    // rankings): si la DB tarda más de 3s, Discord muestra "La aplicación
+    // no ha respondido" y un defer tardío ya no sirve (Unknown interaction).
+    // El flag ephemeral vive en settings: lectura ligera con proyección
+    // (sin crear docs) para diferir ya con el flag correcto. Un solo
+    // deferReply: un segundo revienta con "already been sent or deferred".
+    let isHidden = false
+    try {
+        const settingsDoc = await client.db.fetch(int.guild.id, ["settings"])
+        isHidden = !!settingsDoc?.settings?.leaderboard?.ephemeral
+    } catch {}
+    await int.deferReply({
+        flags: MessageFlags.IsComponentsV2 | (isHidden ? MessageFlags.Ephemeral : 0)
+    })
     let lbLink = `${tools.WEBSITE}/leaderboard/${int.guild.id}`
 
     let db = await tools.fetchAll()
     if (!db) return tools.warn(`Nobody in this server is ranked yet!`)
-    else if (!db.settings.enabled) return tools.warn("*xpDisabled")
-    else if (db.settings.leaderboard.disabled) return tools.warn("The leaderboard is disabled in this server!" + (tools.canManageServer(int.member) ? `\nAs a moderator, you can still privately view the leaderboard here: ${lbLink}` : ""))
+    else if (!db.settings?.enabled) return tools.warn("*xpDisabled")
+    else if (db.settings.leaderboard?.disabled) return tools.warn("The leaderboard is disabled in this server!" + (tools.canManageServer(int.member) ? `\nAs a moderator, you can still privately view the leaderboard here: ${lbLink}` : ""))
+    // isHidden ya se resolvió arriba para el defer (no se puede cambiar después).
 
     if (client.monthlyMaintenance) {
         client.monthlyMaintenance(int.guild, db).catch(error => {
@@ -334,7 +350,7 @@ async run(client, int, tools) {
     let viewKey = requestedViewKey || "xp"
     if (viewKey !== "xp" && viewKey !== "xp_mes" && viewKey !== "xp_dia" && !STAT_MODES[viewKey]) viewKey = "xp"
 
-    let minLeaderboardXP = db.settings.leaderboard.minLevel > 1 ? tools.xpForLevel(db.settings.leaderboard.minLevel, db.settings) : 0
+    let minLeaderboardXP = db.settings.leaderboard?.minLevel > 1 ? tools.xpForLevel(db.settings.leaderboard.minLevel, db.settings) : 0
     const hasLeaderboardLevel = userData => Number(userData?.xp) > 0 && tools.getLevel(Number(userData.xp), db.settings) > 0
     const buildRankings = isMonthly => userEntries
         .map(entry => ({ entry, value: isMonthly ? tools.getMonthlyXP(entry) : Number(entry.xp) || 0 }))
@@ -381,9 +397,6 @@ async run(client, int, tools) {
 
     let highlight = null
     let userSearch = int.options.get("user") || int.options.get("member") // option is "user" if from context menu
-    // Los bots no tienen XP: respuesta efímera antes del defer (después
-    // ya no se puede hacer efímero).
-    if (tools.getTargetUser()?.bot) return int.reply({ content: tools.errors.noBotView, ephemeral: true })
     if (userSearch) {
         let foundRanking = rankings.findIndex(x => x.id == userSearch.user.id)
         if (isNaN(foundRanking) || foundRanking < 0) return tools.warn(int.user.id == userSearch.user.id ? "No estas en el top!" : "Este miembro no esta en el top!")
@@ -391,9 +404,7 @@ async run(client, int, tools) {
         highlight = userSearch.user.id
     }
 
-    let isHidden = db.settings.leaderboard.ephemeral
-
-    const configuredColor = db.settings.leaderboard.embedColor
+    const configuredColor = db.settings.leaderboard?.embedColor
     const accentColor = configuredColor && configuredColor !== -1
         ? (typeof configuredColor === "string"
             ? parseInt(configuredColor.replace("#", ""), 16)
@@ -540,10 +551,6 @@ async run(client, int, tools) {
     }
 
     if (pageNumber < 1 || pageNumber > totalPages) return tools.warn("There are no members on this page!")
-
-    await int.deferReply({
-        flags: MessageFlags.IsComponentsV2 | (isHidden ? MessageFlags.Ephemeral : 0)
-    })
 
     const sendPage = async (page, editor, disabled = false) => {
         const { container, pageUserIds } = await buildContainer(page, disabled)
