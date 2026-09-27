@@ -38,13 +38,23 @@ class Tools {
             xpDisabled: `XP is not enabled in this server!${this.canManageServer() ? ` (enable with ${this.commandTag("config")})` : ""}`,
             noData: "This server doesn't have any data yet!",
             noBotXP: "Bots can't earn XP, silly!",
+            noBotView: "Los bots no ganan XP, no hay nada que ver aquí.",
             cantManageRoles: "I don't have permission to manage roles!",
             notMod: "You don't have permission to use this command!"
         }
 
+        // Usuario objetivo de los comandos de consulta (/rank, /records,
+        // /top): la opción "user" o "member". null si es el propio autor.
+        this.getTargetUser = function() {
+            const found = int?.options?.get("user") || int?.options?.get("member")
+            return found?.user ?? found?.member?.user ?? null
+        }
+
         // fetch settings from db/cache (+ some xp)
+        // Se incluye "info" para que /records pueda aplicar el fallback
+        // diario (dailyMessagesPeriod) sin lectura extra.
         this.fetchSettings = async function(userID, serverID=int.guild.id) {
-            let data = await client.db.fetch(serverID, ["settings", userID ? `users.${userID}` : null])
+            let data = await client.db.fetch(serverID, ["settings", "info", userID ? `users.${userID}` : null])
             if (!data) {
                 await client.db.create({ _id: serverID })
                 return await this.fetchSettings(userID, serverID)
@@ -439,7 +449,10 @@ class Tools {
         // sends an ephemeral reply, usually when the user did something wrong
         this.warn = function(msg) {
             if (msg.startsWith("*")) msg = this.errors[msg.slice(1)] || msg
-            return int.reply({content: this.errors[msg] || msg, ephemeral: true})
+            const data = { content: this.errors[msg] || msg, ephemeral: true }
+            if (int.deferred) return int.editReply(data)
+            if (int.replied) return int.followUp(data)
+            return int.reply(data)
         }
 
         // get detailed position info on a channel, for sorting

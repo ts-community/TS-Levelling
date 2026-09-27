@@ -62,7 +62,7 @@ const CHANNELS = {
 //   talk_to_user          -> flag en records     (evento: la IA responde)
 //   distinct_channels     -> channels            (set de channelIds donde ha escrito)
 //   counting_numbers      -> countingSent        (o contador por canal en channels)
-//   voice_minutes         -> voiceMinutes        (minutos acumulados, sin AFK/solo/eventos)
+//   voice_minutes         -> voiceMinutes        (minutos acumulados, sin AFK; solo también cuenta)
 //   voice_join_channel    -> voiceJoined         (set de fijos a los que ha entrado)
 //   voice_join_all_fixed  -> voiceJoined         (mismo set: al completar los 5)
 //   starboard_featured    -> flag en records     (evento: entra al starboard)
@@ -89,22 +89,22 @@ const categories = [
                 unit: "mensajes", unitOne: "mensaje", suffix: "",
                 tiers: [
                     { threshold: 10, xp: 1000, name: "Primeros pasos", desc: "Envía 10 mensajes en el servidor." },
-                    { threshold: 100, xp: 3000, name: "Presencia notable", desc: "Envía 100 mensajes en el servidor." },
+                    { threshold: 100, xp: 3000, name: "Habitual", desc: "Envía 100 mensajes en el servidor." },
                     { threshold: 1000, xp: 10000, name: "Conversador", desc: "Envía 1.000 mensajes en el servidor." },
-                    { threshold: 10000, xp: 30000, name: "Pilar del chat", desc: "Envía 10.000 mensajes en el servidor." },
-                    { threshold: 50000, xp: 100000, name: "Leyenda del chat", desc: "Envía 50.000 mensajes en el servidor." },
+                    { threshold: 10000, xp: 30000, name: "Pilar", desc: "Envía 10.000 mensajes en el servidor." },
+                    { threshold: 50000, xp: 100000, name: "Leyenda", desc: "Envía 50.000 mensajes en el servidor." },
                 ]
             },
             {
                 id: "monthly_messages",
                 label: "Mensual",
-                emoji: MESSAGES_EMOJI,
+                emoji: "📅",
                 mechanic: { type: "messages_monthly" },
                 unit: "mensajes", unitOne: "mensaje", suffix: "en un mes",
                 tiers: [
-                    { threshold: 500, xp: 3000, name: "Mes activo", desc: "Envía 500 mensajes en un mismo mes." },
-                    { threshold: 2000, xp: 10000, name: "Ritmo imparable", desc: "Envía 2.000 mensajes en un mismo mes." },
-                    { threshold: 5000, xp: 30000, name: "Mes legendario", desc: "Envía 5.000 mensajes en un mismo mes." },
+                    { threshold: 1000, xp: 3000, name: "Mes activo", desc: "Envía 1.000 mensajes en un mismo mes." },
+                    { threshold: 2000, xp: 10000, name: "Imparable", desc: "Envía 2.000 mensajes en un mismo mes." },
+                    { threshold: 5000, xp: 30000, name: "Legendario", desc: "Envía 5.000 mensajes en un mismo mes." },
                 ]
             },
             {
@@ -114,9 +114,9 @@ const categories = [
                 mechanic: { type: "messages_daily" },
                 unit: "mensajes", unitOne: "mensaje", suffix: "en un día",
                 tiers: [
-                    { threshold: 50, xp: 1000, name: "Día activo", desc: "Envía 50 mensajes en un mismo día." },
-                    { threshold: 150, xp: 3000, name: "Constancia diaria", desc: "Envía 150 mensajes en un mismo día." },
-                    { threshold: 300, xp: 5000, name: "Jornada completa", desc: "Envía 300 mensajes en un mismo día." },
+                    { threshold: 500, xp: 1000, name: "Día activo", desc: "Envía 500 mensajes en un mismo día." },
+                    { threshold: 1000, xp: 3000, name: "Constante", desc: "Envía 1.000 mensajes en un mismo día." },
+                    { threshold: 2000, xp: 5000, name: "Jornada", desc: "Envía 2.000 mensajes en un mismo día." },
                 ]
             },
             {
@@ -125,7 +125,7 @@ const categories = [
                 emoji: "🤖",
                 mechanic: { type: "talk_to_user", userId: CHANNELS.iaBotId, channelId: CHANNELS.iaChannelId },
                 tiers: [
-                    { threshold: 1, xp: 3000, name: "Primer contacto", desc: "Menciona o responde a Nova." },
+                    { threshold: 1, xp: 3000, name: "Primer contacto", desc: `Menciona o responde a un mensaje de <@${CHANNELS.iaBotId}>.` },
                 ]
             },
         ]
@@ -145,7 +145,7 @@ const categories = [
                 unit: "reacciones", unitOne: "reacción", suffix: "",
                 tiers: [
                     { threshold: 10, xp: 1000, name: "Primer gesto", desc: "Envía 10 reacciones a mensajes." },
-                    { threshold: 50, xp: 3000, name: "Apoyo constante", desc: "Envía 50 reacciones a mensajes." },
+                    { threshold: 50, xp: 3000, name: "Fiel apoyo", desc: "Envía 50 reacciones a mensajes." },
                     { threshold: 100, xp: 10000, name: "Oleada de apoyo", desc: "Envía 100 reacciones a mensajes." },
                 ]
             },
@@ -156,9 +156,9 @@ const categories = [
                 mechanic: { type: "reactions_received" },
                 unit: "reacciones", unitOne: "reacción", suffix: "recibidas",
                 tiers: [
-                    { threshold: 10, xp: 3000, name: "Mensaje apreciado", desc: "Recibe 10 reacciones en tus mensajes." },
+                    { threshold: 10, xp: 3000, name: "Apreciado", desc: "Recibe 10 reacciones en tus mensajes." },
                     { threshold: 50, xp: 10000, name: "Muy valorado", desc: "Recibe 50 reacciones en tus mensajes." },
-                    { threshold: 100, xp: 30000, name: "Favorito de la comunidad", desc: "Recibe 100 reacciones en tus mensajes." },
+                    { threshold: 100, xp: 30000, name: "Favorito", desc: "Recibe 100 reacciones en tus mensajes." },
                 ]
             },
             {
@@ -169,8 +169,8 @@ const categories = [
                 unit: "días", unitOne: "día", suffix: "seguidos",
                 tiers: [
                     { threshold: 3, xp: 3000, name: "Racha iniciada", desc: "Envía mensajes durante 3 días seguidos." },
-                    { threshold: 7, xp: 10000, name: "Semana constante", desc: "Envía mensajes durante 7 días seguidos." },
-                    { threshold: 14, xp: 30000, name: "Racha imparable", desc: "Envía mensajes durante 14 días seguidos." },
+                    { threshold: 7, xp: 10000, name: "Una semana", desc: "Envía mensajes durante 7 días seguidos." },
+                    { threshold: 14, xp: 30000, name: "Dos semanas", desc: "Envía mensajes durante 14 días seguidos." },
                 ]
             },
             {
@@ -180,9 +180,9 @@ const categories = [
                 mechanic: { type: "member_tenure", unit: "years" },
                 unit: "años", unitOne: "año", suffix: "en el servidor",
                 tiers: [
-                    { threshold: 1, xp: 10000, name: "Miembro veterano", desc: "En la comunidad desde hace 1 año." },
-                    { threshold: 2, xp: 30000, name: "Parte de la historia", desc: "En la comunidad desde hace 2 años." },
-                    { threshold: 3, xp: 75000, name: "Institución", desc: "En la comunidad desde hace 3 años." },
+                    { threshold: 1, xp: 10000, name: "Veterano", desc: "Lleva 1 año en la comunidad." },
+                    { threshold: 2, xp: 30000, name: "Histórico", desc: "Lleva 2 años en la comunidad." },
+                    { threshold: 3, xp: 75000, name: "Institución", desc: "Lleva 3 años en la comunidad." },
                 ]
             },
         ]
@@ -220,9 +220,9 @@ const categories = [
                 mechanic: { type: "counting_numbers", channelId: CHANNELS.countingChannelId },
                 unit: "números", unitOne: "número", suffix: "en counting",
                 tiers: [
-                    { threshold: 10, xp: 1000, name: "Primeras cuentas", desc: `Completa el 10 en <#${CHANNELS.countingChannelId}>.` },
-                    { threshold: 100, xp: 5000, name: "Contador experto", desc: `Completa el 100 en <#${CHANNELS.countingChannelId}>.` },
-                    { threshold: 500, xp: 15000, name: "Maestro del conteo", desc: `Completa el 500 en <#${CHANNELS.countingChannelId}>.` },
+                    { threshold: 10, xp: 1000, name: "El 10", desc: `Completa el 10 en <#${CHANNELS.countingChannelId}>.` },
+                    { threshold: 100, xp: 5000, name: "El 100", desc: `Completa el 100 en <#${CHANNELS.countingChannelId}>.` },
+                    { threshold: 500, xp: 15000, name: "El 500", desc: `Completa el 500 en <#${CHANNELS.countingChannelId}>.` },
                 ]
             },
         ]
@@ -259,6 +259,7 @@ const categories = [
                     afkChannelId: CHANNELS.voiceAfkId,
                     excludedChannelIds: [CHANNELS.voiceEventosId],
                 },
+                unit: "canales", unitOne: "canal", suffix: "distintos",
                 tiers: [
                     { threshold: 1, xp: 5000, name: "Ruta completa", desc: "Entra en los 5 canales fijos de voz." },
                 ]
@@ -270,14 +271,14 @@ const categories = [
                 mechanic: {
                     type: "voice_minutes",
                     excludeAfk: true,
-                    excludeAlone: true,
-                    excludedChannelIds: [CHANNELS.voiceAfkId, CHANNELS.voiceEventosId],
+                    excludeAlone: false,
+                    excludedChannelIds: [CHANNELS.voiceAfkId],
                 },
                 divisor: 60, unit: "horas", unitOne: "hora", suffix: "en voz",
                 tiers: [
-                    { threshold: 300, xp: 5000, name: "Tiempo compartido", desc: "Pasa 5 horas en voz válida." },
-                    { threshold: 1800, xp: 15000, name: "Voz habitual", desc: "Pasa 30 horas en voz válida." },
-                    { threshold: 6000, xp: 50000, name: "Residente de voz", desc: "Pasa 100 horas en voz válida." },
+                    { threshold: 300, xp: 5000, name: "5 horas", desc: "Pasa 5 horas en voz válida." },
+                    { threshold: 1800, xp: 15000, name: "30 horas", desc: "Pasa 30 horas en voz válida." },
+                    { threshold: 6000, xp: 50000, name: "100 horas", desc: "Pasa 100 horas en voz válida." },
                 ]
             },
         ]
@@ -297,7 +298,7 @@ const categories = [
                 mechanic: { type: "starboard_featured", channelId: CHANNELS.starboardChannelId, botId: CHANNELS.starboardBotId },
                 mystery: "Lo mejor acaba a la vista…",
                 tiers: [
-                    { threshold: 1, xp: 30000, name: "Mensaje destacado", desc: `Consigue que uno de tus mensajes aparezca en <#${CHANNELS.starboardChannelId}>.` },
+                    { threshold: 1, xp: 30000, name: "Bajo los focos", desc: `Consigue que uno de tus mensajes aparezca en <#${CHANNELS.starboardChannelId}>.` },
                 ]
             },
             {
@@ -307,7 +308,7 @@ const categories = [
                 mechanic: { type: "night_message", startHour: 4, endHour: 5, timezone: "Europe/Madrid" },
                 mystery: "Hay horas que casi nadie ve…",
                 tiers: [
-                    { threshold: 1, xp: 5000, name: "Búho nocturno", desc: "Envía un mensaje entre las 04:00 y las 05:00, hora española." },
+                    { threshold: 1, xp: 5000, name: "Insomnio", desc: "Envía un mensaje entre las 04:00 y las 05:00, hora española." },
                 ]
             },
             {
@@ -317,7 +318,7 @@ const categories = [
                 mechanic: { type: "hidden_command", commandName: "roger" },
                 mystery: "Hay gestos que el bot entiende…",
                 tiers: [
-                    { threshold: 1, xp: 15000, name: "Comando secreto", desc: "Descubre y utiliza el comando oculto." },
+                    { threshold: 1, xp: 15000, name: "Señas", desc: "Descubre y utiliza el comando oculto." },
                 ]
             },
             {
@@ -327,7 +328,7 @@ const categories = [
                 mechanic: { type: "web_easter_egg" },
                 mystery: "Hay más mundo fuera de aquí…",
                 tiers: [
-                    { threshold: 1, xp: 20000, name: "Detective digital", desc: "Encuentra el secreto escondido en la web." },
+                    { threshold: 1, xp: 20000, name: "Al otro lado", desc: "Encuentra el secreto escondido en la web." },
                 ]
             },
             {
@@ -337,7 +338,7 @@ const categories = [
                 mechanic: { type: "secret_phrase", phrase: "lentejas" },
                 mystery: "Dicen que una palabra basta…",
                 tiers: [
-                    { threshold: 1, xp: 5000, name: "Palabra inesperada", desc: "Escribe la palabra secreta en un mensaje." },
+                    { threshold: 1, xp: 5000, name: "De pasada", desc: "Escribe la palabra secreta en un mensaje." },
                 ]
             },
         ]

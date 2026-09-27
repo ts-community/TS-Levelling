@@ -1984,6 +1984,57 @@ input:checked + .sliderspan:before {
     border-left: 1px solid rgba(255, 255, 255, 0.15);
 }
 
+/* Pulido compartido: profundidad sutil, foco visible y mejor lectura en pantallas pequenas. */
+.leaderboardBox,
+.settingBox,
+.categoryBox {
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.leaderboardBox:hover,
+.settingBox:hover,
+.categoryBox:hover {
+    border-color: rgba(0, 230, 160, .22);
+    box-shadow: 0 16px 42px rgba(0, 0, 0, .16);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--polarisgreen);
+    outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+    #lbPageHeader {
+        padding-top: 28px !important;
+        margin-bottom: 18px !important;
+    }
+
+    #serverName {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        font-size: clamp(26px, 8vw, 36px);
+    }
+
+    .topbarBrand span {
+        max-width: 42vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .001ms !important;
+        transition-duration: .001ms !important;
+    }
+}
+
 .userMenuButton svg {
     height: 11px;
     width: 11px;

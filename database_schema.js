@@ -135,6 +135,7 @@ const schema = {
     info: {
         lastUpdate: { type: Number, default: 0 },
         monthlyMessagesPeriod: { type: String, default: "" },
+        dailyMessagesPeriod: { type: String, default: "" },
         monthlyTop: { type: Object, default: {} },
     }
 }

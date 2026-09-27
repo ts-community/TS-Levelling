@@ -572,39 +572,35 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
         // Salida del canal anterior: acumular minutos si contaba.
         if (oldChannelId) {
             const session = voiceSessions.get(key)
-            const joinedAt = session?.channelId === oldChannelId ? session.joinedAt : null
+            const storedServer = await client.db.fetch(guild.id).exec().catch(() => null)
+            const storedStartedAt = Number(storedServer?.users?.[userId]?.voiceStartedAt) || 0
+            const joinedAt = session?.channelId === oldChannelId
+                ? session.joinedAt
+                : storedStartedAt || null
             voiceSessions.delete(key)
             if (joinedAt && !excluded.has(String(oldChannelId))) {
                 try {
-                    const channel = oldState.channel || await client.channels.fetch(oldChannelId).catch(() => null)
-                    const members = channel?.members
-                    // Contaba si había al menos otro humano además del usuario.
-                    let others = 0
-                    if (members) {
-                        for (const m of members.values()) {
-                            if (String(m.id) === String(userId)) continue
-                            if (m.user?.bot) continue
-                            others++
-                        }
-                        others++ // el que sale estaba dentro
-                    } else others = 2
-                    if (others >= 2) {
-                        const minutes = Math.floor(Math.min(now - joinedAt, 12 * 60 * 60 * 1000) / 60000)
-                        if (minutes > 0) {
-                            await client.db.update(guild.id, { $inc: { [`users.${userId}.voiceMinutes`]: minutes } }).exec().catch(() => {})
-                            const server = await client.db.fetch(guild.id).exec().catch(() => null)
-                            const total = Number(server?.users?.[userId]?.voiceMinutes) || minutes
-                            const unlocked = recordTracker.unlockedIdSet(server?.users?.[userId])
-                            for (const t of recordTracker.newlyReachedThresholds(voiceRecords.voice_time, total, unlocked)) {
-                                const unlock = await recordTracker.grantRecord(client, guild, guild.id, userId, "voice_time", t).catch(() => null)
-                                if (unlock) {
-                                    pending.push(unlock)
-                                    unlocked.add(`voice_time:${t}`)
-                                }
+                    // Cuenta en solitario: cada minuto en voz (salvo AFK) suma.
+                    const minutes = Math.floor(Math.min(now - joinedAt, 12 * 60 * 60 * 1000) / 60000)
+                    const update = { $unset: { [`users.${userId}.voiceStartedAt`]: 1 } }
+                    if (minutes > 0) update.$inc = { [`users.${userId}.voiceMinutes`]: minutes }
+                    await client.db.update(guild.id, update).exec().catch(() => {})
+                    if (minutes > 0) {
+                        const server = await client.db.fetch(guild.id).exec().catch(() => null)
+                        const total = Number(server?.users?.[userId]?.voiceMinutes) || minutes
+                        const unlocked = recordTracker.unlockedIdSet(server?.users?.[userId])
+                        for (const t of recordTracker.newlyReachedThresholds(voiceRecords.voice_time, total, unlocked)) {
+                            const unlock = await recordTracker.grantRecord(client, guild, guild.id, userId, "voice_time", t).catch(() => null)
+                            if (unlock) {
+                                pending.push(unlock)
+                                unlocked.add(`voice_time:${t}`)
                             }
                         }
                     }
                 } catch {}
+            }
+            else {
+                await client.db.update(guild.id, { $unset: { [`users.${userId}.voiceStartedAt`]: 1 } }).exec().catch(() => {})
             }
         }
 
@@ -612,7 +608,10 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
         if (newChannelId) {
             voiceSessions.set(key, { channelId: newChannelId, joinedAt: now })
             try {
-                await client.db.update(guild.id, { $addToSet: { [`users.${userId}.voiceJoined`]: String(newChannelId) } }).exec().catch(() => {})
+                await client.db.update(guild.id, {
+                    $addToSet: { [`users.${userId}.voiceJoined`]: String(newChannelId) },
+                    $set: { [`users.${userId}.voiceStartedAt`]: now },
+                }).exec().catch(() => {})
                 const server = await client.db.fetch(guild.id).exec().catch(() => null)
                 const joined = new Set([].concat(server?.users?.[userId]?.voiceJoined || []))
                 joined.add(String(newChannelId))
@@ -714,6 +713,7 @@ client.on("interactionCreate", async int => {
             }
         } catch {}
     } catch (e) {
+    if (e?.code === 10062 || e?.rawError?.code === 10062) return
         console.error(e)
 
         const errorReply = {
@@ -722,7 +722,8 @@ client.on("interactionCreate", async int => {
         }
 
         try {
-            if (int.replied || int.deferred) await int.followUp(errorReply)
+            if (int.deferred) await int.editReply(errorReply)
+            else if (int.replied) await int.followUp(errorReply)
             else await int.reply(errorReply)
         } catch (replyError) {
             console.error("Could not send interaction error reply:", replyError)

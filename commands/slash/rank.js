@@ -24,6 +24,9 @@ module.exports = {
     },
 
     async run(client, int, tools) {
+        // Los bots no tienen XP: respuesta efímera antes del defer (después
+        // ya no se puede hacer efímero).
+        if (tools.getTargetUser()?.bot) return int.reply({ content: tools.errors.noBotView, ephemeral: true })
         await int.deferReply()
         let member = int.member
         let foundUser = int.options.get("user") || int.options.get("member")

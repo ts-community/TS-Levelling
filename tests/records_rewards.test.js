@@ -209,14 +209,14 @@ test("unlock agrupa tiers del mismo record: último nombre (+N), sin ✅", () =>
     const json = JSON.stringify(msg.msg.components.map(c => c.toJSON()))
     // Un solo bloque por record: fases + (+N) al final de su línea.
     assert.ok(json.includes("**Conversador** - 3/5 fases (+3)"), "fases + contador de tiers subidos")
-    assert.ok(json.includes("— <:XP:1467192533812645939> **+14.000 XP**"), "categoría primero y XP con formato")
+    assert.ok(json.includes("- <:XP:1467192533812645939> **+14.000 XP**"), "categoría primero y XP con formato")
     assert.ok(!json.includes("Primeros pasos"), "no lista cada tier")
     assert.ok(!json.includes("✅"), "sin tick verde")
     // Título estilo /rank con ## y totales del usuario.
     assert.ok(json.includes("##") && json.includes("10/40 Records"), "título con los totales más recientes del lote")
     // Línea de categoría (no nombre del record).
     assert.ok(json.includes("Actividad"), "categoría en la línea de recompensa")
-    assert.ok(json.includes("¡4 Records completados!"), "mención en plural")
+    assert.ok(json.includes("¡Nuevos Records!"), "cabecera en plural")
 })
 
 test("unlock singular: mención y cabecera sin nombre ni (+N)", () => {
@@ -230,7 +230,7 @@ test("unlock singular: mención y cabecera sin nombre ni (+N)", () => {
         ],
     })
     const json = JSON.stringify(msg.msg.components.map(c => c.toJSON()))
-    assert.ok(json.includes("<@u1> ¡Record completado! 🎉"), "mención en singular")
+    assert.ok(json.includes("<@u1> ¡Nuevo Record! 🎉"), "mención en singular")
     assert.ok(json.includes("## 🎉 ¡Nuevo Record!"), "cabecera sin nombre de récord")
     assert.ok(json.includes("5/36 Records"), "totales globales")
     assert.ok(!json.includes("(+"), "sin contador si solo sube un nivel")
@@ -251,11 +251,11 @@ test("unlock multi-categoría: un container por categoría con su color", () => 
     // mención + 2 containers
     assert.equal(msg.msg.components.length, 3)
     const [mention, first, second] = msg.msg.components.map(c => c.toJSON())
-    assert.ok(JSON.stringify(mention).includes("¡2 Records completados!"), "mención en plural")
+    assert.ok(JSON.stringify(mention).includes("¡2 Nuevos Records!"), "mención en plural")
     assert.equal(first.accent_color, RecordUnlockMessage.ACCENTS.actividad)
     assert.equal(second.accent_color, RecordUnlockMessage.ACCENTS.voz)
-    assert.ok(JSON.stringify(first).includes("¡Nuevo Record!"), "título solo en el primero")
-    assert.ok(!JSON.stringify(second).includes("¡Nuevo Record!"), "el segundo sin título")
+    assert.ok(JSON.stringify(first).includes("¡Nuevos Records!"), "título plural solo en el primero")
+    assert.ok(!JSON.stringify(second).includes("¡Nuevos Records!"), "el segundo sin título")
     // el pie va en el último container
     assert.ok(JSON.stringify(second).includes("para ver tus logros"), "pie en el último container")
     assert.ok(!JSON.stringify(first).includes("para ver tus logros"), "pie solo una vez")

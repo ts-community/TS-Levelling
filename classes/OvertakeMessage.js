@@ -133,7 +133,7 @@ class OvertakeMessage {
         // fuera pone "¡Nuevo adelantamiento!" y dentro "¡Adelantamiento Pro!",
         // igual que fuera "¡Nuevo rango!" y dentro "¡Subida de rango!".
         const topTag = ` ${EMOJI.TOP} #${this.newPos}`
-        const titleLine = `## 🎉 ¡Adelantamiento!${topTag}`
+        const titleLine = `## 🎉 ¡Adelantamiento! ${topTag}`
         // Linea del adelantado: sin TOP (ya va en el titulo), solo el primero
         // con (+N) y contexto corto para que quepa en una linea en movil.
         // El primero es el de mas arriba en el ranking (el rival mas alto).

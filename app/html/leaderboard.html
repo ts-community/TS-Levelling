@@ -45,15 +45,48 @@
             margin-top: 10px !important;
         }
 
+        #recordsList {
+            display: grid;
+            gap: 24px;
+            width: 100%;
+        }
+        .recordsCategory {
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            border-radius: 18px;
+            background: linear-gradient(145deg, rgba(255,255,255,0.07), rgba(255,255,255,0.025));
+            box-shadow: 0 18px 50px rgba(0,0,0,0.14);
+        }
+        .recordsCategoryHeader { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+        .recordsCategoryHeader h2 { margin: 0; }
+        .recordsCategoryHeader p { margin: 0; opacity: .65; text-align: right; }
+        .recordsGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+        .recordCard {
+            padding: 16px;
+            border-radius: 14px;
+            background: rgba(0,0,0,0.17);
+            border: 1px solid rgba(255,255,255,0.08);
+            animation: recordRise .55s both;
+            animation-delay: calc(var(--record-index) * 45ms);
+        }
+        .recordCard h3 { margin: 0 0 8px; font-size: 18px; }
+        .recordCard p { margin: 7px 0 0; font-size: 14px; line-height: 1.45; opacity: .72; }
+        .recordTier { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.07); font-size: 14px; }
+        .recordTier:first-child { border-top: 0; }
+        .recordTier strong { color: var(--polarisgreen); white-space: nowrap; }
+        .recordTier.locked strong { color: rgba(255,255,255,.42); }
+        .recordTier.locked span { filter: blur(4px); user-select: none; }
+        @keyframes recordRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
         /* Easter egg: huevo escondido abajo a la derecha */
         #secretEasterTrigger {
             position: fixed;
             right: 18px;
             bottom: 16px;
-            width: 30px;
-            height: 38px;
-            /* forma de huevo: mas estrecho arriba, redondo abajo */
-            border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+            width: 24px;
+            height: 42px;
+            /* Huevo vertical, mas estrecho arriba y redondo abajo. */
+            border-radius: 50% 50% 48% 48% / 36% 36% 64% 64%;
             border: 1px solid rgba(135, 243, 255, 0.35);
             background:
                 radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.85) 0%, rgba(255,255,255,0) 32%),
@@ -64,7 +97,7 @@
             cursor: pointer;
             z-index: 40;
             transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
-            animation: eggIdle 3.6s ease-in-out infinite;
+            animation: eggIdle 3.1s ease-in-out infinite, eggSpark 2.2s ease-in-out infinite alternate;
         }
         #secretEasterTrigger:hover,
         #secretEasterTrigger:focus-visible {
@@ -88,6 +121,10 @@
             50% { transform: scale(1.3) rotate(8deg); }
             75% { transform: scale(1.32) rotate(-5deg); }
             100% { transform: scale(1.28) rotate(-6deg); }
+        }
+        @keyframes eggSpark {
+            from { box-shadow: 0 0 8px rgba(135, 243, 255, 0.28); }
+            to { box-shadow: 0 0 22px rgba(167, 139, 250, 0.8), 0 0 42px rgba(135, 243, 255, 0.22); }
         }
         @media (prefers-reduced-motion: reduce) {
             #secretEasterTrigger { animation: none; }
@@ -198,10 +235,8 @@
     <h2 box="levels" class="lbBox plsLogIn">¡Inicia sesión para ver tu progreso hacia cada nivel!</h2>
     <div id="progress" box="levels" class="leaderboardBox lbBox" style="display: none"></div>
 
-    <div box="records" class="lbBox middleflex centerflex" style="display: none; flex-direction: column; min-height: 320px; text-align: center;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="height: 56px; width: 56px"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
-        <h2 style="margin-top: 16px">Próximamente</h2>
-        <p style="opacity: 70%; margin-top: 4px">Estamos trabajando en esta función.</p>
+    <div box="records" class="lbBox" style="display: none;">
+        <div id="recordsList"></div>
     </div>
 
     <h2 box="rank" class="lbBox plsLogIn">¡Inicia sesión para ver la información detallada de tu rango!</h2>
@@ -289,6 +324,21 @@
                     <div class="statRow">
                         <p class="statLabel">Mensajes para subir de nivel</p>
                         <p class="statValue accent-blue" lb="messages"></p>
+                    </div>
+                </div>
+
+                <div class="statBox" stat="messages">
+                    <div class="statRow">
+                        <p class="statLabel">Mensajes totales</p>
+                        <p class="statValue accent-blue" lb="totalmessages"></p>
+                    </div>
+                    <div class="statRow">
+                        <p class="statLabel">Mensajes este mes</p>
+                        <p class="statValue accent-blue" lb="monthlymessages"></p>
+                    </div>
+                    <div class="statRow">
+                        <p class="statLabel">Mensajes hoy</p>
+                        <p class="statValue accent-blue" lb="dailymessages"></p>
                     </div>
                 </div>
             </div>
@@ -408,7 +458,7 @@
 
     <script>
         const secretTrigger = document.getElementById('secretEasterTrigger');
-        const guildMatch = window.location.pathname.match(/\/(leaderboard|rank|roles|levels|records)\/(\d+)/i);
+        const guildMatch = window.location.pathname.match(/\/(leaderboard|top|rank|roles|levels|records)\/(\d+)/i);
         const guildId = guildMatch ? guildMatch[2] : null;
 
         if (secretTrigger) {
@@ -448,6 +498,7 @@ function updateHeaderTitle(box) {
 let pathParts = window.location.pathname.split("/").filter(Boolean)
 let guildID = pathParts[pathParts.length - 1]
 let currentBox = (pathParts.length > 1 && slugToBox[pathParts[0]]) ? slugToBox[pathParts[0]] : "leaderboard"
+if (pathParts[0] === "top") currentBox = "leaderboard"
 let guildName = ""
 let serverName = guildID
 let page = 1
@@ -704,6 +755,60 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
     }
     appendLeaderboard(data.leaderboard)
 
+    function escapeRecordText(value) {
+        return String(value ?? "").replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]))
+    }
+
+    function recordCurrentValue(record) {
+        const user = data.user || {}
+        const type = record.mechanic?.type
+        if (type === "messages_total") return Number(user.messages) || 0
+        if (type === "messages_monthly") return Number(user.monthlyMessages) || 0
+        if (type === "messages_daily") return Number(user.dailyMessages) || 0
+        if (type === "reactions_sent") return Number(user.reactionsSent) || 0
+        if (type === "reactions_received") return Number(user.reactionsReceived) || 0
+        if (type === "counting_numbers") return Number(user.countingSent) || 0
+        if (type === "voice_minutes") return (Number(user.voiceMinutes) || 0) / 60
+        if (type === "streak_days") return typeof user.streak === "object" ? Number(user.streak.current ?? user.streak.days) || 0 : Number(user.streak) || 0
+        if (type === "economy_participation") return user.records?.[`${record.id}:1`] ? 1 : 0
+        return 0
+    }
+
+    function recordProgressText(record, tier, current) {
+        const target = record.mechanic?.type === "voice_minutes" ? tier.threshold / 60 : tier.threshold
+        const unit = record.unit === "horas" ? "h" : record.unit === "mensajes" ? "mensajes" : record.unitOne && target === 1 ? record.unitOne : record.unit || "fases"
+        return `${commafy(current)}/${commafy(target)} ${unit}`
+    }
+
+    function renderRecords(categories, unlocked) {
+        const unlockedSet = new Set(Object.keys(unlocked || {}))
+        let index = 0
+        $('#recordsList').html((categories || []).map(category => {
+            const total = (category.records || []).reduce((sum, record) => sum + record.tiers.length, 0)
+            const done = (category.records || []).reduce((sum, record) => sum + record.tiers.filter(t => unlockedSet.has(`${record.id}:${t.threshold}`)).length, 0)
+            const cards = (category.records || []).map(record => {
+                const current = recordCurrentValue(record)
+                const tiers = record.tiers.map(tier => {
+                    const key = `${record.id}:${tier.threshold}`
+                    const complete = unlockedSet.has(key)
+                    const hidden = category.hidden && !complete
+                    const tierName = hidden ? 'Secreto sin descubrir' : tier.name
+                    const description = hidden ? (record.mystery || 'Hay algo oculto aquí…') : tier.desc
+                    const reward = tier.xp ? `+${commafy(tier.xp)} XP` : 'Sin XP'
+                    index++
+                    const progressCurrent = complete && hidden ? Math.max(current, record.mechanic?.type === "voice_minutes" ? tier.threshold / 60 : tier.threshold) : current
+                    const progress = `<small>📊 ${escapeRecordText(recordProgressText(record, tier, progressCurrent))}</small>`
+                    return `<div class="recordTier ${hidden ? 'locked' : ''}"><span>${hidden ? '🔒' : (complete ? '✓' : '○')} ${escapeRecordText(tierName)}<br>${progress}<br><small>${escapeRecordText(description)}</small></span><strong>${escapeRecordText(reward)}</strong></div>`
+                }).join('')
+                const completed = record.tiers.filter(t => unlockedSet.has(`${record.id}:${t.threshold}`)).length
+                return `<article class="recordCard" style="--record-index:${index}"><h3>${escapeRecordText(record.emoji)} ${escapeRecordText(record.label || record.id)} <small>${completed}/${record.tiers.length}</small></h3><p>${escapeRecordText(record.mechanic?.type || 'logro')}</p>${tiers}</article>`
+            }).join('')
+            return `<section class="recordsCategory"><div class="recordsCategoryHeader"><h2>${escapeRecordText(category.emoji)} ${escapeRecordText(category.name)}</h2><p>${done}/${total} fases</p></div><div class="recordsGrid">${cards}</div></section>`
+        }).join(''))
+    }
+
+    renderRecords(data.records, data.user.records)
+
     // reward roles
     data.settings.rewards.sort((a, b) => a.level - b.level).forEach(r => {
         let rSlot = roleSlot.clone()
@@ -794,6 +899,9 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         let estimatedMax = Math.ceil((userLevel.xpRequired - data.user.xp) / (data.settings.gain.max * userMultiplier.boost))
         let estimatedRange = estimatedMin < 0 ? "N/A" : (estimatedMax == estimatedMin) ? `${commafy(estimatedMax)}` : `${commafy(estimatedMax)} - ${commafy(estimatedMin)} (avg. ${commafy(Math.round((estimatedMax + estimatedMin) / 2))})`
         $('#accountInfo [lb=messages]').text(estimatedRange)
+        $('#accountInfo [lb=totalmessages]').text(commafy(data.user.messages || 0))
+        $('#accountInfo [lb=monthlymessages]').text(commafy(data.user.monthlyMessages || 0))
+        $('#accountInfo [lb=dailymessages]').text(commafy(data.user.dailyMessages || 0))
 
         if (userMultiplier.roles.length) {
             if (userMultiplier.roles.length == 1) {

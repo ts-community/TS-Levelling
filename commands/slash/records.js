@@ -1,7 +1,5 @@
 const {
     ActionRowBuilder,
-    ButtonBuilder,
-    ButtonStyle,
     ContainerBuilder,
     MessageFlags,
     SectionBuilder,
@@ -17,6 +15,7 @@ const fs = require("fs")
 const Tools = require("../../classes/Tools.js")
 const ranks = require("../../consts/ranks.js")
 const records = require("../../config/records.js")
+const { estimateVisualWidth } = require("./top.js")
 
 const XP_EMOJI = "<:XP:1467192533812645939>"
 const INFO_EMOJI = "ℹ️"
@@ -31,7 +30,6 @@ const ACCENTS = {
     voz: 0x9b7bff,
     hidden: 0x8a8f98,
 }
-const INFO_BUTTON_ID = "records-info"
 const MS_PER_YEAR = 365.25 * 24 * 3600 * 1000
 
 // Páginas en el orden de config/records.js (la última es ocultos).
@@ -60,12 +58,11 @@ function resolveRank(xp, settings) {
 function makeProgress(current, tiers, fmt) {
     const tier = tiers.find(t => t.threshold > current) || tiers[tiers.length - 1]
     const full = current >= tier.threshold
-    const shown = full ? tier.threshold : current
     return {
         tier,
         target: tier.threshold,
         frac: full ? 1 : current / tier.threshold,
-        currentLabel: fmt(shown),
+        currentLabel: fmt(current),
         targetLabel: fmt(tier.threshold),
         full,
         completed: tiers.filter(t => t.threshold <= current).length,
@@ -116,12 +113,33 @@ function getProgress(record, userData, member, commafy) {
         return makeProgress(Number(userData.countingSent) || 0, record.tiers, v => commafy(v))
     }
     if (type === "voice_minutes") {
-        if (userData?.voiceMinutes == null) return null
-        // Umbrales en minutos, se muestran en horas (divisor 60).
+        // Umbrales en minutos, se muestran en horas (divisor 60) con un
+        // decimal en español ("3,5/5 h"). La "h" la pone formatProgress.
+        // Sin voz aún = 0 minutos (no null: el fallback de formatProgress
+        // usaría el umbral en minutos y saldría "0/300 h").
         const toHours = m => m / 60
-        const minutes = Number(userData.voiceMinutes) || 0
+        const fmtHours = v => String(Math.round(v * 10) / 10).replace(".", ",")
+        const minutes = Number(userData?.voiceMinutes) || 0
         const hourTiers = record.tiers.map(t => ({ ...t, threshold: toHours(t.threshold) }))
-        return makeProgress(toHours(minutes), hourTiers, v => `${commafy(v)}h`)
+        return makeProgress(toHours(minutes), hourTiers, fmtHours)
+    }
+    if (type === "voice_join_all_fixed") {
+        // Progreso real: fijos visitados de N (un solo tier de recompensa).
+        // buildRecordBlock usa phasesTotal como denominador ("2/5 fases").
+        const fixed = (record.mechanic.fixedChannelIds || []).map(String)
+        const joined = new Set([].concat(userData?.voiceJoined || []).map(String))
+        const visited = fixed.filter(id => joined.has(id)).length
+        const total = Math.max(1, fixed.length)
+        return {
+            tier: record.tiers[0],
+            target: total,
+            frac: total ? visited / total : 0,
+            currentLabel: commafy(visited),
+            targetLabel: commafy(total),
+            full: visited >= total,
+            completed: Math.min(visited, total),
+            phasesTotal: total,
+        }
     }
     if (type === "economy_participation") {
         // Flag binario: si existe el flag, está completado; si no, es null (sin progreso numérico)
@@ -156,19 +174,59 @@ function formatReward(tier, commafy) {
     return rewards.join(" + ")
 }
 
+function compactProgressLabel(label) {
+    const value = Number(String(label).replace(/\./g, "").replace(",", "."))
+    if (!Number.isFinite(value) || Math.abs(value) < 1000) return label
+    const divisor = Math.abs(value) >= 1000000 ? 1000000 : 1000
+    const suffix = divisor === 1000000 ? "M" : "k"
+    const compact = Math.round((value / divisor) * 10) / 10
+    return `${String(compact).replace(".", ",")}${suffix}`
+}
+
+function formatProgress(record, progress, commafy, unitOverride) {
+    const target = progress?.target ?? record.tiers[0]?.threshold ?? 0
+    const current = compactProgressLabel(progress?.currentLabel ?? commafy(0))
+    const targetLabel = compactProgressLabel(progress?.targetLabel ?? commafy(target))
+    const unit = unitOverride
+        ?? (record.unit === "horas" ? "h"
+            : record.unit === "mensajes" ? "mensajes"
+                : target === 1 && record.unitOne ? record.unitOne
+                    : record.unit || (record.tiers.length === 1 ? "" : "fases"))
+    return `📊 **${current}/${targetLabel}${unit ? ` ${unit}` : ""}**`
+}
+
+// Listón de ancho para las líneas pequeñas (-#): el mismo que usa el test
+// de móvil y /top (MOBILE_LINE_WIDTH).
+const PROGRESS_LINE_WIDTH = 37.9
+
+// En récords de mensajes la unidad larga ("mensajes") puede saltar de línea
+// en móvil con números grandes: si la línea completa supera el listón, se
+// reescribe con "msgs" (como la cascada de /top con fitLine). Las menciones
+// de rol se miden como "@rol", igual que en el test.
+function fitProgressLine(record, progress, currentTier, commafy) {
+    const reward = formatReward(currentTier, commafy)
+    const full = `${formatProgress(record, progress, commafy)} - ${reward}`
+    if (record.unit !== "mensajes") return full
+    const rendered = `-# ${full}`.replace(/<@&\d+>/g, "@rol")
+    if (estimateVisualWidth(rendered) <= PROGRESS_LINE_WIDTH) return full
+    return `${formatProgress(record, progress, commafy, "msgs")} - ${reward}`
+}
+
 // Un bloque por logro con el render compartido del mensaje de desbloqueo:
 // ### en una sola línea con guion (puede saltar en móvil), descripción
 // citada y recompensa en pequeño. Sin línea de progreso por ahora.
 // Solo se muestra el nivel actual (el siguiente a desbloquear).
 function buildRecordBlock(record, unlockedIds, progress, commafy) {
     const tiers = record.tiers
-    const total = tiers.length
+    // Algunos récords miden el avance en fases propias (p. ej. Ruta completa:
+    // 5 canales con un solo tier de recompensa).
+    const total = progress?.phasesTotal ?? tiers.length
     let completed
     let currentTier
     if (progress) {
         if (progress.full) {
             completed = total
-            currentTier = tiers[total - 1]
+            currentTier = tiers[tiers.length - 1]
         } else {
             completed = progress.completed
             currentTier = progress.tier
@@ -179,14 +237,19 @@ function buildRecordBlock(record, unlockedIds, progress, commafy) {
     }
 
     const allDone = completed >= total
+    const phaseWord = total === 1 ? "fase" : "fases"
 
     const lines = [allDone
-        ? `### ~~${record.emoji} **${currentTier.name}** - ${completed}/${total} fases~~`
-        : `### ${record.emoji} **${currentTier.name}** - ${completed}/${total} fases`]
+        ? `### ~~${record.emoji} **${currentTier.name}** - ${completed}/${total} ${phaseWord}~~`
+        : `### ${record.emoji} **${currentTier.name}** - ${completed}/${total} ${phaseWord}`]
     lines.push(allDone ? `> ~~${currentTier.desc}~~` : `> ${currentTier.desc}`)
-    lines.push(allDone
-        ? `-# ~~${formatReward(currentTier, commafy)}~~`
-        : `-# ${formatReward(currentTier, commafy)}`)
+    const binaryProgress = !progress && total === 1 && completed ? {
+        currentLabel: commafy(1),
+        target: 1,
+        targetLabel: commafy(1),
+    } : progress
+    const progressLine = fitProgressLine(record, binaryProgress, currentTier, commafy)
+    lines.push(allDone ? `-# ~~${progressLine}~~` : `-# ${progressLine}`)
     return lines.join("\n")
 }
 
@@ -213,30 +276,77 @@ function buildCategoryBlocks(category, userData, member, unlockedIds, commafy) {
     return blocks
 }
 
-function buildHiddenBlocks(hiddenCategory, unlockedIds, commafy) {
+function buildHiddenBlocks(hiddenCategory, unlockedIds, commafy, userData = {}, member = null) {
     // Sin cabecera: va pegado al título como las demás páginas (el contador
-    // ya sale en el menú). Lo no descubierto muestra su propio misterio
-    // (uno por Record, sin filtrar nada); lo descubierto, el render completo
-    // con nombre y recompensa pero descripción sustituida por misterio.
-    // Un bloque por nivel para separarlos como en las demás páginas.
+    // ya sale en el menú). Render idéntico al de un récord normal, pero con
+    // UNA sola descripción misteriosa que no revela la condición, esté o no
+    // desbloqueado (así lo descubierto tampoco filtra cómo se consigue).
     const blocks = []
     for (const record of hiddenCategory.records) {
-        const total = record.tiers.length
-        const completed = record.tiers.filter(t => unlockedIds.has(`${record.id}:${t.threshold}`)).length
-        for (const tier of record.tiers) {
-            const key = `${record.id}:${tier.threshold}`
-            if (!unlockedIds.has(key)) {
-                blocks.push(`-# 🔍 *${record.mystery || "Un secreto aún por descubrir…"}*`)
-                continue
-            }
-            blocks.push([
-                `### ${record.emoji} **${tier.name}** - ${completed}/${total} fases`,
-                `-# ❓ *El secreto sigue a salvo…*`,
-                `-# ${formatReward(tier, commafy)}`,
-            ].join("\n"))
+        const masked = {
+            ...record,
+            tiers: record.tiers.map(tier => ({
+                ...tier,
+                desc: record.mystery || "Un secreto aún por descubrir…",
+            })),
         }
+        blocks.push(buildRecordBlock(masked, unlockedIds, getProgress(record, userData, member, commafy), commafy))
     }
     return blocks
+}
+
+function formatCount(value, singular, plural = singular === "mes" ? "meses" : `${singular}s`) {
+    return `${value} ${value === 1 ? singular : plural}`
+}
+
+function formatVoiceTime(minutes) {
+    const totalMinutes = Math.max(0, Math.floor(Number(minutes) || 0))
+    const hours = Math.floor(totalMinutes / 60)
+    const remainingMinutes = totalMinutes % 60
+    if (!remainingMinutes) return formatCount(hours, "hora")
+    if (!hours) return formatCount(remainingMinutes, "minuto")
+    return `${formatCount(hours, "hora")} y ${formatCount(remainingMinutes, "minuto")}`
+}
+
+function getActiveVoiceMinutes(userData, member) {
+    const channelId = member?.voice?.channelId
+    const startedAt = Number(userData?.voiceStartedAt)
+    if (!channelId || !startedAt) return 0
+    const voiceRecord = records.allRecords().find(({ record }) => record.id === "voice_time")?.record
+    if (voiceRecord?.mechanic?.excludedChannelIds?.some(id => String(id) === String(channelId))) return 0
+    // Cuenta en solitario: basta con estar en un canal válido.
+    return Math.floor(Math.min(Date.now() - startedAt, 12 * 60 * 60 * 1000) / 60000)
+}
+
+function formatTenure(joinedTimestamp, now = Date.now()) {
+    const joined = new Date(joinedTimestamp)
+    const current = new Date(now)
+    if (!Number.isFinite(joined.getTime()) || joined > current) return formatCount(0, "día")
+
+    let years = current.getFullYear() - joined.getFullYear()
+    let anniversary = new Date(joined)
+    anniversary.setFullYear(joined.getFullYear() + years)
+    if (anniversary > current) {
+        years--
+        anniversary = new Date(joined)
+        anniversary.setFullYear(joined.getFullYear() + years)
+    }
+
+    let months = current.getMonth() - anniversary.getMonth()
+    if (months < 0) months += 12
+    const monthiversary = new Date(anniversary)
+    monthiversary.setMonth(anniversary.getMonth() + months)
+    if (monthiversary > current) {
+        months--
+        monthiversary.setMonth(anniversary.getMonth() + months)
+    }
+
+    const days = Math.max(0, Math.floor((current - monthiversary) / (24 * 3600 * 1000)))
+    const parts = []
+    if (years) parts.push(formatCount(years, "año"))
+    if (months) parts.push(formatCount(months, "mes"))
+    if (days || !parts.length) parts.push(formatCount(days, "día"))
+    return parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} y ${parts.at(-1)}`
 }
 
 // Página Estadísticas: valores útiles incluso cuando todavía están a cero.
@@ -251,41 +361,31 @@ function buildInfoTexts(userData, member, unlockedIds, tools) {
         : streakDays
     const streak = `${show(streakDays)} días`
     const maxStreak = `${show(streakMax)} días`
-    const channelsRaw = userData?.channels
-    const channels = show(typeof channelsRaw === "number" ? channelsRaw
-            : channelsRaw instanceof Set || channelsRaw instanceof Map ? channelsRaw.size
-            : Array.isArray(channelsRaw) ? channelsRaw.length
-            : channelsRaw ? Object.keys(channelsRaw).length : 0)
-    const voiceHours = Math.floor((Number(userData?.voiceMinutes) || 0) / 60)
-    const voice = `${show(voiceHours)}h`
-    let tenure = "0 días"
-    if (member?.joinedTimestamp) {
-        const days = Math.max(0, Math.floor((Date.now() - member.joinedTimestamp) / (24 * 3600 * 1000)))
-        tenure = `${show(days)} días`
-    }
+    const voice = formatVoiceTime(Number(userData?.voiceMinutes) + getActiveVoiceMinutes(userData, member))
+    const tenure = member?.joinedTimestamp ? formatTenure(member.joinedTimestamp) : formatCount(0, "día")
+    // "msgs" en corto: con "mensajes" estas líneas saltan en móvil (listón 31).
     const groups = [
         [
             `### 💬 Actividad`,
-            `<:messages:1467163578699354235> **Mensajes totales:** ${msgs}`,
-            `📅 **Mensajes este mes:** ${monthlyMsgs}`,
-            `☀️ **Mensajes hoy:** ${show(Number(userData?.dailyMessages) || 0)}`,
+            `- <:messages:1467163578699354235> **Mensajes totales:** ${msgs} msgs`,
+            `- 📅 **Mensajes este mes:** ${monthlyMsgs} msgs`,
+            `- ☀️ **Mensajes diarios:** ${show(Number(userData?.dailyMessages) || 0)} msgs`,
         ].join("\n"),
         [
             `### 🤝 Comunidad`,
-            `❤️ **Reacciones enviadas:** ${show(userData?.reactionsSent)}`,
-            `💘 **Reacciones recibidas:** ${show(userData?.reactionsReceived)}`,
-            `🔥 **Racha actual:** ${streak}`,
-            `🏆 **Racha máxima:** ${maxStreak}`,
-            `🏅 **Antigüedad servidor:** ${tenure}`,
+            `- ❤️ **Reacciones enviadas:** ${show(userData?.reactionsSent)}`,
+            `- 💘 **Reacciones recibidas:** ${show(userData?.reactionsReceived)}`,
+            `- 🔥 **Racha actual:** ${streak}`,
+            `- 🏆 **Racha máxima:** ${maxStreak}`,
+            `- 🏅 **Antigüedad:** ${tenure}`,
         ].join("\n"),
         [
             `### 🧭 Canales`,
-            `🧭 **Canales con mensajes:** ${channels}`,
-            `🔢 **Números en Counting:** ${show(userData?.countingSent)}`,
+            `- 🔢 **Counting:** ${show(userData?.countingSent)} números`,
         ].join("\n"),
         [
             `### 🎙️ Voz`,
-            `🎙️ **Tiempo en voz:** ${voice}`,
+            `- 🎙️ **Tiempo en voz:** ${voice}`,
         ].join("\n"),
     ]
     const help = [
@@ -296,43 +396,6 @@ function buildInfoTexts(userData, member, unlockedIds, tools) {
     return [groups, help.join("\n")]
 }
 
-// Detalle del botón de estadísticas en Components V2: qué son y cómo van.
-// Devuelve los 4 bloques de texto (el contenedor los separa).
-function buildInfoDetailBlocks(tools) {
-    const totalXp = tools.commafy(records.totalXp(records.allRecords()))
-    const tiers = records.countTiers(records.allRecords())
-    return [
-        `# ${records.RECORDS_EMOJI} ¿Qué son los Records?`,
-        [
-            `## 🎯 Cómo funcionan`,
-            `-# Cada logro tiene fases con XP extra.`,
-            `-# Siempre ves tu siguiente nivel.`,
-            `-# Al completarlo, el XP se suma solo.`,
-        ].join("\n"),
-        [
-            `## 🗂️ Las páginas`,
-            `-# Stats, actividad, comunidad, canales y voz.`,
-            `-# Los ocultos se revelan solos.`,
-            `-# Hay **${totalXp} XP** en ${tiers} fases.`,
-        ].join("\n"),
-        `-# Muévete con el menú del mensaje.`,
-    ]
-}
-
-function buildInfoContainer(tools) {
-    const [title, how, pages, foot] = buildInfoDetailBlocks(tools)
-    const container = new ContainerBuilder().setAccentColor(ACCENTS.stats)
-    const sep = () => new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
-    const text = content => new TextDisplayBuilder().setContent(content)
-    container.addTextDisplayComponents(text(title))
-    container.addSeparatorComponents(sep())
-    container.addTextDisplayComponents(text(how))
-    container.addSeparatorComponents(sep())
-    container.addTextDisplayComponents(text(pages))
-    container.addSeparatorComponents(sep())
-    container.addTextDisplayComponents(text(foot))
-    return container
-}
 // Un menú desplegable por categoría, con sus completados, su descripción y
 // la posición (Página x/y) para orientarse. Estadísticas va primera.
 function buildCatSelect(currentId, unlockedIds, disabled = false) {
@@ -373,15 +436,28 @@ metadata: {
 },
 
 async run(client, int, tools) {
+    // Los bots no tienen XP: respuesta efímera antes del defer (después
+    // ya no se puede hacer efímero).
+    if (tools.getTargetUser()?.bot) return int.reply({ content: tools.errors.noBotView, ephemeral: true })
+    await int.deferReply({ flags: MessageFlags.IsComponentsV2 })
     const targetMember = int.options.get("user") || int.options.get("member")
     const member = targetMember?.member || int.member
     const memberId = member?.id || int.user.id
 
-    let db = await tools.fetchAll()
+    let db = await tools.fetchSettings(memberId)
     if (!db) return tools.warn("*noData")
     else if (!db.settings.enabled) return tools.warn("*xpDisabled")
 
-    const userData = db.users?.[memberId] || {}
+    const userData = { ...(db.users?.[memberId] || {}) }
+    const madridDay = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Europe/Madrid",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).format(new Date())
+    if (db.info?.dailyMessagesPeriod && db.info.dailyMessagesPeriod !== madridDay) {
+        userData.dailyMessages = 0
+    }
     const unlockedIds = new Set(Object.keys(userData.records || {}))
     const order = [INFO_ID, ...PAGES]
     let pageNumber = 0 // Estadísticas primero
@@ -394,19 +470,21 @@ async run(client, int, tools) {
         const statGroups = id === INFO_ID ? buildInfoTexts(userData, member, unlockedIds, tools)[0] : null
         const pageBlocks = category
             ? (category.hidden
-                ? buildHiddenBlocks(category, unlockedIds, tools.commafy)
+                ? buildHiddenBlocks(category, unlockedIds, tools.commafy, userData, member)
                 : buildCategoryBlocks(category, userData, member, unlockedIds, tools.commafy))
             : null
         // Sin cabecera de categoría (salvo ocultos, que ya vienen sin ella):
         // el primer récord (pageBlocks[1]) va pegado al título en el mismo
-        // TextDisplay, como en el mensaje de nuevo Record. En stats el título
-        // va solo: los grupos empiezan después del separador.
+        // TextDisplay. En stats el nombre de la primera categoría va pegado
+        // al título (sin separador encima) y todo lo demás lleva
+        // separadores como en el resto de grupos.
         const categoryIntro = pageBlocks
             ? (category.hidden ? pageBlocks[0] : pageBlocks[1])
             : null
+        const firstHeading = statGroups ? statGroups[0].split("\n")[0] : null
         const titleContent = [
             buildTitle(unlockedIds),
-            statGroups ? statGroups[0] : categoryIntro,
+            firstHeading ?? categoryIntro,
         ].filter(Boolean).join("\n\n")
         const titleText = new TextDisplayBuilder().setContent(titleContent)
         const avatarUrl = typeof member?.displayAvatarURL === "function" ? member.displayAvatarURL() : ""
@@ -420,12 +498,16 @@ async run(client, int, tools) {
         container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
 
         if (id === INFO_ID) {
-            // El primer grupo ya va pegado al título; el resto con
-            // separadores. Sin ayuda ni botón.
-            for (const text of statGroups.slice(1)) {
-                container.addTextDisplayComponents(new TextDisplayBuilder().setContent(text))
+            // La cabecera de Actividad ya va en el título: aquí solo sus
+            // stats; el resto de grupos con cabecera, separador, stats y
+            // separador, como siempre.
+            statGroups.forEach((group, index) => {
+                const [heading, ...stats] = group.split("\n")
+                if (index > 0) container.addTextDisplayComponents(new TextDisplayBuilder().setContent(heading))
                 container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
-            }
+                container.addTextDisplayComponents(new TextDisplayBuilder().setContent(stats.join("\n")))
+                container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+            })
         } else {
             // El título y el primer bloque comparten TextDisplay y cada bloque
             // queda separado por su propio divisor, incluido el final: misma
@@ -439,8 +521,6 @@ async run(client, int, tools) {
         container.addActionRowComponents(new ActionRowBuilder().addComponents(buildCatSelect(id, unlockedIds, disabled)))
         return { container }
     }
-
-    await int.deferReply({ flags: MessageFlags.IsComponentsV2 })
 
     // La mención de la IA en Test de Turing no debe pinguear: sin menciones.
     const noPings = { parse: [] }
@@ -464,17 +544,6 @@ async run(client, int, tools) {
                 content: `Este menú es de otra persona. Usa ${tools.commandTag("records")} para ver tus Records.`,
                 ephemeral: true,
             }).catch(() => {})
-        }
-        // Botón de ayuda: explicación en Components V2 y efímero.
-        if (interaction.isButton()) {
-            if (interaction.customId === INFO_BUTTON_ID) {
-                return interaction.reply({
-                    components: [buildInfoContainer(tools)],
-                    flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
-                    allowedMentions: noPings,
-                }).catch(() => {})
-            }
-            return tools.buttonReply(interaction)
         }
         if (!interaction.isStringSelectMenu()) return tools.buttonReply(interaction)
         if (buttonPressed) return
@@ -508,16 +577,16 @@ module.exports.resolveRank = resolveRank
 module.exports.titleCounts = titleCounts
 module.exports.buildTitle = buildTitle
 module.exports.formatReward = formatReward
+module.exports.formatProgress = formatProgress
+module.exports.fitProgressLine = fitProgressLine
+module.exports.PROGRESS_LINE_WIDTH = PROGRESS_LINE_WIDTH
 module.exports.buildRecordBlock = buildRecordBlock
 module.exports.buildCategoryBlocks = buildCategoryBlocks
 module.exports.buildHiddenBlocks = buildHiddenBlocks
 module.exports.buildCatSelect = buildCatSelect
 module.exports.buildInfoTexts = buildInfoTexts
-module.exports.buildInfoDetailBlocks = buildInfoDetailBlocks
-module.exports.buildInfoContainer = buildInfoContainer
 module.exports.ACCENTS = ACCENTS
 module.exports.INFO_ID = INFO_ID
-module.exports.INFO_BUTTON_ID = INFO_BUTTON_ID
 module.exports.INFO_EMOJI = INFO_EMOJI
 module.exports.INFO_EMOJI = INFO_EMOJI
 module.exports.PAGES = PAGES

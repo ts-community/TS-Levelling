@@ -52,10 +52,11 @@ function renderRecord({ record, category, tiers, total, done }) {
     if (tierXp > 0) rewards.push(`${XP_EMOJI} **+${Tools.global.commafy(tierXp)} XP**`)
     if (tierRoles) rewards.push(tierRoles)
 
+    const phaseWord = total === 1 ? "fase" : "fases"
     return [
-        `### ${record.emoji} **${lastTier.name}** - ${done}/${total} fases${multi}`,
+        `### ${record.emoji} **${lastTier.name}** - ${done}/${total} ${phaseWord}${multi}`,
         `> ${lastTier.desc}`,
-        rewards.length ? `-# ${catEmoji} ${category.name} — ${rewards.join(" + ")}` : `-# ${catEmoji} ${category.name}`,
+        rewards.length ? `-# ${catEmoji} ${category.name} - ${rewards.join(" + ")}` : `-# ${catEmoji} ${category.name}`,
     ].join("\n")
 }
 
@@ -111,7 +112,8 @@ class RecordUnlockMessage {
         const last = unlocks[unlocks.length - 1]
         const totalCompleted = last.totalCompleted ?? unlocks.length
         const totalVisible = last.totalVisible ?? unlocks.reduce((sum, u) => sum + u.total, 0)
-        const titleLine = `## 🎉 ¡Nuevo Record!  ${RECORDS_EMOJI} ${totalCompleted}/${totalVisible} Records`
+        const title = unlocks.length > 1 ? "¡Nuevos Records!" : "¡Nuevo Record!"
+        const titleLine = `## 🎉 ${title}   ${RECORDS_EMOJI} ${totalCompleted}/${totalVisible} Records`
 
         const sep = () => new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
         const text = content => new TextDisplayBuilder().setContent(content)
@@ -161,7 +163,7 @@ class RecordUnlockMessage {
 
         const newTiers = unlocks.length
         const mentionLine = userId ? [text(
-            newTiers > 1 ? `<@${userId}> ¡${newTiers} Records completados! 🎉` : `<@${userId}> ¡Record completado! 🎉`
+            newTiers > 1 ? `<@${userId}> ¡${newTiers} Nuevos Records! 🎉` : `<@${userId}> ¡Nuevo Record! 🎉`
         )] : []
         this.msg = {
             components: [...mentionLine, ...containers],

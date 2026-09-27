@@ -11,6 +11,7 @@ const {
     TextDisplayBuilder
 } = require("discord.js")
 const ranks = require("../../consts/ranks.js")
+const recordsConfig = require("../../config/records.js")
 
 function getCurrentSpanishMonth() {
     return new Intl.DateTimeFormat("es-ES", {
@@ -59,6 +60,9 @@ function charWidth(ch) {
 }
 
 function estimateVisualWidth(text) {
+    // El tachado (~~...~~) es marcado como la negrita: no se renderiza,
+    // así que no mide (las líneas completadas de /records lo usan).
+    text = String(text).replace(/~~/g, "")
     let width = 0
     for (const part of text.split(/(<a?:\w+:\d+>)/g)) {
         if (!part) continue
@@ -157,18 +161,9 @@ function statNumber(raw) {
     return Number(raw) || 0
 }
 
-function statChannelCount(raw) {
-    if (raw == null) return 0
-    if (typeof raw === "number") return raw
-    if (raw instanceof Set || raw instanceof Map) return raw.size
-    if (Array.isArray(raw)) return raw.length
-    if (typeof raw === "object") return Object.keys(raw).length
-    return 0
-}
-
 const STAT_MODES = {
     mensajes: {
-        menuEmoji: "💬", label: "Mensajes", title: "Top de mensajes",
+        menuEmoji: "💬", label: "Mensajes totales", title: "Top de mensajes totales",
         unit: "mensajes", abbr: "msjs", emoji: "<:messages:1467163578699354235>",
         one: "mensaje", get: u => Number(u.messages) || 0,
     },
@@ -207,11 +202,6 @@ const STAT_MODES = {
             return Number(raw) || 0
         },
     },
-    canales: {
-        menuEmoji: "🧭", label: "Canales", title: "Top de canales",
-        unit: "canales", abbr: "can.", emoji: "🧭",
-        one: "canal", get: u => statChannelCount(u.channels),
-    },
     counting: {
         menuEmoji: "🔢", label: "Counting", title: "Top de counting",
         unit: "números", abbr: "núms.", emoji: "🔢",
@@ -222,6 +212,20 @@ const STAT_MODES = {
         unit: "min en voz", abbr: "min", emoji: "🎙️",
         one: "min en voz", get: u => Number(u.voiceMinutes) || 0,
     },
+}
+
+const STAT_RECORD_EMOJIS = Object.fromEntries(recordsConfig.categories
+    .flatMap(category => category.records.map(record => [record.id, record.emoji])))
+const STAT_RECORD_IDS = {
+    mensajes: "messages",
+    mensajes_mes: "monthly_messages",
+    mensajes_dia: "daily_messages",
+    reacciones_enviadas: "reactions_sent",
+    reacciones_recibidas: "reactions_received",
+    racha: "streak",
+    racha_max: "streak",
+    counting: "counting",
+    voz: "voice_time",
 }
 
 function statUnit(mode, value) {
@@ -237,18 +241,48 @@ const VIEW_MODES = [
     { value: "xp_dia", label: "XP del día", menuEmoji: "✨" },
 ]
 
+function getRelatedModes(viewKey) {
+    const options = STAT_MODES[viewKey]
+        ? [{ value: viewKey, label: STAT_MODES[viewKey].label, menuEmoji: STAT_MODES[viewKey].menuEmoji }]
+        : [...VIEW_MODES]
+    const add = (value, label, menuEmoji) => options.push({ value, label, menuEmoji })
+    if (viewKey === "xp" || viewKey === "xp_mes" || viewKey === "xp_dia") {
+        return options
+    }
+    if (viewKey === "mensajes") {
+        add("mensajes_mes", "Mensajes del mes", "📅")
+        add("mensajes_dia", "Mensajes del día", "☀️")
+    } else if (viewKey === "mensajes_mes") {
+        add("mensajes", "Mensajes totales", "💬")
+        add("mensajes_dia", "Mensajes del día", "☀️")
+    } else if (viewKey === "mensajes_dia") {
+        add("mensajes", "Mensajes totales", "💬")
+        add("mensajes_mes", "Mensajes del mes", "📅")
+    } else if (viewKey === "racha") {
+        add("racha_max", "Racha máxima", "🏆")
+    } else if (viewKey === "racha_max") {
+        add("racha", "Racha actual", "🔥")
+    }
+    return options
+}
+
 function buildViewMenu(viewKey, disabled = false) {
+    const options = getRelatedModes(viewKey)
+    const includeExtraStats = !STAT_MODES[viewKey]
+    const extraStats = Object.entries(STAT_MODES)
+        .filter(([key]) => !["mensajes_mes", "mensajes_dia"].includes(key))
+        .map(([key, mode]) => ({ value: key, label: mode.label, menuEmoji: mode.menuEmoji }))
     return new StringSelectMenuBuilder()
         .setCustomId("top-view")
         .setPlaceholder("Ver top por…")
         .setDisabled(disabled)
         .addOptions(
-            ...VIEW_MODES.map(v =>
+            ...options.map(v =>
                 new StringSelectMenuOptionBuilder()
                     .setLabel(v.label).setValue(v.value).setEmoji(v.menuEmoji).setDefault(viewKey === v.value)),
-            ...Object.entries(STAT_MODES).map(([key, mode]) =>
+                ...(includeExtraStats ? extraStats.map(({ value, label, menuEmoji }) =>
                 new StringSelectMenuOptionBuilder()
-                    .setLabel(mode.label).setValue(key).setEmoji(mode.menuEmoji).setDefault(viewKey === key))
+                    .setLabel(label).setValue(value).setEmoji(menuEmoji).setDefault(viewKey === value)) : [])
         )
 }
 
@@ -258,11 +292,26 @@ metadata: {
     description: "View the server's XP leaderboard.",
     args: [
         { type: "user", name: "member", description: "Finds a certain member's position on the leaderboard", required: false },
-        { type: "bool", name: "monthly", description: "Show this month's most active members", required: false }
+        { type: "string", name: "view", description: "Choose the leaderboard category to open", required: false, choices: [
+            { name: "XP total", value: "xp" },
+            { name: "XP mensual", value: "monthly" },
+            { name: "XP diario", value: "daily" },
+            { name: "Mensajes totales", value: "mensajes" },
+            { name: "Mensajes del mes", value: "mensajes_mes" },
+            { name: "Mensajes diarios", value: "mensajes_dia" },
+            { name: "Reacciones enviadas", value: "reacciones_enviadas" },
+            { name: "Reacciones recibidas", value: "reacciones_recibidas" },
+            { name: "Racha actual", value: "racha" },
+            { name: "Racha máxima", value: "racha_max" },
+            { name: "Counting", value: "counting" },
+            { name: "Voz", value: "voz" },
+        ]},
     ]
 },
 
 async run(client, int, tools) {
+    // Un solo deferReply (más abajo, con el flag ephemeral ya resuelto):
+    // un segundo defer revienta con "already been sent or deferred".
     let lbLink = `${tools.WEBSITE}/leaderboard/${int.guild.id}`
 
     let db = await tools.fetchAll()
@@ -277,33 +326,45 @@ async run(client, int, tools) {
     }
 
     let pageSize = 8
-    let viewKey = int.options.get("monthly")?.value ? "xp_mes" : "xp"
+    const userEntries = tools.xpObjToArray(db.users || {})
+    const requestedView = int.options.get("view")?.value
+    const requestedViewKey = requestedView === "monthly" ? "xp_mes"
+        : requestedView === "daily" ? "xp_dia"
+            : requestedView
+    let viewKey = requestedViewKey || "xp"
+    if (viewKey !== "xp" && viewKey !== "xp_mes" && viewKey !== "xp_dia" && !STAT_MODES[viewKey]) viewKey = "xp"
 
     let minLeaderboardXP = db.settings.leaderboard.minLevel > 1 ? tools.xpForLevel(db.settings.leaderboard.minLevel, db.settings) : 0
     const hasLeaderboardLevel = userData => Number(userData?.xp) > 0 && tools.getLevel(Number(userData.xp), db.settings) > 0
-    const buildRankings = isMonthly => tools.xpObjToArray(db.users || {})
-        .filter(x => hasLeaderboardLevel(x) && !x.hidden && (isMonthly ? tools.getMonthlyXP(x) > 0 : Number(x.xp) > minLeaderboardXP))
+    const buildRankings = isMonthly => userEntries
+        .map(entry => ({ entry, value: isMonthly ? tools.getMonthlyXP(entry) : Number(entry.xp) || 0 }))
+        .filter(({ entry, value }) => hasLeaderboardLevel(entry) && !entry.hidden && value > (isMonthly ? 0 : minLeaderboardXP))
         .sort((a, b) => isMonthly
-            ? tools.getMonthlyXP(b) - tools.getMonthlyXP(a)
-                || tools.getMonthlyMessages(b) - tools.getMonthlyMessages(a)
-                || b.xp - a.xp
-            : b.xp - a.xp)
+            ? b.value - a.value
+                || tools.getMonthlyMessages(b.entry) - tools.getMonthlyMessages(a.entry)
+                || b.entry.xp - a.entry.xp
+            : b.value - a.value)
+        .map(({ entry }) => entry)
     let rankings = buildRankings(false)
 
     // El botón rota global -> mensual -> diario. El diario ordena por XP del
     // día (desempate por mensajes del día y luego XP total, como el mensual).
-    const buildDailyRankings = () => tools.xpObjToArray(db.users || {})
-        .filter(x => hasLeaderboardLevel(x) && !x.hidden && tools.getDailyXP(x) > 0)
-        .sort((a, b) => tools.getDailyXP(b) - tools.getDailyXP(a)
-            || tools.getDailyMessages(b) - tools.getDailyMessages(a)
-            || b.xp - a.xp)
+    const buildDailyRankings = () => userEntries
+        .map(entry => ({ entry, value: tools.getDailyXP(entry) }))
+        .filter(({ entry, value }) => hasLeaderboardLevel(entry) && !entry.hidden && value > 0)
+        .sort((a, b) => b.value - a.value
+            || tools.getDailyMessages(b.entry) - tools.getDailyMessages(a.entry)
+            || b.entry.xp - a.entry.xp)
+        .map(({ entry }) => entry)
 
     const buildStatRankings = key => {
         const mode = STAT_MODES[key]
         if (!mode) return []
-        return tools.xpObjToArray(db.users || {})
-            .filter(x => hasLeaderboardLevel(x) && !x.hidden && mode.get(x) > 0)
-            .sort((a, b) => mode.get(b) - mode.get(a) || b.xp - a.xp)
+        return userEntries
+            .map(entry => ({ entry, value: mode.get(entry) }))
+            .filter(({ entry, value }) => hasLeaderboardLevel(entry) && !entry.hidden && value > 0)
+            .sort((a, b) => b.value - a.value || b.entry.xp - a.entry.xp)
+            .map(({ entry }) => entry)
     }
 
     const buildViewRankings = key => {
@@ -320,6 +381,9 @@ async run(client, int, tools) {
 
     let highlight = null
     let userSearch = int.options.get("user") || int.options.get("member") // option is "user" if from context menu
+    // Los bots no tienen XP: respuesta efímera antes del defer (después
+    // ya no se puede hacer efímero).
+    if (tools.getTargetUser()?.bot) return int.reply({ content: tools.errors.noBotView, ephemeral: true })
     if (userSearch) {
         let foundRanking = rankings.findIndex(x => x.id == userSearch.user.id)
         if (isNaN(foundRanking) || foundRanking < 0) return tools.warn(int.user.id == userSearch.user.id ? "No estas en el top!" : "Este miembro no esta en el top!")
@@ -404,16 +468,17 @@ async run(client, int, tools) {
                 : isRequester
                     ? "  <:member:1467596629787021415> **Tú**"
                     : ""
+            const statEmoji = STAT_RECORD_EMOJIS[STAT_RECORD_IDS[viewKey]] || statMode?.emoji
             entryComponents.push(new TextDisplayBuilder().setContent([
-                `${rankRole?.emoji || "<:top:1467967277251956887>"} **#${position} - Nivel ${level} - ${memberDisplay}**${memberMarker}`,
                 statMode
-                    ? fitLine(...statLineVariants(statMode.emoji, tools.commafy(statValue), statUnit(statMode, statValue), statMode.abbr))
-                    : viewKey === "xp_dia"
+                    ? `${statEmoji} **#${position} - ${memberDisplay}**${memberMarker} - **${tools.commafy(statValue)} ${statUnit(statMode, statValue)}**`
+                    : `${rankRole?.emoji || "<:top:1467967277251956887>"} **#${position} - Nivel ${level} - ${memberDisplay}**${memberMarker}`,
+                !statMode && viewKey === "xp_dia"
                     ? fitMonthlyLine(...dailyMessageVariants(dailyMessages, dailyXP))
-                    : viewKey === "xp_mes"
+                    : !statMode && viewKey === "xp_mes"
                     ? fitMonthlyLine(...monthlyMessageVariants(monthlyMessages, monthlyXP))
-                    : fitLine(...globalMessageVariants(totalMessages, monthlyMessages))
-            ].join("\n")))
+                    : !statMode ? fitLine(...globalMessageVariants(totalMessages, monthlyMessages)) : null
+            ].filter(Boolean).join("\n")))
 
             if (index < pageData.length - 1) {
                 entryComponents.push(new SeparatorBuilder()

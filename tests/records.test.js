@@ -20,7 +20,7 @@ test("command metadata is valid", () => {
     assert.equal(command.metadata.name, "records")
     assert.ok(command.metadata.description.length > 0)
     assert.equal(typeof command.run, "function")
-    for (const fn of ["buildRecordBlock", "buildCategoryBlocks", "buildHiddenBlocks", "buildTitle", "buildCatSelect", "buildInfoTexts", "buildInfoDetailBlocks", "buildInfoContainer", "resolveRank", "titleCounts", "getProgress"]) {
+    for (const fn of ["buildRecordBlock", "buildCategoryBlocks", "buildHiddenBlocks", "buildTitle", "buildCatSelect", "buildInfoTexts", "resolveRank", "titleCounts", "getProgress", "formatProgress", "fitProgressLine"]) {
         assert.equal(typeof command[fn], "function")
     }
 })
@@ -165,9 +165,6 @@ test("every rendered line fits on mobile", () => {
             }
         }
     }
-    for (const text of command.buildInfoDetailBlocks(tools)) {
-        checkLines(text)
-    }
     // Recompensa con rol (aún sin usar): también tiene que caber.
     const roleRecord = { id: "role_test", label: "Rol prueba", emoji: "🎖️", mechanic: { type: "messages_total" }, unit: "mensajes", tiers: [{ threshold: 10, xp: 0, name: "Prueba", desc: "Envía 10 mensajes", roleId: "1113898817469820928" }] }
     checkLines(command.buildRecordBlock(roleRecord, new Set(), null, tools.commafy))
@@ -184,17 +181,17 @@ test("progress numbers come from real data", () => {
     p = command.getProgress(byId.messages, { messages: 150 }, null, commafy)
     assert.equal(p.target, 1000)
 
-    // Superado el último nivel: barra llena pero limitada al objetivo.
+    // Superado el último nivel: la barra se llena, pero el contador conserva el valor real.
     p = command.getProgress(byId.messages, { messages: 99999 }, null, commafy)
     assert.equal(p.target, 50000)
     assert.equal(p.frac, 1)
-    assert.equal(p.currentLabel, p.targetLabel)
+    assert.notEqual(p.currentLabel, p.targetLabel)
 
     p = command.getProgress(byId.monthly_messages, { monthlyMessages: 120 }, null, commafy)
-    assert.equal(p.target, 500)
+    assert.equal(p.target, 1000)
 
     p = command.getProgress(byId.daily_messages, { dailyMessages: 60 }, null, commafy)
-    assert.equal(p.target, 150)
+    assert.equal(p.target, 500)
 
     p = command.getProgress(byId.reactions_received, { reactionsReceived: 12 }, null, commafy)
     assert.equal(p.target, 50)
@@ -205,6 +202,38 @@ test("progress numbers come from real data", () => {
 
     assert.equal(command.getProgress(byId.tenure, {}, null, commafy), null)
     assert.equal(command.getProgress(byId.streak, {}, null, commafy), null)
+
+    // Voz: umbrales en minutos, progreso en horas. Sin voz aún = 0/5 h,
+    // nunca el umbral en crudo ("0/300 h").
+    p = command.getProgress(byId.voice_time, {}, null, commafy)
+    assert.equal(p.target, 5)
+    assert.equal(p.currentLabel, commafy(0))
+    assert.equal(p.targetLabel, commafy(5))
+    p = command.getProgress(byId.voice_time, { voiceMinutes: 90 }, null, commafy)
+    assert.equal(p.target, 5)
+    const voiceBlock = command.buildRecordBlock(byId.voice_time, new Set(), command.getProgress(byId.voice_time, {}, null, commafy), commafy)
+    assert.ok(voiceBlock.includes("📊 **0/5 h**"), `voz sin datos: ${voiceBlock.split("\n").at(-1)}`)
+    // Con decimales en español: 210 min = 3,5/5 h.
+    const voiceHalf = command.buildRecordBlock(byId.voice_time, new Set(), command.getProgress(byId.voice_time, { voiceMinutes: 210 }, null, commafy), commafy)
+    assert.ok(voiceHalf.includes("📊 **3,5/5 h**"), voiceHalf.split("\n").at(-1))
+
+    // Ruta completa: un solo tier pero avance 0/5 (fijos visitados).
+    const fixedIds = byId.voice_all_fixed.mechanic.fixedChannelIds
+    assert.equal(fixedIds.length, 5)
+    p = command.getProgress(byId.voice_all_fixed, {}, null, commafy)
+    assert.equal(p.target, 5)
+    assert.equal(p.phasesTotal, 5)
+    let tourBlock = command.buildRecordBlock(byId.voice_all_fixed, new Set(), p, commafy)
+    assert.ok(tourBlock.includes("**Ruta completa** - 0/5 fases"), tourBlock.split("\n")[0])
+    assert.ok(tourBlock.includes("📊 **0/5 canales**"), tourBlock.split("\n").at(-1))
+    p = command.getProgress(byId.voice_all_fixed, { voiceJoined: [fixedIds[0], fixedIds[1], "otro-canal"] }, null, commafy)
+    assert.equal(p.completed, 2)
+    tourBlock = command.buildRecordBlock(byId.voice_all_fixed, new Set(), p, commafy)
+    assert.ok(tourBlock.includes("**Ruta completa** - 2/5 fases"), tourBlock.split("\n")[0])
+    p = command.getProgress(byId.voice_all_fixed, { voiceJoined: [...fixedIds] }, null, commafy)
+    assert.equal(p.full, true)
+    tourBlock = command.buildRecordBlock(byId.voice_all_fixed, new Set(), p, commafy)
+    assert.ok(tourBlock.includes("**Ruta completa** - 5/5 fases"), tourBlock.split("\n")[0])
 })
 
 test("counting only accepts the next exact number", () => {
@@ -237,7 +266,7 @@ test("streak keeps current and historical maximum", () => {
     })
 })
 
-test("record block shows only the current tier, no progress line for now", () => {
+test("record block shows the current tier and real progress", () => {
     const { record } = records.allRecords().find(({ record }) => record.id === "messages")
     const commafy = tools.commafy
     const locked = command.buildRecordBlock(record, new Set(), command.getProgress(record, { messages: 7 }, null, commafy), commafy)
@@ -246,8 +275,8 @@ test("record block shows only the current tier, no progress line for now", () =>
     const lines = locked.split("\n")
     assert.equal(lines[0], `### ${record.emoji} **Primeros pasos** - 0/5 fases`)
     assert.equal(lines[1], "> Envía 10 mensajes en el servidor.")
-    assert.equal(lines[2], "-# <:XP:1467192533812645939> **+1.000 XP**")
-    assert.equal(lines.length, 3, "título + descripción + recompensa, sin progreso")
+    assert.equal(lines[2], "-# 📊 **7/10 mensajes** - <:XP:1467192533812645939> **+1.000 XP**")
+    assert.equal(lines.length, 3, "título + descripción + progreso/recompensa")
     assert.ok(!locked.includes("~~"), "sin completar: sin tachado")
 
     // Con más mensajes salta a su siguiente objetivo y el contador avanza.
@@ -255,19 +284,38 @@ test("record block shows only the current tier, no progress line for now", () =>
     assert.ok(next.startsWith(`### ${record.emoji} **Conversador**`))
     assert.ok(next.includes("**Conversador** - 2/5 fases"))
     assert.ok(!next.includes("~~"), "a medias: sin tachado")
-    assert.ok(!next.includes("mensajes ·"), "sin línea de progreso por ahora")
-    assert.ok(next.includes("-# <:XP:1467192533812645939> **+10.000 XP**"))
+    assert.ok(next.includes("📊 **150/1k mensajes**"))
+    assert.ok(next.includes("<:XP:1467192533812645939> **+10.000 XP**"))
 
-    // Superado todo el catálogo: tachado total y sin números de progreso.
+    // Superado todo el catálogo: tachado total, conservando el contador real.
     const done = command.buildRecordBlock(record, new Set(), command.getProgress(record, { messages: 99999 }, null, commafy), commafy)
     assert.ok(done.includes("### ~~"))
-    assert.ok(done.includes("**Leyenda del chat**"))
-    assert.ok(done.includes("- 5/5 fases"))
+    assert.ok(done.includes("**Leyenda**"))
+    assert.ok(done.includes("📊 **100k/50k mensajes**"))
     assert.ok(done.includes("> ~~Envía 50.000 mensajes en el servidor.~~"))
-    assert.ok(done.includes("-# ~~<:XP:1467192533812645939> **+100.000 XP**~~"))
+    assert.ok(done.includes("-# ~~📊 **100k/50k mensajes** - <:XP:1467192533812645939> **+100.000 XP**~~"))
     assert.ok(!done.includes("✅"))
     assert.ok(!/· \d+%/.test(done))
     assert.ok(!done.includes("<:star_drop"))
+})
+
+test("long message lines fall back to msgs instead of wrapping", () => {
+    const commafy = tools.commafy
+    // Con números grandes + rol, "mensajes" supera el listón -#: se abrevia.
+    const big = {
+        id: "big_test", label: "Grande", emoji: "💬",
+        mechanic: { type: "messages_total" }, unit: "mensajes", unitOne: "mensaje",
+        tiers: [{ threshold: 5000000, xp: 100000, name: "Gigante", desc: "d", roleId: "1113898817469820928" }],
+    }
+    const block = command.buildRecordBlock(big, new Set(), command.getProgress(big, { messages: 4700000 }, null, commafy), commafy)
+    assert.ok(block.includes("**4,7M/5M msgs**"), block.split("\n").at(-1))
+    assert.ok(!block.includes("mensajes"))
+    const line = block.split("\n").at(-1).replace(/<@&\d+>/g, "@rol")
+    assert.ok(estimateVisualWidth(line) <= MAX_LINE_WIDTH, `salta: ${line}`)
+    // Las cortas conservan "mensajes".
+    const { record } = records.allRecords().find(({ record }) => record.id === "messages")
+    const short = command.buildRecordBlock(record, new Set(), command.getProgress(record, { messages: 7 }, null, commafy), commafy)
+    assert.ok(short.includes("**7/10 mensajes**"))
 })
 
 test("completed records sort first and render struck through", () => {
@@ -278,8 +326,8 @@ test("completed records sort first and render struck through", () => {
     assert.ok(!plain[1].includes("~~"), "sin completar: sin tachado")
 
     const withDone = command.buildCategoryBlocks(category, {}, null, new Set(["talk_to:1"]), tools.commafy)
-    assert.ok(withDone[1].startsWith("### ~~🤖 **Primer contacto** - 1/1 fases~~"), "completado arriba aunque sea el más fácil")
-    assert.ok(withDone[1].includes("> ~~Menciona o responde a Nova.~~"), "descripción tachada")
+    assert.ok(withDone[1].startsWith("### ~~🤖 **Primer contacto** - 1/1 fase~~"), "completado arriba aunque sea el más fácil")
+    assert.ok(withDone[1].includes("> ~~Menciona o responde a un mensaje de <@"), "descripción tachada")
     assert.ok(withDone[1].includes("<:XP:1467192533812645939> **+3.000 XP**~~"), "recompensa tachada")
 })
 
@@ -288,32 +336,37 @@ test("completed records keep difficulty order among themselves", () => {
     // monthly (3 fases) + talk_to (1 fase) completados: el más difícil primero,
     // y messages (sin completar) después aunque sea el más difícil del catálogo.
     const ids = new Set([
-        "monthly_messages:500", "monthly_messages:2000", "monthly_messages:5000", "talk_to:1",
+        "monthly_messages:1000", "monthly_messages:2000", "monthly_messages:5000", "talk_to:1",
     ])
     // userData acorde a los flags: el progreso mensual también lo da por completo.
     const blocks = command.buildCategoryBlocks(category, { monthlyMessages: 6000 }, null, ids, tools.commafy)
-    assert.ok(blocks[1].includes("**Mes legendario**"), "completado más difícil primero")
+    assert.ok(blocks[1].includes("**Legendario**"), "completado más difícil primero")
     assert.ok(blocks[2].includes("**Primer contacto**"), "completado más fácil segundo")
     assert.ok(blocks[3].includes("**Primeros pasos**"), "sin completar después")
     assert.ok(!blocks[1].includes("?????") && blocks[1].includes("- 3/3 fases"), "título normal")
 })
 
-test("hidden page has no title and masks undescribed tiers", () => {
+test("hidden page renders like the rest with mystery descriptions", () => {
     const hiddenCat = records.categories.find(c => c.id === "hidden")
     const locked = command.buildHiddenBlocks(hiddenCat, new Set(), tools.commafy)
-    assert.equal(locked.length, 5, "un bloque por nivel oculto")
+    assert.equal(locked.length, 5, "un bloque por récord oculto")
     const lockedText = locked.join("\n")
-    assert.ok(!lockedText.includes("##"), "sin título de categoría")
-    assert.ok(!lockedText.includes("❓ ?????"), "misterio en vez de interrogantes")
+    assert.ok(!/^##(?!#)/m.test(lockedText), "sin título de categoría")
+    // Igual que un récord normal (título, descripción citada, progreso y
+    // recompensa), pero la descripción es el misterio: no revela la condición.
+    const star = hiddenCat.records.find(r => r.id === "starboard")
+    assert.ok(lockedText.includes(`### ⭐ **Bajo los focos** - 0/1 fase`), "título a la vista")
+    assert.ok(lockedText.includes(`> ${star.mystery}`), "descripción misteriosa citada")
+    assert.ok(lockedText.includes("-# 📊 **0/1** - <:XP:1467192533812645939> **+30.000 XP**"), "progreso y recompensa a la vista")
+    assert.ok(!lockedText.includes("~~"), "sin descubrir: sin tachado")
     // Un misterio distinto por Record...
     const mysteries = hiddenCat.records.map(r => r.mystery)
     assert.equal(new Set(mysteries).size, hiddenCat.records.length, "cada oculto con su misterio")
     for (const m of mysteries) assert.ok(lockedText.includes(m), `falta el misterio: ${m}`)
-    // ...que no filtra nada sin descubrir.
+    // ...y la descripción real no se filtra ni bloqueado ni desbloqueado.
     for (const { record } of records.hiddenRecords()) {
         assert.ok(!lockedText.includes(record.label), `filtra etiqueta: ${record.id}`)
         for (const tier of record.tiers) {
-            assert.ok(!lockedText.includes(tier.name), `filtra nombre: ${tier.name}`)
             assert.ok(!lockedText.includes(tier.desc), `filtra descripción: ${record.id}`)
         }
     }
@@ -321,9 +374,9 @@ test("hidden page has no title and masks undescribed tiers", () => {
     const unlocked = command.buildHiddenBlocks(hiddenCat, new Set(["starboard:1"]), tools.commafy)
     assert.equal(unlocked.length, 5)
     const unlockedText = unlocked.join("\n")
-    assert.ok(unlockedText.includes("### ⭐ **Mensaje destacado** - 1/1 fases"), "nombre a la vista")
-    assert.ok(unlockedText.includes("El secreto sigue a salvo"), "descripción sustituida por misterio")
-    assert.ok(unlockedText.includes("-# <:XP:1467192533812645939> **+30.000 XP**"), "recompensa a la vista")
+    assert.ok(unlockedText.includes("### ~~⭐ **Bajo los focos** - 1/1 fase~~"), "desbloqueado tachado")
+    assert.ok(unlockedText.includes(`> ~~${star.mystery}~~`), "misterio también al descubrirlo")
+    assert.ok(unlockedText.includes("-# ~~📊 **1/1** - <:XP:1467192533812645939> **+30.000 XP**~~"), "progreso y recompensa tachados")
     assert.ok(!unlockedText.includes("aparezca en"), "la descripción real no se filtra")
 })
 
@@ -347,7 +400,7 @@ test("info page shows record stats without faking missing data", () => {
     assert.ok(!stats.includes("General"), "sin grupo general")
     assert.ok(stats.includes("**Mensajes totales:** 10"))
     assert.ok(stats.includes("**Mensajes este mes:** 3"))
-    assert.ok(stats.includes("**Mensajes hoy:** 7"))
+    assert.ok(stats.includes("**Mensajes diarios:** 7"))
     assert.ok(stats.includes("**Reacciones enviadas:** 25"))
     assert.ok(stats.includes("**Reacciones recibidas:** 0"))
     assert.ok(stats.includes("**Racha actual:** 0 días"))
@@ -359,23 +412,16 @@ test("info page shows record stats without faking missing data", () => {
     const [emptyGroups] = command.buildInfoTexts({}, null, new Set(), tools)
     const empty = emptyGroups.join("\n")
     assert.ok(empty.includes("**Mensajes totales:** 0"))
-    assert.ok(empty.includes("**Antigüedad servidor:** 0 días"))
+    assert.ok(empty.includes("**Antigüedad:** 0 días"))
     const full = command.buildInfoTexts(
         { messages: 110894, monthlyMessages: 3240, reactionsSent: 250, reactionsReceived: 40,
             streak: { current: 9 }, channels: { a: 1, b: 2 }, countingSent: 120, voiceMinutes: 900 },
         member, new Set(), tools)[0].join("\n")
     assert.ok(full.includes("**Reacciones recibidas:** 40"))
     assert.ok(full.includes("**Racha actual:** 9 días"))
-    assert.ok(full.includes("**Canales con mensajes:** 2"))
-    assert.ok(full.includes("**Números en Counting:** 120"))
-    assert.ok(full.includes("**Tiempo en voz:** 15h"))
-    // Detalle V2: bloques cortos que caben en móvil.
-    const blocks = command.buildInfoDetailBlocks(tools)
-    assert.equal(blocks.length, 4)
-    assert.ok(blocks[0].includes("¿Qué son los Records?"))
-    assert.ok(blocks[2].includes("39 fases") || blocks[3].includes("39 fases"))
-    const ephemeral = command.buildInfoContainer(tools)
-    assert.ok(ephemeral.toJSON().components.length <= 10, "el efímero también respeta el límite")
+    assert.ok(!full.includes("**Canales con mensajes:**"))
+    assert.ok(full.includes("**Counting:** 120 números"))
+    assert.ok(full.includes("**Tiempo en voz:** 15 horas"))
 })
 
 test("resolveRank finds the user rank banner", () => {

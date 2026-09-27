@@ -58,6 +58,14 @@ async runInner(client, message, tools) {
     // fetch user's xp, or give them 0
     let userData = db.users[author] || { xp: 0, cooldown: 0 }
 
+    // Sin miembro no hay roles ni XP que asignar (webhooks o usuarios que
+    // ya no están en el servidor): se intenta una vez desde la API y si
+    // sigue sin haberlo se ignora el mensaje antes de contar nada.
+    if (!message.member && message.guild) {
+        try { message.member = await message.guild.members.fetch(author).catch(() => null) } catch {}
+    }
+    if (!message.member) return
+
     await client.db.update(message.guild.id, {
         $inc: {
             [`users.${author}.messages`]: 1,

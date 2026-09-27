@@ -15,6 +15,7 @@ const Model = require("./classes/DatabaseModel.js");
 const LevelUpEmbed = require('./classes/LevelUpEmbed.js')
 const LevelUpMessage = require("./classes/LevelUpMessage.js")
 const { unlockWebEasterEgg, resolveServerId, DEFAULT_EASTEREGG_GUILD_ID } = require("./classes/WebEasterEgg.js")
+const recordsConfig = require("./config/records.js")
 const auth = require('./config.json')
 const curvePresets = require('./json/curve_presets.json')
 const schemaData = require("./database_schema.js")
@@ -111,10 +112,15 @@ app.use(function(req, res, next) {
 
 app.get("/servers", (req, res) => sendPage(res, "servers"))
 app.get("/settings/:id", (req, res) => sendPage(res, "config"))
-app.get(["/leaderboard/:id", "/rank/:id", "/roles/:id", "/levels/:id", "/records/:id"], (req, res) => sendPage(res, "leaderboard"))
+app.get(["/leaderboard/:id", "/top/:id", "/rank/:id", "/roles/:id", "/levels/:id", "/records/:id"], (req, res) => sendPage(res, "leaderboard"))
 app.get("/", (req, res) => sendPage(res, "home"))
 
-app.get(["/settings", "/leaderboard", "/rank", "/roles", "/levels", "/records", "/servers"], (req, res) => sendRedirect(res, "/servers"))
+app.get(["/leaderboard", "/top"], (req, res) => sendRedirect(res, `/leaderboard/${DEFAULT_EASTEREGG_GUILD_ID}`))
+app.get(["/rank", "/roles", "/levels", "/records"], (req, res) => {
+    const page = req.path.slice(1)
+    return sendRedirect(res, `/${page}/${DEFAULT_EASTEREGG_GUILD_ID}`)
+})
+app.get(["/settings", "/servers"], (req, res) => sendRedirect(res, "/servers"))
 
 app.get("/easteregg", async function(req, res) {
     const [user, guilds] = await getDiscordInfo(req)
@@ -164,6 +170,20 @@ app.get("/easteregg", async function(req, res) {
                         background-size: 180% 180%;
                         animation: gradientFlow 16s ease-in-out infinite alternate;
                     }
+                    body::before, body::after {
+                        content: "";
+                        position: fixed;
+                        width: 5px;
+                        height: 5px;
+                        border-radius: 50%;
+                        background: var(--accent);
+                        box-shadow: 12vw 18vh var(--accent-2), 28vw 72vh var(--success), 72vw 22vh var(--warning), 86vw 78vh var(--accent), 54vw 88vh var(--accent-2);
+                        opacity: .55;
+                        animation: particles 9s linear infinite;
+                        pointer-events: none;
+                    }
+                    body::after { animation-delay: -4s; transform: scale(.65); opacity: .35; }
+                    @keyframes particles { from { translate: 0 18px; scale: .8; } 50% { translate: 0 -24px; scale: 1.15; } to { translate: 0 18px; scale: .8; } }
                     @keyframes gradientFlow {
                         0% { background-position: 0% 50%; }
                         50% { background-position: 100% 50%; }
@@ -188,17 +208,18 @@ app.get("/easteregg", async function(req, res) {
                     }
                     .card {
                         position: relative;
-                        width: min(92vw, 680px);
-                        padding: 2.3rem 2rem 1.9rem;
+                        width: min(92vw, 600px);
+                        padding: 2rem 1.5rem 1.5rem;
                         background: linear-gradient(180deg, rgba(16, 24, 40, 0.82), rgba(9, 14, 25, 0.88));
                         border: 1px solid rgba(151, 215, 255, 0.2);
-                        border-radius: 30px;
+                        border-radius: 24px;
                         box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.08);
                         backdrop-filter: blur(14px);
                         text-align: center;
                         z-index: 1;
-                        animation: cardIn 0.75s cubic-bezier(.2,.8,.2,1) both;
+                        animation: cardIn 0.75s cubic-bezier(.2,.8,.2,1) both, cardPulse 5s ease-in-out 1s infinite;
                     }
+                    @keyframes cardPulse { 0%,100% { box-shadow: 0 30px 80px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08); } 50% { box-shadow: 0 34px 90px rgba(0,0,0,.58), 0 0 34px rgba(135,243,255,.08), inset 0 1px 0 rgba(255,255,255,.1); } }
                     @keyframes cardIn {
                         from { opacity: 0; transform: translateY(18px) scale(0.98); }
                         to { opacity: 1; transform: none; }
@@ -207,15 +228,21 @@ app.get("/easteregg", async function(req, res) {
                         display: inline-flex;
                         align-items: center;
                         justify-content: center;
-                        width: 88px;
-                        height: 88px;
-                        border-radius: 50%;
+                        position: relative;
+                        width: 66px;
+                        height: 92px;
+                        border-radius: 50% 50% 48% 48% / 38% 38% 62% 62%;
                         font-size: 2.4rem;
                         background: linear-gradient(135deg, rgba(135,243,255,0.18), rgba(167,139,250,0.22));
                         border: 1px solid rgba(255,255,255,0.18);
                         box-shadow: 0 14px 30px rgba(135, 243, 255, 0.18);
                         margin-bottom: 1rem;
+                        animation: eggFloat 3.2s ease-in-out infinite, eggGlow 2.4s ease-in-out infinite alternate;
                     }
+                    .badge::after { content: ""; position: absolute; inset: -5px; border-radius: inherit; border: 1px solid rgba(255,255,255,.25); animation: eggRing 2.8s ease-out infinite; }
+                    @keyframes eggFloat { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-9px) rotate(3deg); } }
+                    @keyframes eggGlow { from { box-shadow: 0 12px 26px rgba(135,243,255,.18); } to { box-shadow: 0 16px 42px rgba(167,139,250,.5); } }
+                    @keyframes eggRing { from { opacity: .7; transform: scale(.92); } to { opacity: 0; transform: scale(1.35); } }
                     .status-success .badge { box-shadow: 0 14px 30px rgba(126, 240, 188, 0.22); }
                     .status-info .badge { box-shadow: 0 14px 30px rgba(135, 243, 255, 0.22); }
                     h1 {
@@ -248,7 +275,11 @@ app.get("/easteregg", async function(req, res) {
                         border-radius: 16px;
                         background: rgba(135, 243, 255, 0.07);
                         border: 1px solid rgba(135, 243, 255, 0.14);
+                        animation: detailIn .55s both;
                     }
+                    .detail:nth-child(2) { animation-delay: .12s; }
+                    .detail:nth-child(3) { animation-delay: .24s; }
+                    @keyframes detailIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
                     .detail > span { font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.7; }
                     .detail > strong { font-size: 1.02rem; color: var(--text); }
                     .detail > strong img { height: 1.3em; width: auto; vertical-align: -0.25em; margin-right: 0.15em; }
@@ -291,6 +322,16 @@ app.get("/easteregg", async function(req, res) {
                         height: 100%;
                         pointer-events: none;
                         z-index: 3;
+                    }
+                    @media (prefers-reduced-motion: reduce) {
+                        *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
+                    }
+                    @media (max-width: 520px) {
+                        .card { width: min(94vw, 600px); padding: 1.6rem 1rem 1.1rem; }
+                        h1 { font-size: 1.8rem; }
+                        p { font-size: .95rem; line-height: 1.55; }
+                        .detail { padding: .7rem .75rem; }
+                        .actions a { width: 100%; }
                     }
                 </style>
             </head>
@@ -412,26 +453,21 @@ app.get("/easteregg", async function(req, res) {
     const meta = result.meta || result.result && { record: result.result.record, category: result.result.category, tier: result.result.tier } || null
     const tierXp = Number(meta?.tier?.xp ?? result.result?.tier?.xp ?? 20000)
     const recordEmoji = escapeHtml(meta?.record?.emoji || "🌐")
-    const recordName = escapeHtml(meta?.tier?.name || meta?.record?.label || "Detective digital")
+    const recordName = escapeHtml(meta?.tier?.name || meta?.record?.label || "Al otro lado")
     const recordDesc = escapeHtml(meta?.tier?.desc || "Encuentra el secreto escondido en la web.")
     const categoryName = escapeHtml(meta?.category?.name || "Ocultos")
     const xpStr = `+${tierXp.toLocaleString("es-ES")} XP`
 
     function buildDetails({ withProgress }) {
         const rows = []
-        rows.push(`<div class="detail"><span>🖥️ Servidor</span><strong>${guildName}</strong><small>ID ${escapeHtml(guildId)} · El logro se ha guardado en este servidor.</small></div>`)
         rows.push(`<div class="detail"><span>🏆 Record conseguido</span><strong>${recordEmoji} ${recordName}</strong><small>${recordDesc}</small></div>`)
         rows.push(`<div class="detail"><span>✨ Recompensa</span><strong><img src="/assets/icons/xp.png" alt="XP">${escapeHtml(xpStr)}</strong><small>${result.unlocked ? "Ya sumada a tu XP y a tu XP mensual." : "Ya la recibiste la primera vez; no se suma de nuevo."}</small></div>`)
-        rows.push(`<div class="detail"><span>🕵️ Tipo</span><strong>Record oculto</strong><small>Los Records son logros del servidor. Este es de la categoría ${categoryName} y solo se revela al descubrirlo.</small></div>`)
         if (withProgress && result.result) {
             const done = result.result.done ?? 1
             const total = result.result.total ?? 1
             const completed = result.result.totalCompleted ?? done
             const visible = result.result.totalVisible ?? total
             rows.push(`<div class="detail"><span>📊 Tu progreso</span><strong><img src="/assets/icons/records.png" alt="Records">${completed}/${visible} Records</strong><small>Este logro: ${done}/${total} fases. Míralos con /records en Discord.</small></div>`)
-        }
-        if (result.unlocked) {
-            rows.push(`<div class="detail"><span>📣 Discord</span><strong>${result.announced ? "Anuncio enviado" : "Anuncio en camino"}</strong><small>${result.announced ? "Se ha publicado tu Record en el canal de Records del servidor." : "Si el canal de Records está configurado, aparecerá en Discord en unos segundos."}</small></div>`)
         }
         return rows.join("")
     }
@@ -1059,7 +1095,44 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
     guildData.server.totalRanked = xpArray.length
     if (xpArray.length < trueTotalXP) guildData.server.totalPartial = true
 
-    return res.send({guild: guildData.server, user: userLevel, leaderboard: paginated, settings: importantSettings, roles: guildData.roles, moderator: isMod, hiddenMembers, pageInfo: { page, pageCount, pageSize } })
+    if (loggedIn && userLevel && !userLevel.noLogin) {
+        const storedUser = data.users?.[userInfo.id] || {}
+        // Si el periodo diario guardado ya es de otro día (el reset por
+        // mensaje aún no ha corrido), mostrar 0 en vez del valor de ayer.
+        let dailyMessages = Number(storedUser.dailyMessages) || 0
+        try {
+            const madridDay = new Intl.DateTimeFormat("en-CA", {
+                timeZone: "Europe/Madrid",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+            }).format(new Date())
+            if (data.info?.dailyMessagesPeriod && data.info.dailyMessagesPeriod !== madridDay) {
+                dailyMessages = 0
+            }
+        } catch {}
+        userLevel.records = storedUser.records || {}
+        userLevel.messages = Number(storedUser.messages) || 0
+        userLevel.monthlyMessages = Number(storedUser.monthlyMessages) || 0
+        userLevel.dailyMessages = dailyMessages
+        userLevel.reactionsSent = Number(storedUser.reactionsSent) || 0
+        userLevel.reactionsReceived = Number(storedUser.reactionsReceived) || 0
+        userLevel.countingSent = Number(storedUser.countingSent) || 0
+        userLevel.voiceMinutes = Number(storedUser.voiceMinutes) || 0
+        userLevel.streak = storedUser.streak || 0
+    }
+
+    return res.send({
+        guild: guildData.server,
+        user: userLevel,
+        leaderboard: paginated,
+        settings: importantSettings,
+        roles: guildData.roles,
+        records: recordsConfig.categories,
+        moderator: isMod,
+        hiddenMembers,
+        pageInfo: { page, pageCount, pageSize },
+    })
 })
 
 app.post("/api/editXP", async function(req, res) {

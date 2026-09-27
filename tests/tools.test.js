@@ -253,3 +253,15 @@ test("unlockRecord rejects unknown records and tiers", async () => {
     const record = recordsConfig.allRecords()[0].record
     assert.equal(await t.unlockRecord("guild", "user", record.id, -1), false)
 })
+
+test("getTargetUser resolves the inspected user for bot checks", () => {
+    const bot = { id: "1", bot: true }
+    const human = { id: "2", bot: false }
+    const withOptions = found => new Tools(fakeClient(), { options: { get: () => found } })
+    assert.equal(withOptions({ user: bot }).getTargetUser(), bot)
+    assert.equal(withOptions({ user: human }).getTargetUser(), human)
+    assert.equal(withOptions({ member: { user: bot } }).getTargetUser(), bot)
+    assert.equal(withOptions(null).getTargetUser(), null)
+    assert.equal(new Tools(fakeClient(), {}).getTargetUser(), null)
+    assert.equal(tools.errors.noBotView.length > 0, true)
+})

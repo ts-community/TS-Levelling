@@ -26,7 +26,6 @@ test("stat modes rank each stat, zero values excluded", () => {
     assert.deepEqual(rank("reacciones_recibidas"), ["u1", "u2"])
     assert.deepEqual(rank("racha"), ["u2", "u1"])
     assert.deepEqual(rank("racha_max"), ["u2", "u1"])
-    assert.deepEqual(rank("canales"), ["u1", "u2"])
     assert.deepEqual(rank("counting"), ["u3", "u1"])
     assert.deepEqual(rank("voz"), ["u2", "u1"])
 })
@@ -37,42 +36,58 @@ test("stat extractors handle every stored shape", () => {
     assert.equal(m.racha.get({ streak: 4 }), 4)
     assert.equal(m.racha_max.get({ streak: { current: 4, max: 9 } }), 9)
     assert.equal(m.racha_max.get({}), 0)
-    assert.equal(m.canales.get({ channels: { a: 1, b: 2 } }), 2)
-    assert.equal(m.canales.get({ channels: 3 }), 3)
-    assert.equal(m.canales.get({ channels: new Set(["a"]) }), 1)
-    assert.equal(m.canales.get({}), 0)
 })
 
 test("stat modes mirror the stats page order, no Records", () => {
     // Espejo de las stats en orden, sin Records (ya no es una stat visible).
-    assert.deepEqual(Object.keys(top.STAT_MODES), ["mensajes", "mensajes_mes", "mensajes_dia", "reacciones_enviadas", "reacciones_recibidas", "racha", "racha_max", "canales", "counting", "voz"])
+    assert.deepEqual(Object.keys(top.STAT_MODES), ["mensajes", "mensajes_mes", "mensajes_dia", "reacciones_enviadas", "reacciones_recibidas", "racha", "racha_max", "counting", "voz"])
 })
 
-test("view menu lists XP modes plus every rankable stat", () => {
-    for (const viewKey of ["xp", "xp_mes", "mensajes", "voz"]) {
-        const menu = top.buildViewMenu(viewKey, false).toJSON()
-        assert.equal(menu.custom_id, "top-view")
-        assert.equal(menu.options.length, 3 + Object.keys(top.STAT_MODES).length)
-        assert.deepEqual(menu.options.map(o => o.value), ["xp", "xp_mes", "xp_dia", ...Object.keys(top.STAT_MODES)])
-        const defaults = menu.options.filter(o => o.default)
-        assert.equal(defaults.length, 1, "una sola opción marcada")
-        assert.equal(defaults[0].value, viewKey)
-        assert.equal(menu.disabled, false)
-    }
+test("top command exposes explicit direct view choices", () => {
+    const args = top.metadata.args
+    const view = args.find(arg => arg.name === "view")
+    assert.deepEqual(view?.choices.map(choice => choice.value), [
+        "xp", "monthly", "daily", "mensajes", "mensajes_mes", "mensajes_dia", "reacciones_enviadas",
+        "reacciones_recibidas", "racha", "racha_max", "counting", "voz",
+    ])
+    assert.equal(args.some(arg => arg.name === "monthly"), false)
+})
+
+test("view menu separates XP and contextual stat modes", () => {
+    const xpMenu = top.buildViewMenu("xp", false).toJSON()
+    assert.equal(xpMenu.custom_id, "top-view")
+    assert.deepEqual(xpMenu.options.map(o => o.value), [
+        "xp", "xp_mes", "xp_dia", "mensajes", "reacciones_enviadas",
+        "reacciones_recibidas", "racha", "racha_max", "counting", "voz",
+    ])
+    assert.equal(xpMenu.options.filter(o => o.default).length, 1)
+    assert.equal(xpMenu.options.find(o => o.default).value, "xp")
+
+    const messagesMenu = top.buildViewMenu("mensajes", false).toJSON()
+    assert.deepEqual(messagesMenu.options.map(o => o.value), ["mensajes", "mensajes_mes", "mensajes_dia"])
+    assert.equal(messagesMenu.options.filter(o => o.default).length, 1)
+
+    const streakMenu = top.buildViewMenu("racha", false).toJSON()
+    assert.deepEqual(streakMenu.options.map(o => o.value), ["racha", "racha_max"])
+
+    const voiceMenu = top.buildViewMenu("voz", true).toJSON()
+    assert.deepEqual(voiceMenu.options.map(o => o.value), ["voz"])
+    assert.equal(voiceMenu.disabled, true)
+
     const off = top.buildViewMenu("xp", true).toJSON()
     assert.equal(off.disabled, true, "se desactiva al caducar")
 })
 
 test("stat lines fit on mobile", () => {
     const { STAT_MODES: m, statLineVariants, estimateVisualWidth } = top
-    const big = { mensajes: 110894, mensajes_mes: 99999, mensajes_dia: 8888, reacciones_enviadas: 9999, reacciones_recibidas: 9999, racha: 99, racha_max: 99, canales: 50, counting: 9999, voz: 60000, records: 39 }
+    const big = { mensajes: 110894, mensajes_mes: 99999, mensajes_dia: 8888, reacciones_enviadas: 9999, reacciones_recibidas: 9999, racha: 99, racha_max: 99, counting: 9999, voz: 60000, records: 39 }
     for (const [key, mode] of Object.entries(m)) {
         const value = String(big[key]).replace(/\B(?=(\d{3})+(?!\d))/g, ".")
         const shortest = statLineVariants(mode.emoji, value, mode.unit, mode.abbr).slice(-1)[0]
         assert.ok(estimateVisualWidth(shortest) <= 37.9, `${key} ni la corta cabe: ${shortest}`)
         assert.ok(mode.label && mode.title && mode.menuEmoji, `${key} sin textos de menú`)
     }
-    assert.equal(Object.keys(m).length, 10, "un modo por stat visible (sin Records, sin XP/antigüedad)")
+    assert.equal(Object.keys(m).length, 9, "un modo por stat visible (sin Records, sin XP/antigüedad)")
 })
 
 test("daily variants fit on mobile", () => {
