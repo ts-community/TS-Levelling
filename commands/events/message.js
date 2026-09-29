@@ -66,13 +66,58 @@ async runInner(client, message, tools) {
     }
     if (!message.member) return
 
-    await client.db.update(message.guild.id, {
-        $inc: {
-            [`users.${author}.messages`]: 1,
-            [`users.${author}.monthlyMessages`]: 1,
-            [`users.${author}.dailyMessages`]: 1
+    // Reset lógico por usuario: si su marcador no es el periodo actual
+    // (o de fallback el global), su valor es de ayer/el mes pasado y se
+    // empieza en 1/0 en vez de incrementar lo viejo. El marcador se autocura
+    // aquí, así el scheduler solo tiene que flipear el global.
+    const todayDay = tracker.getMadridDay(new Date())
+    const currentMonth = (() => {
+        try {
+            if (typeof tracker.getMadridMonth === "function") return tracker.getMadridMonth(new Date())
+        } catch {}
+        const parts = new Intl.DateTimeFormat("en", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit" }).formatToParts(new Date())
+        const v = Object.fromEntries(parts.map(p => [p.type, p.value]))
+        return `${v.year}-${v.month}`
+    })()
+    const dailyWasStale = userData.dailyPeriod
+        ? String(userData.dailyPeriod) !== todayDay
+        : (db.info?.dailyMessagesPeriod ? String(db.info.dailyMessagesPeriod) !== todayDay : false)
+    const monthlyWasStale = userData.monthlyPeriod
+        ? String(userData.monthlyPeriod) !== currentMonth
+        : (db.info?.monthlyMessagesPeriod ? String(db.info.monthlyMessagesPeriod) !== currentMonth : false)
+
+    {
+        const inc = { [`users.${author}.messages`]: 1 }
+        const set = {}
+        if (dailyWasStale) {
+            set[`users.${author}.dailyMessages`] = 1
+            set[`users.${author}.dailyXP`] = 0
+            set[`users.${author}.dailyPeriod`] = todayDay
+        } else {
+            inc[`users.${author}.dailyMessages`] = 1
         }
-    }).exec()
+        if (monthlyWasStale) {
+            set[`users.${author}.monthlyMessages`] = 1
+            set[`users.${author}.monthlyXP`] = 0
+            set[`users.${author}.monthlyPeriod`] = currentMonth
+        } else {
+            inc[`users.${author}.monthlyMessages`] = 1
+        }
+        const counterUpdate = { $inc: inc }
+        if (Object.keys(set).length) counterUpdate.$set = set
+        await client.db.update(message.guild.id, counterUpdate).exec()
+        // Reflejar el flip en memoria para los checks de récords de abajo.
+        if (dailyWasStale) {
+            userData.dailyMessages = 1
+            userData.dailyXP = 0
+            userData.dailyPeriod = todayDay
+        }
+        if (monthlyWasStale) {
+            userData.monthlyMessages = 1
+            userData.monthlyXP = 0
+            userData.monthlyPeriod = currentMonth
+        }
+    }
 
     // Progreso de récords (cuenta aunque el XP esté en cooldown).
     // No bloquea el XP si falla: todo va en try/catch.
@@ -95,9 +140,10 @@ async runInner(client, message, tools) {
         client.db.update(message.guild.id, progressUpdate).exec().catch(() => {})
 
         // Snapshot en memoria para comprobar umbrales sin otra lectura.
+        // Si era stale, userData ya es el valor post-flip (1): no sumar otra vez.
         const messagesNow = (userData.messages || 0) + 1
-        const monthlyNow = (userData.monthlyMessages || 0) + 1
-        const dailyNow = (userData.dailyMessages || 0) + 1
+        const monthlyNow = monthlyWasStale ? 1 : (userData.monthlyMessages || 0) + 1
+        const dailyNow = dailyWasStale ? 1 : (userData.dailyMessages || 0) + 1
         const countingNow = (userData.countingSent || 0) + (isCounting ? 1 : 0)
         const streakNow = streakUpdate.current
         const channelsNow = tracker.countDistinctChannels(userData.channels) +
@@ -266,9 +312,11 @@ async runInner(client, message, tools) {
 
     // userData viene de antes del $inc de este mensaje: sumar 1 en memoria
     // para que el contador de mensajes salga correcto en las tarjetas
-    // (level up y adelantamiento comparten este userData)
+    // (level up y adelantamiento comparten este userData). Si era stale ya
+    // vale 1 tras el flip: no sumar otra vez.
     userData.messages = (userData.messages || 0) + 1
-    userData.monthlyMessages = (userData.monthlyMessages || 0) + 1
+    userData.monthlyMessages = monthlyWasStale ? 1 : (userData.monthlyMessages || 0) + 1
+    userData.dailyMessages = dailyWasStale ? 1 : (userData.dailyMessages || 0) + 1
 
     // auto sync roles on xp gain or level up
     let syncMode = settings.rewardSyncing.sync

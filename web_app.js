@@ -1097,27 +1097,45 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
 
     if (loggedIn && userLevel && !userLevel.noLogin) {
         const storedUser = data.users?.[userInfo.id] || {}
-        // Si el periodo diario guardado ya es de otro día (el reset por
-        // mensaje aún no ha corrido), mostrar 0 en vez del valor de ayer.
-        let dailyMessages = Number(storedUser.dailyMessages) || 0
-        try {
-            const madridDay = new Intl.DateTimeFormat("en-CA", {
-                timeZone: "Europe/Madrid",
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-            }).format(new Date())
-            if (data.info?.dailyMessagesPeriod && data.info.dailyMessagesPeriod !== madridDay) {
-                dailyMessages = 0
-            }
-        } catch {}
+        // Reset lógico: marcador por usuario manda, de fallback el global.
+        // Así se muestra 0 aunque el scheduler/lazy aún no haya flipeado.
+        const effective = (kind) => {
+            try {
+                if (kind === "daily") {
+                    const today = new Intl.DateTimeFormat("en-CA", {
+                        timeZone: "Europe/Madrid",
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                    }).format(new Date())
+                    if (storedUser.dailyPeriod) {
+                        if (String(storedUser.dailyPeriod) !== today) return 0
+                    } else if (data.info?.dailyMessagesPeriod) {
+                        if (String(data.info.dailyMessagesPeriod) !== today) return 0
+                    }
+                    return Number(storedUser.dailyMessages) || 0
+                }
+                const parts = new Intl.DateTimeFormat("en", {
+                    timeZone: "Europe/Madrid", year: "numeric", month: "2-digit",
+                }).formatToParts(new Date())
+                const v = Object.fromEntries(parts.map(p => [p.type, p.value]))
+                const month = `${v.year}-${v.month}`
+                if (storedUser.monthlyPeriod) {
+                    if (String(storedUser.monthlyPeriod) !== month) return 0
+                } else if (data.info?.monthlyMessagesPeriod) {
+                    if (String(data.info.monthlyMessagesPeriod) !== month) return 0
+                }
+                return Number(storedUser.monthlyMessages) || 0
+            } catch { return 0 }
+        }
         userLevel.records = storedUser.records || {}
         userLevel.messages = Number(storedUser.messages) || 0
-        userLevel.monthlyMessages = Number(storedUser.monthlyMessages) || 0
-        userLevel.dailyMessages = dailyMessages
+        userLevel.monthlyMessages = effective("monthly")
+        userLevel.dailyMessages = effective("daily")
         userLevel.reactionsSent = Number(storedUser.reactionsSent) || 0
         userLevel.reactionsReceived = Number(storedUser.reactionsReceived) || 0
         userLevel.countingSent = Number(storedUser.countingSent) || 0
+        userLevel.pokemonCaught = Number(storedUser.pokemonCaught) || 0
         userLevel.voiceMinutes = Number(storedUser.voiceMinutes) || 0
         userLevel.streak = storedUser.streak || 0
     }

@@ -51,7 +51,7 @@ test("records go from easiest to hardest within each category", () => {
     const order = Object.fromEntries(records.categories.map(c => [c.id, c.records.map(r => r.id)]))
     assert.deepEqual(order.actividad, ["messages", "monthly_messages", "daily_messages", "talk_to"])
     assert.deepEqual(order.comunidad, ["reactions_sent", "reactions_received", "streak", "tenure"])
-    assert.deepEqual(order.canales, ["distinct_channels", "economy_participation", "counting"])
+    assert.deepEqual(order.canales, ["distinct_channels", "economy_participation", "pokemon", "counting"])
     assert.deepEqual(order.voz, ["voice_general", "voice_all_fixed", "voice_time"])
 })
 
@@ -69,8 +69,8 @@ test("every record has an emoji for its block header", () => {
     }
 })
 
-test("expected scope: 34 visible tiers, 5 hidden", () => {
-    assert.equal(records.countTiers(records.visibleRecords()), 34)
+test("expected scope: 37 visible tiers, 5 hidden", () => {
+    assert.equal(records.countTiers(records.visibleRecords()), 37)
     assert.equal(records.countTiers(records.hiddenRecords()), 5)
     assert.equal(records.hiddenRecords().every(({ category }) => category.hidden), true)
     assert.equal(records.visibleRecords().every(({ category }) => !category.hidden), true)
@@ -82,18 +82,18 @@ test("total XP stays subtle", () => {
 })
 
 test("title counts hidden in the total from the start", () => {
-    assert.deepEqual(command.titleCounts(new Set()), { done: 0, total: 39 })
-    assert.deepEqual(command.titleCounts(new Set(["starboard:1"])), { done: 1, total: 39 })
+    assert.deepEqual(command.titleCounts(new Set()), { done: 0, total: 42 })
+    assert.deepEqual(command.titleCounts(new Set(["starboard:1"])), { done: 1, total: 42 })
     const all = new Set(records.allRecords().flatMap(({ record }) => record.tiers.map(t => `${record.id}:${t.threshold}`)))
-    assert.deepEqual(command.titleCounts(all), { done: 39, total: 39 })
-    assert.equal(command.buildTitle(new Set()), "# <:records:1549908515399929959> Mis Records (0/39)")
+    assert.deepEqual(command.titleCounts(all), { done: 42, total: 42 })
+    assert.equal(command.buildTitle(new Set()), "# <:records:1549908515399929959> Mis Records (0/42)")
 })
 
 test("category select shows per-category progress", () => {
     const select = command.buildCatSelect("actividad", new Set()).toJSON()
     assert.equal(select.custom_id, "records-cat")
     assert.equal(select.options.length, 6)
-    assert.deepEqual(select.options.map(o => o.label), ["Estadísticas", "Actividad (0/12)", "Comunidad (0/12)", "Canales (0/5)", "Voz (0/5)", "Ocultos (0/5)"])
+    assert.deepEqual(select.options.map(o => o.label), ["Estadísticas", "Actividad (0/12)", "Comunidad (0/12)", "Canales (0/8)", "Voz (0/5)", "Ocultos (0/5)"])
     assert.deepEqual(select.options.map(o => o.value), ["stats", "actividad", "comunidad", "canales", "voz", "hidden"])
     assert.deepEqual(select.options.map(o => o.description), [
         "Tus números de actividad, comunidad y voz.",
@@ -248,23 +248,23 @@ test("progress numbers come from real data", () => {
     const voiceHalf = command.buildRecordBlock(byId.voice_time, new Set(), command.getProgress(byId.voice_time, { voiceMinutes: 210 }, null, commafy), commafy)
     assert.ok(voiceHalf.includes("📊 **3,5/5 h**"), voiceHalf.split("\n").at(-1))
 
-    // Ruta completa: un solo tier pero avance 0/5 (fijos visitados).
+    // De gira: un solo tier pero avance 0/5 (fijos visitados).
     const fixedIds = byId.voice_all_fixed.mechanic.fixedChannelIds
     assert.equal(fixedIds.length, 5)
     p = command.getProgress(byId.voice_all_fixed, {}, null, commafy)
     assert.equal(p.target, 5)
     assert.equal(p.phasesTotal, 5)
     let tourBlock = command.buildRecordBlock(byId.voice_all_fixed, new Set(), p, commafy)
-    assert.ok(tourBlock.includes("**Ruta completa** - 0/5 fases"), tourBlock.split("\n")[0])
+    assert.ok(tourBlock.includes("**De gira** - 0/5 fases"), tourBlock.split("\n")[0])
     assert.ok(tourBlock.includes("📊 **0/5 canales**"), tourBlock.split("\n").at(-1))
     p = command.getProgress(byId.voice_all_fixed, { voiceJoined: [fixedIds[0], fixedIds[1], "otro-canal"] }, null, commafy)
     assert.equal(p.completed, 2)
     tourBlock = command.buildRecordBlock(byId.voice_all_fixed, new Set(), p, commafy)
-    assert.ok(tourBlock.includes("**Ruta completa** - 2/5 fases"), tourBlock.split("\n")[0])
+    assert.ok(tourBlock.includes("**De gira** - 2/5 fases"), tourBlock.split("\n")[0])
     p = command.getProgress(byId.voice_all_fixed, { voiceJoined: [...fixedIds] }, null, commafy)
     assert.equal(p.full, true)
     tourBlock = command.buildRecordBlock(byId.voice_all_fixed, new Set(), p, commafy)
-    assert.ok(tourBlock.includes("**Ruta completa** - 5/5 fases"), tourBlock.split("\n")[0])
+    assert.ok(tourBlock.includes("**De gira** - 5/5 fases"), tourBlock.split("\n")[0])
 })
 
 test("counting only accepts the next exact number", () => {
@@ -324,7 +324,7 @@ test("record block shows the current tier and real progress", () => {
     assert.ok(done.includes("**Leyenda**"))
     assert.ok(done.includes("📊 **100k/50k mensajes**"))
     assert.ok(done.includes("> ~~Envía 50.000 mensajes en el servidor.~~"))
-    assert.ok(done.includes("-# ~~📊 **100k/50k mensajes** - <:XP:1467192533812645939> **+100.000 XP**~~"))
+    assert.ok(done.includes("-# ~~📊 **100k/50k mensajes** - <:XP:1467192533812645939> **+75.000 XP**~~"))
     assert.ok(!done.includes("✅"))
     assert.ok(!/· \d+%/.test(done))
     assert.ok(!done.includes("<:star_drop"))
@@ -381,9 +381,9 @@ test("completed records sort first and render struck through", () => {
     assert.ok(!plain[1].includes("~~"), "sin completar: sin tachado")
 
     const withDone = command.buildCategoryBlocks(category, {}, null, new Set(["talk_to:1"]), tools.commafy)
-    assert.ok(withDone[1].startsWith("### ~~🤖 **Primer contacto** - 1/1 fase~~"), "completado arriba aunque sea el más fácil")
+    assert.ok(withDone[1].startsWith("### ~~🤖 **Contacto** - 1/1 fase~~"), "completado arriba aunque sea el más fácil")
     assert.ok(withDone[1].includes("> ~~Menciona o responde a un mensaje de <@"), "descripción tachada")
-    assert.ok(withDone[1].includes("<:XP:1467192533812645939> **+3.000 XP**~~"), "recompensa tachada")
+    assert.ok(withDone[1].includes("<:XP:1467192533812645939> **+1.000 XP**~~"), "recompensa tachada")
 })
 
 test("completed records keep difficulty order among themselves", () => {
@@ -395,8 +395,8 @@ test("completed records keep difficulty order among themselves", () => {
     ])
     // userData acorde a los flags: el progreso mensual también lo da por completo.
     const blocks = command.buildCategoryBlocks(category, { monthlyMessages: 6000 }, null, ids, tools.commafy)
-    assert.ok(blocks[1].includes("**Legendario**"), "completado más difícil primero")
-    assert.ok(blocks[2].includes("**Primer contacto**"), "completado más fácil segundo")
+    assert.ok(blocks[1].includes("**Mes pleno**"), "completado más difícil primero")
+    assert.ok(blocks[2].includes("**Contacto**"), "completado más fácil segundo")
     assert.ok(blocks[3].includes("**Primeros pasos**"), "sin completar después")
     assert.ok(!blocks[1].includes("?????") && blocks[1].includes("- 3/3 fases"), "título normal")
 })
@@ -548,4 +548,35 @@ test("page composition stays within proven container sizes", () => {
     // x(cabecera+sep+stats+sep) + menú. Como /top (unos 20), los containers
     // aguantan más de 10 sin problema.
     assert.equal(1 + 1 + 2 + 3 * 4 + 1, 17)
+})
+
+test("poketwo catch parses the congrat message", () => {
+    const channelId = records.CHANNELS.poketwoChannelId
+    const botId = records.CHANNELS.poketwoBotId
+    assert.ok(channelId && botId, "faltan IDs de poketwo en CHANNELS")
+    const base = { channelId, author: { id: botId, bot: true } }
+    const caught = "Congratulations <@879836272615628870>! You caught a Level 21 Slowpoke<:female:1207734084210532483> (53.23%)!"
+    assert.equal(tracker.parsePoketwoCatch(caught), "879836272615628870")
+    assert.equal(tracker.isPoketwoCatchMessage({ ...base, content: caught }, channelId, botId), "879836272615628870")
+    // Un spawn o mensaje normal no cuenta.
+    assert.equal(tracker.isPoketwoCatchMessage({ ...base, content: "A wild Pikachu has appeared!" }, channelId, botId), null)
+    // Otro canal u otro autor no valen.
+    assert.equal(tracker.isPoketwoCatchMessage({ ...base, content: caught }, "otro-canal", botId), null)
+    assert.equal(tracker.isPoketwoCatchMessage({ channelId, author: { id: "123" }, content: caught }, channelId, botId), null)
+    assert.equal(tracker.parsePoketwoCatch(""), null)
+})
+
+test("pokemon progress comes from pokemonCaught", () => {
+    const byId = Object.fromEntries(records.allRecords().map(({ record }) => [record.id, record]))
+    const commafy = tools.commafy
+    assert.deepEqual(byId.pokemon.tiers.map(t => t.threshold), [10, 50, 200])
+    assert.equal(command.getProgress(byId.pokemon, {}, null, commafy), null, "sin capturas no hay progreso")
+    let p = command.getProgress(byId.pokemon, { pokemonCaught: 7 }, null, commafy)
+    assert.equal(p.target, 10)
+    assert.ok(Math.abs(p.frac - 0.7) < 1e-9)
+    p = command.getProgress(byId.pokemon, { pokemonCaught: 60 }, null, commafy)
+    assert.equal(p.target, 200)
+    const block = command.buildRecordBlock(byId.pokemon, new Set(), command.getProgress(byId.pokemon, { pokemonCaught: 7 }, null, commafy), commafy)
+    assert.ok(block.includes("**Aprendiz** - 0/3 fases"), block.split("\n")[0])
+    assert.ok(block.includes("📊 **7/10 pokémon**"), block.split("\n").at(-1))
 })

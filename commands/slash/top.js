@@ -163,39 +163,45 @@ function statNumber(raw) {
 
 const STAT_MODES = {
     mensajes: {
-        menuEmoji: "💬", label: "Mensajes totales", title: "Top de mensajes totales",
+        menuEmoji: "💬", label: "Mensajes totales", title: "Top de Mensajes Totales",
         unit: "mensajes", abbr: "msjs", emoji: "<:messages:1467163578699354235>",
         one: "mensaje", get: u => Number(u.messages) || 0,
     },
     mensajes_mes: {
-        menuEmoji: "📅", label: "Mensajes del mes", title: "Top de mensajes del mes",
+        menuEmoji: "📅", label: "Mensajes del mes", title: "Top de Mensajes del Mes",
         unit: "mensajes este mes", abbr: "msgs mes", emoji: "<:messages:1467163578699354235>",
-        one: "mensaje este mes", get: u => Number(u.monthlyMessages) || 0,
+        one: "mensaje este mes", shortUnit: "mensajes", shortOne: "mensaje",
+        get: u => Number(u.monthlyMessages) || 0,
     },
     mensajes_dia: {
-        menuEmoji: "☀️", label: "Mensajes del día", title: "Top de mensajes del día",
+        menuEmoji: "☀️", label: "Mensajes del día", title: "Top de Mensajes del Día",
         unit: "mensajes hoy", abbr: "msgs hoy", emoji: "☀️",
-        one: "mensaje hoy", get: u => Number(u.dailyMessages) || 0,
+        one: "mensaje hoy", shortUnit: "mensajes", shortOne: "mensaje",
+        get: u => Number(u.dailyMessages) || 0,
     },
     reacciones_enviadas: {
-        menuEmoji: "❤️", label: "Reacciones enviadas", title: "Top de reacciones enviadas",
+        menuEmoji: "❤️", label: "Reacciones enviadas", title: "Top de Reacciones Enviadas",
         unit: "reacciones enviadas", abbr: "reacciones", emoji: "❤️",
-        one: "reacción enviada", get: u => Number(u.reactionsSent) || 0,
+        one: "reacción enviada", shortUnit: "reacciones", shortOne: "reacción",
+        get: u => Number(u.reactionsSent) || 0,
     },
     reacciones_recibidas: {
-        menuEmoji: "💘", label: "Reacciones recibidas", title: "Top de reacciones recibidas",
+        menuEmoji: "💘", label: "Reacciones recibidas", title: "Top de Reacciones Recibidas",
         unit: "reacciones recibidas", abbr: "reacciones", emoji: "💘",
-        one: "reacción recibida", get: u => Number(u.reactionsReceived) || 0,
+        one: "reacción recibida", shortUnit: "reacciones", shortOne: "reacción",
+        get: u => Number(u.reactionsReceived) || 0,
     },
     racha: {
-        menuEmoji: "🔥", label: "Racha actual", title: "Top de racha actual",
+        menuEmoji: "🔥", label: "Racha actual", title: "Top de Racha Actual",
         unit: "días de racha", abbr: "días", emoji: "🔥",
-        one: "día de racha", get: u => statNumber(u.streak),
+        one: "día de racha", shortUnit: "días", shortOne: "día",
+        get: u => statNumber(u.streak),
     },
     racha_max: {
-        menuEmoji: "🏆", label: "Racha máxima", title: "Top de racha máxima",
+        menuEmoji: "🏆", label: "Racha máxima", title: "Top de Racha Máxima",
         unit: "días de racha máx.", abbr: "días", emoji: "🏆",
-        one: "día de racha máx.", get: u => {
+        one: "día de racha máx.", shortUnit: "días", shortOne: "día",
+        get: u => {
             const raw = u.streak
             if (raw == null) return 0
             if (typeof raw === "object") return Number(raw.max ?? raw.maximum ?? raw.best ?? raw.current ?? raw.days) || 0
@@ -203,12 +209,19 @@ const STAT_MODES = {
         },
     },
     counting: {
-        menuEmoji: "🔢", label: "Counting", title: "Top de counting",
+        menuEmoji: "🔢", label: "Counting", title: "Top de Counting",
         unit: "números", abbr: "núms.", emoji: "🔢",
-        one: "número", get: u => Number(u.countingSent) || 0,
+        one: "número", shortUnit: "núms.", shortOne: "núm.",
+        get: u => Number(u.countingSent) || 0,
+    },
+    pokemon: {
+        menuEmoji: "⚾", label: "Pokémon", title: "Top de Pokémon",
+        unit: "pokémon", abbr: "pkm", emoji: "⚾",
+        one: "pokémon", shortUnit: "pkm", shortOne: "pkm",
+        get: u => Number(u.pokemonCaught) || 0,
     },
     voz: {
-        menuEmoji: "🎙️", label: "Voz", title: "Top de voz",
+        menuEmoji: "🎙️", label: "Voz", title: "Top de Voz",
         unit: "min en voz", abbr: "min", emoji: "🎙️",
         one: "min en voz", get: u => Number(u.voiceMinutes) || 0,
     },
@@ -225,12 +238,55 @@ const STAT_RECORD_IDS = {
     racha: "streak",
     racha_max: "streak",
     counting: "counting",
+    pokemon: "pokemon",
     voz: "voice_time",
 }
 
 function statUnit(mode, value) {
     if (Number(value) === 1 && mode.one) return mode.one
     return mode.unit
+}
+
+// Texto de voz como en las estadísticas de /records ("2 horas",
+// "2 horas y 5 minutos", "45 minutos"). Duplicado aquí a propósito para
+// no crear un ciclo records.js -> top.js.
+function topVoiceText(minutes) {
+    const total = Math.max(0, Math.floor(Number(minutes) || 0))
+    if (!total) return "0 minutos"
+    const hours = Math.floor(total / 60)
+    const rest = total % 60
+    const h = n => `${n} ${n === 1 ? "hora" : "horas"}`
+    const m = n => `${n} ${n === 1 ? "minuto" : "minutos"}`
+    if (!rest) return h(hours)
+    if (!hours) return m(rest)
+    return `${h(hours)} y ${m(rest)}`
+}
+
+// Listón para las líneas de stats del top. Van sin -# (letra normal),
+// así que otra lógica y otro listón que en las líneas pequeñas: si la
+// línea completa no cabe con el nombre visible, se usa la unidad compacta.
+const TOP_STAT_LINE_WIDTH = 48
+
+// Línea de una entrada del top en vistas de stats: número primero y
+// mención al final (la mención no tiene longitud fija y así las cifras
+// quedan estructuradas). Las marcas (Tú / fuera del server / buscado)
+// van al final del todo, fuera de la negrita.
+function buildStatEntryLine({ emoji, position, mention, shownName, endMarkers, viewKey, commafied, value }) {
+    const mode = STAT_MODES[viewKey]
+    let valueText
+    if (viewKey === "voz") {
+        valueText = topVoiceText(value)
+    } else {
+        const one = Number(value) === 1
+        valueText = `${commafied} ${one && mode.one ? mode.one : mode.unit}`
+        if (mode.shortUnit) {
+            const probe = `${emoji} **#${position} - ${valueText}** - ${shownName || ""}`
+            if (estimateVisualWidth(probe) > TOP_STAT_LINE_WIDTH) {
+                valueText = `${commafied} ${one ? (mode.shortOne || mode.shortUnit) : mode.shortUnit}`
+            }
+        }
+    }
+    return `${emoji} **#${position} - ${valueText}** - ${mention}${endMarkers || ""}`
 }
 
 // Un solo control para cambiar de vista: XP total, XP del mes, XP del día
@@ -241,37 +297,13 @@ const VIEW_MODES = [
     { value: "xp_dia", label: "XP del día", menuEmoji: "✨" },
 ]
 
-function getRelatedModes(viewKey) {
-    const options = STAT_MODES[viewKey]
-        ? [{ value: viewKey, label: STAT_MODES[viewKey].label, menuEmoji: STAT_MODES[viewKey].menuEmoji }]
-        : [...VIEW_MODES]
-    const add = (value, label, menuEmoji) => options.push({ value, label, menuEmoji })
-    if (viewKey === "xp" || viewKey === "xp_mes" || viewKey === "xp_dia") {
-        return options
-    }
-    if (viewKey === "mensajes") {
-        add("mensajes_mes", "Mensajes del mes", "📅")
-        add("mensajes_dia", "Mensajes del día", "☀️")
-    } else if (viewKey === "mensajes_mes") {
-        add("mensajes", "Mensajes totales", "💬")
-        add("mensajes_dia", "Mensajes del día", "☀️")
-    } else if (viewKey === "mensajes_dia") {
-        add("mensajes", "Mensajes totales", "💬")
-        add("mensajes_mes", "Mensajes del mes", "📅")
-    } else if (viewKey === "racha") {
-        add("racha_max", "Racha máxima", "🏆")
-    } else if (viewKey === "racha_max") {
-        add("racha", "Racha actual", "🔥")
-    }
-    return options
-}
-
+// Menú único y fijo: todas las vistas siempre, en el mismo orden, estés
+// en la vista que estés. Discord admite 25 opciones y aquí hay 13.
 function buildViewMenu(viewKey, disabled = false) {
-    const options = getRelatedModes(viewKey)
-    const includeExtraStats = !STAT_MODES[viewKey]
-    const extraStats = Object.entries(STAT_MODES)
-        .filter(([key]) => !["mensajes_mes", "mensajes_dia"].includes(key))
-        .map(([key, mode]) => ({ value: key, label: mode.label, menuEmoji: mode.menuEmoji }))
+    const options = [
+        ...VIEW_MODES,
+        ...Object.entries(STAT_MODES).map(([value, mode]) => ({ value, label: mode.label, menuEmoji: mode.menuEmoji })),
+    ]
     return new StringSelectMenuBuilder()
         .setCustomId("top-view")
         .setPlaceholder("Ver top por…")
@@ -280,9 +312,6 @@ function buildViewMenu(viewKey, disabled = false) {
             ...options.map(v =>
                 new StringSelectMenuOptionBuilder()
                     .setLabel(v.label).setValue(v.value).setEmoji(v.menuEmoji).setDefault(viewKey === v.value)),
-                ...(includeExtraStats ? extraStats.map(({ value, label, menuEmoji }) =>
-                new StringSelectMenuOptionBuilder()
-                    .setLabel(label).setValue(value).setEmoji(menuEmoji).setDefault(viewKey === value)) : [])
         )
 }
 
@@ -304,6 +333,7 @@ metadata: {
             { name: "Racha actual", value: "racha" },
             { name: "Racha máxima", value: "racha_max" },
             { name: "Counting", value: "counting" },
+            { name: "Pokémon", value: "pokemon" },
             { name: "Voz", value: "voz" },
         ]},
     ]
@@ -352,12 +382,13 @@ async run(client, int, tools) {
 
     let minLeaderboardXP = db.settings.leaderboard?.minLevel > 1 ? tools.xpForLevel(db.settings.leaderboard.minLevel, db.settings) : 0
     const hasLeaderboardLevel = userData => Number(userData?.xp) > 0 && tools.getLevel(Number(userData.xp), db.settings) > 0
+    const info = db.info || null
     const buildRankings = isMonthly => userEntries
-        .map(entry => ({ entry, value: isMonthly ? tools.getMonthlyXP(entry) : Number(entry.xp) || 0 }))
+        .map(entry => ({ entry, value: isMonthly ? tools.getMonthlyXP(entry, info) : Number(entry.xp) || 0 }))
         .filter(({ entry, value }) => hasLeaderboardLevel(entry) && !entry.hidden && value > (isMonthly ? 0 : minLeaderboardXP))
         .sort((a, b) => isMonthly
             ? b.value - a.value
-                || tools.getMonthlyMessages(b.entry) - tools.getMonthlyMessages(a.entry)
+                || tools.getMonthlyMessages(b.entry, info) - tools.getMonthlyMessages(a.entry, info)
                 || b.entry.xp - a.entry.xp
             : b.value - a.value)
         .map(({ entry }) => entry)
@@ -366,18 +397,25 @@ async run(client, int, tools) {
     // El botón rota global -> mensual -> diario. El diario ordena por XP del
     // día (desempate por mensajes del día y luego XP total, como el mensual).
     const buildDailyRankings = () => userEntries
-        .map(entry => ({ entry, value: tools.getDailyXP(entry) }))
+        .map(entry => ({ entry, value: tools.getDailyXP(entry, info) }))
         .filter(({ entry, value }) => hasLeaderboardLevel(entry) && !entry.hidden && value > 0)
         .sort((a, b) => b.value - a.value
-            || tools.getDailyMessages(b.entry) - tools.getDailyMessages(a.entry)
+            || tools.getDailyMessages(b.entry, info) - tools.getDailyMessages(a.entry, info)
             || b.entry.xp - a.entry.xp)
         .map(({ entry }) => entry)
+
+    const statValueFor = (key, entry) => {
+        if (key === "mensajes_mes") return tools.getMonthlyMessages(entry, info)
+        if (key === "mensajes_dia") return tools.getDailyMessages(entry, info)
+        const mode = STAT_MODES[key]
+        return mode ? mode.get(entry) : 0
+    }
 
     const buildStatRankings = key => {
         const mode = STAT_MODES[key]
         if (!mode) return []
         return userEntries
-            .map(entry => ({ entry, value: mode.get(entry) }))
+            .map(entry => ({ entry, value: statValueFor(key, entry) }))
             .filter(({ entry, value }) => hasLeaderboardLevel(entry) && !entry.hidden && value > 0)
             .sort((a, b) => b.value - a.value || b.entry.xp - a.entry.xp)
             .map(({ entry }) => entry)
@@ -462,28 +500,35 @@ async run(client, int, tools) {
             const isRequester = entry.id === int.user.id
             const { level, rankRole } = pageRankInfo[index]
             const totalMessages = tools.commafy(tools.getMessages(entry))
-            const monthlyMessages = tools.commafy(tools.getMonthlyMessages(entry))
-            const monthlyXP = tools.commafy(tools.getMonthlyXP(entry))
-            const dailyMessages = tools.commafy(tools.getDailyMessages(entry))
-            const dailyXP = tools.commafy(tools.getDailyXP(entry))
-            const statValue = statMode ? statMode.get(entry) : 0
+            const monthlyMessages = tools.commafy(tools.getMonthlyMessages(entry, info))
+            const monthlyXP = tools.commafy(tools.getMonthlyXP(entry, info))
+            const dailyMessages = tools.commafy(tools.getDailyMessages(entry, info))
+            const dailyXP = tools.commafy(tools.getDailyXP(entry, info))
+            const statValue = statMode ? statValueFor(viewKey, entry) : 0
             const member = resolvedMembers.get(userId)
             const user = member?.user || client.users.cache.get(userId)
             const displayName = member?.displayName || user?.globalName || user?.username
-            const memberDisplay = member
+            const shownName = displayName || "Miembro"
+            // Stats: número primero y marcas al final del todo.
+            const memberDisplay = `<@${userId}>`
+            let endMarkers = ""
+            if (!member) endMarkers += "  <:no_en_el_server:1549908584555347988>"
+            if (isHighlighted && !isRequester) endMarkers += `  <:member:1467596629787021415>** ${shownName}**`
+            else if (isRequester) endMarkers += "  <:member:1467596629787021415> **Tú**"
+            // XP: tal cual estaba (marcas dentro de la negrita).
+            const xpMemberDisplay = member
                 ? `<@${userId}>`
                 : `<@${userId}>  <:no_en_el_server:1549908584555347988>`
-            const searchedMemberName = displayName || "Miembro"
-            const memberMarker = isHighlighted && !isRequester
-                ? `  <:member:1467596629787021415>** ${searchedMemberName || "Miembro"}**`
+            const xpMemberMarker = isHighlighted && !isRequester
+                ? `  <:member:1467596629787021415>** ${shownName}**`
                 : isRequester
                     ? "  <:member:1467596629787021415> **Tú**"
                     : ""
             const statEmoji = STAT_RECORD_EMOJIS[STAT_RECORD_IDS[viewKey]] || statMode?.emoji
             entryComponents.push(new TextDisplayBuilder().setContent([
                 statMode
-                    ? `${statEmoji} **#${position} - ${memberDisplay}**${memberMarker} - **${tools.commafy(statValue)} ${statUnit(statMode, statValue)}**`
-                    : `${rankRole?.emoji || "<:top:1467967277251956887>"} **#${position} - Nivel ${level} - ${memberDisplay}**${memberMarker}`,
+                    ? buildStatEntryLine({ emoji: statEmoji, position, mention: memberDisplay, shownName, endMarkers, viewKey, commafied: tools.commafy(statValue), value: statValue })
+                    : `${rankRole?.emoji || "<:top:1467967277251956887>"} **#${position} - Nivel ${level} - ${xpMemberDisplay}**${xpMemberMarker}`,
                 !statMode && viewKey === "xp_dia"
                     ? fitMonthlyLine(...dailyMessageVariants(dailyMessages, dailyXP))
                     : !statMode && viewKey === "xp_mes"
@@ -545,6 +590,9 @@ async run(client, int, tools) {
                 .addTextDisplayComponents(new TextDisplayBuilder().setContent(
                     `-# Página **${page}** de **${totalPages}**  -  ${memberRange}`))
                 .addActionRowComponents(new ActionRowBuilder().addComponents(navigation))
+                .addSeparatorComponents(new SeparatorBuilder()
+                    .setDivider(true)
+                    .setSpacing(SeparatorSpacingSize.Small))
                 .addActionRowComponents(new ActionRowBuilder().addComponents(viewMenu)),
             pageUserIds
         }
@@ -623,6 +671,9 @@ module.exports.dailyMessageVariants = dailyMessageVariants
 module.exports.statLineVariants = statLineVariants
 module.exports.STAT_MODES = STAT_MODES
 module.exports.statUnit = statUnit
+module.exports.buildStatEntryLine = buildStatEntryLine
+module.exports.topVoiceText = topVoiceText
+module.exports.TOP_STAT_LINE_WIDTH = TOP_STAT_LINE_WIDTH
 module.exports.buildViewMenu = buildViewMenu
 module.exports.VIEW_MODES = VIEW_MODES
 module.exports.monthlyMessageVariants = monthlyMessageVariants

@@ -62,7 +62,7 @@ test("unlockWebEasterEgg grants the hidden web record once per user/server", asy
     const first = await unlockWebEasterEgg({ client, guildId: "123456789012345678", userId: "u1" })
     assert.equal(first.unlocked, true)
     assert.equal(doc.users.u1.records["web_easter:1"], true)
-    assert.equal(doc.users.u1.xp, 20000)
+    assert.equal(doc.users.u1.xp, 30000)
 
     const second = await unlockWebEasterEgg({ client, guildId: "123456789012345678", userId: "u1" })
     assert.equal(second.unlocked, false)

@@ -49,6 +49,54 @@ function getMadridYesterday(date = new Date()) {
     return getMadridDay(new Date(date.getTime() - 24 * 60 * 60 * 1000))
 }
 
+function getMadridMonth(date = new Date()) {
+    const parts = new Intl.DateTimeFormat("en", {
+        timeZone: "Europe/Madrid",
+        year: "numeric",
+        month: "2-digit",
+    }).formatToParts(date)
+    const values = Object.fromEntries(parts.map(p => [p.type, p.value]))
+    return `${values.year}-${values.month}`
+}
+
+// Reset lógico: la verdad no es poner a 0 a todos en DB, sino el marcador
+// de periodo. Si el marcador del usuario (y de fallback el global) no es el
+// actual, el valor efectivo es 0 aunque en DB siga lo de ayer/el mes pasado.
+// El marcador por usuario se autocura en el siguiente write ($set a 1).
+function isDailyStale(userData, info, now = new Date()) {
+    const today = typeof now === "string" ? now : getMadridDay(now)
+    if (userData?.dailyPeriod) return String(userData.dailyPeriod) !== today
+    if (info?.dailyMessagesPeriod) return String(info.dailyMessagesPeriod) !== today
+    return false
+}
+
+function isMonthlyStale(userData, info, now = new Date()) {
+    const month = typeof now === "string" ? now : getMadridMonth(now)
+    if (userData?.monthlyPeriod) return String(userData.monthlyPeriod) !== month
+    if (info?.monthlyMessagesPeriod) return String(info.monthlyMessagesPeriod) !== month
+    return false
+}
+
+function getEffectiveDailyMessages(userData, info, now = new Date()) {
+    if (isDailyStale(userData, info, now)) return 0
+    return Number(userData?.dailyMessages) || 0
+}
+
+function getEffectiveDailyXP(userData, info, now = new Date()) {
+    if (isDailyStale(userData, info, now)) return 0
+    return Number(userData?.dailyXP) || 0
+}
+
+function getEffectiveMonthlyMessages(userData, info, now = new Date()) {
+    if (isMonthlyStale(userData, info, now)) return 0
+    return Number(userData?.monthlyMessages) || 0
+}
+
+function getEffectiveMonthlyXP(userData, info, now = new Date()) {
+    if (isMonthlyStale(userData, info, now)) return 0
+    return Number(userData?.monthlyXP) || 0
+}
+
 // Calcula la racha nueva a partir de la guardada. Día en TZ Europe/Madrid.
 function computeStreakUpdate(streak, now = new Date()) {
     const today = getMadridDay(now)
@@ -93,6 +141,31 @@ function isCountingMessage(message, countingChannelId, previousMessage = null) {
     } catch {
         return false
     }
+}
+
+// Captura de Pokétwo: el bot felicita con "Congratulations <@id>! You caught
+// a ...". Devuelve el ID del que capturó o null. Solo vale en el canal de
+// #poketwo y del bot de Pokétwo (el autor es el bot, no el que captura).
+function parsePoketwoCatch(content = "") {
+    const match = String(content || "").match(/Congratulations\s+<@!?(\d+)>\s*!\s*You caught a\s+/i)
+    return match ? match[1] : null
+}
+
+function isPoketwoCatchMessage(message, poketwoChannelId, poketwoBotId) {
+    if (!poketwoChannelId || !poketwoBotId) return null
+    if (String(message?.channelId || message?.channel?.id) !== String(poketwoChannelId)) return null
+    if (String(message?.author?.id) !== String(poketwoBotId)) return null
+    const texts = [String(message?.content || "")]
+    try {
+        for (const e of message?.embeds || []) {
+            if (e.description) texts.push(e.description)
+        }
+    } catch {}
+    for (const text of texts) {
+        const catcherId = parsePoketwoCatch(text)
+        if (catcherId) return catcherId
+    }
+    return null
 }
 
 // ¿Habla con la IA? Menciona a Nova con @ o responde a uno de sus mensajes.
@@ -255,11 +328,36 @@ async function grantRecordInner(client, guild, resolvedGuildId, userId, found, t
     const oldXP = Number(beforeUser.xp) || 0
     const oldLevel = settings ? Tools.global.getLevel(oldXP, settings) : 0
 
+    // XP de récords period-aware: si el marcador del usuario (fallback el
+    // global) no es el actual, su daily/monthly es de otro periodo y se
+    // empieza en tier.xp en vez de incrementar lo viejo. Sin esto, un récord
+    // ganado en el primer mensaje del día/mes sumaría sobre lo de ayer.
     const updates = { $set: { [`users.${userId}.records.${key}`]: true } }
     if (tier.xp > 0) {
+        let dailyStale = false
+        let monthlyStale = false
+        try {
+            const today = getMadridDay(new Date())
+            const month = getMadridMonth(new Date())
+            dailyStale = beforeUser.dailyPeriod
+                ? String(beforeUser.dailyPeriod) !== today
+                : (fresh?.info?.dailyMessagesPeriod ? String(fresh.info.dailyMessagesPeriod) !== today : false)
+            monthlyStale = beforeUser.monthlyPeriod
+                ? String(beforeUser.monthlyPeriod) !== month
+                : (fresh?.info?.monthlyMessagesPeriod ? String(fresh.info.monthlyMessagesPeriod) !== month : false)
+            if (dailyStale) {
+                updates.$set[`users.${userId}.dailyXP`] = tier.xp
+                updates.$set[`users.${userId}.dailyPeriod`] = today
+            }
+            if (monthlyStale) {
+                updates.$set[`users.${userId}.monthlyXP`] = tier.xp
+                updates.$set[`users.${userId}.monthlyPeriod`] = month
+            }
+        } catch {}
         updates.$inc = {
             [`users.${userId}.xp`]: tier.xp,
-            [`users.${userId}.monthlyXP`]: tier.xp,
+            ...(!monthlyStale ? { [`users.${userId}.monthlyXP`]: tier.xp } : {}),
+            ...(!dailyStale ? { [`users.${userId}.dailyXP`]: tier.xp } : {}),
         }
     }
     await client.db.update(resolvedGuildId, updates).exec().catch(() => null)
@@ -397,7 +495,7 @@ function buildRecordResetUpdate(userId, userData) {
 
 // Campos que solo existen por los récords (progreso). messages y
 // monthlyMessages NO están aquí a propósito: hay que mantenerlos.
-const PROGRESS_FIELDS = ['streak', 'reactionsSent', 'reactionsReceived', 'channels', 'countingSent', 'voiceMinutes', 'voiceJoined']
+const PROGRESS_FIELDS = ['streak', 'reactionsSent', 'reactionsReceived', 'channels', 'countingSent', 'pokemonCaught', 'voiceMinutes', 'voiceJoined']
 
 // Versión completa para el reset de terminal: como buildRecordResetUpdate
 // pero además quita el progreso de récords (salvo keepProgress). Lo único
@@ -445,6 +543,7 @@ async function grantEconomyParticipation(client, guild, guildId, userId) {
 // público solo sale el announce): así sabe por qué lo consiguió sin
 // filtrarlo. Si tiene los DMs cerrados no llega y no pasa nada.
 async function sendHiddenDm(client, userId, unlocks, avatarUrl = "") {
+    return true // Temporalmente desactivado: no se envían DMs de récords ocultos.
     const hidden = (unlocks || []).filter(u => u.category?.hidden || u.category?.id === "hidden")
     if (!hidden.length) return false
     try {
@@ -516,12 +615,21 @@ async function sendBatchedUnlocks({ client, userId, avatarUrl, unlocks }) {
 
 module.exports = {
     getMadridDay,
+    getMadridMonth,
     getMadridHour,
+    isDailyStale,
+    isMonthlyStale,
+    getEffectiveDailyMessages,
+    getEffectiveDailyXP,
+    getEffectiveMonthlyMessages,
+    getEffectiveMonthlyXP,
     getRecordIds,
     computeStreakUpdate,
     getStreakCurrent,
     countDistinctChannels,
     isCountingMessage,
+    parsePoketwoCatch,
+    isPoketwoCatchMessage,
     didTalkToIA,
     parseStarboardMessageId,
     isValidRecordReaction,

@@ -46,7 +46,7 @@ module.exports = {
         let xp = currentXP.xp
         let levelData = tools.getLevel(xp, db.settings, true)
         let totalMsgs = tools.commafy(tools.getMessages(currentXP))
-        let monthlyMsgs = tools.commafy(tools.getMonthlyMessages(currentXP))
+        let monthlyMsgs = tools.commafy(tools.getMonthlyMessages(currentXP, db.info))
         // TODO: completados reales cuando exista la lógica de récords.
         let recordsTotal = recordsConfig.countTiers(recordsConfig.allRecords())
         let maxLevel = levelData.level >= db.settings.maxLevel
@@ -258,7 +258,7 @@ module.exports = {
             .addSectionComponents(new SectionBuilder()
                 .addTextDisplayComponents(
                     new TextDisplayBuilder().setContent([
-                        `## ${role.emoji} <@&${role.id}> <:top:1467967277251956887> #${userRank || "?"}`,
+                        `## ${role.emoji} <@&${role.id}>  <:top:1467967277251956887> #${userRank || "?"}`,
                         `**<:XP:1467192533812645939>** **Nivel ${levelData.level}** (${tools.commafy(xp)} XP)`,
                         `**<:messages:1467163578699354235>** ${formatMessagesLine(totalMsgs, monthlyMsgs)}`,
                         `**${recordsConfig.RECORDS_EMOJI}** **${tools.getRecordsCompleted(currentXP)}/${recordsTotal} Records** completados`,

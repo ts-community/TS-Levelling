@@ -69,16 +69,47 @@ function makeProgress(current, tiers, fmt) {
     }
 }
 
-function getProgress(record, userData, member, commafy) {
+function effectivePeriodValue(userData, info, kind) {
+    // Reset lógico compartido con Tools: marcador por usuario manda,
+    // de fallback el global. Sin info se devuelve el guardado (tests).
+    try {
+        if (kind === "daily") {
+            const today = new Intl.DateTimeFormat("en-CA", {
+                timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit",
+            }).format(new Date())
+            if (userData?.dailyPeriod) {
+                if (String(userData.dailyPeriod) !== today) return 0
+            } else if (info?.dailyMessagesPeriod) {
+                if (String(info.dailyMessagesPeriod) !== today) return 0
+            }
+            return Number(userData?.dailyMessages) || 0
+        }
+        const parts = new Intl.DateTimeFormat("en", {
+            timeZone: "Europe/Madrid", year: "numeric", month: "2-digit",
+        }).formatToParts(new Date())
+        const v = Object.fromEntries(parts.map(p => [p.type, p.value]))
+        const month = `${v.year}-${v.month}`
+        if (userData?.monthlyPeriod) {
+            if (String(userData.monthlyPeriod) !== month) return 0
+        } else if (info?.monthlyMessagesPeriod) {
+            if (String(info.monthlyMessagesPeriod) !== month) return 0
+        }
+        return Number(userData?.monthlyMessages) || 0
+    } catch {
+        return Number(kind === "daily" ? userData?.dailyMessages : userData?.monthlyMessages) || 0
+    }
+}
+
+function getProgress(record, userData, member, commafy, info) {
     const type = record.mechanic.type
     if (type === "messages_total") {
         return makeProgress(Number(userData?.messages) || 0, record.tiers, v => commafy(v))
     }
     if (type === "messages_monthly") {
-        return makeProgress(Number(userData?.monthlyMessages) || 0, record.tiers, v => commafy(v))
+        return makeProgress(effectivePeriodValue(userData, info, "monthly"), record.tiers, v => commafy(v))
     }
     if (type === "messages_daily") {
-        return makeProgress(Number(userData?.dailyMessages) || 0, record.tiers, v => commafy(v))
+        return makeProgress(effectivePeriodValue(userData, info, "daily"), record.tiers, v => commafy(v))
     }
     if (type === "member_tenure") {
         if (!member?.joinedTimestamp) return null
@@ -111,6 +142,10 @@ function getProgress(record, userData, member, commafy) {
     if (type === "counting_numbers") {
         if (userData?.countingSent == null) return null
         return makeProgress(Number(userData.countingSent) || 0, record.tiers, v => commafy(v))
+    }
+    if (type === "pokemon_caught") {
+        if (userData?.pokemonCaught == null) return null
+        return makeProgress(Number(userData.pokemonCaught) || 0, record.tiers, v => commafy(v))
     }
     if (type === "voice_minutes") {
         // Umbrales en minutos, se muestran en horas (divisor 60) con un
@@ -276,19 +311,19 @@ function sortRecordsByProgress(category, unlockedIds) {
     })
 }
 
-function buildCategoryBlocks(category, userData, member, unlockedIds, commafy, narrowFirst = false) {
+function buildCategoryBlocks(category, userData, member, unlockedIds, commafy, narrowFirst = false, info) {
     const blocks = [`## ${category.emoji} ${category.name}`]
     const sortedRecords = sortRecordsByProgress(category, unlockedIds)
     sortedRecords.forEach((record, index) => {
         // El primer bloque va en la sección con thumbnail (más estrecha)
         // cuando hay avatar: su línea -# usa el listón estrecho.
         const width = narrowFirst && index === 0 ? FIRST_BLOCK_LINE_WIDTH : PROGRESS_LINE_WIDTH
-        blocks.push(buildRecordBlock(record, unlockedIds, getProgress(record, userData, member, commafy), commafy, width))
+        blocks.push(buildRecordBlock(record, unlockedIds, getProgress(record, userData, member, commafy, info), commafy, width))
     })
     return blocks
 }
 
-function buildHiddenBlocks(hiddenCategory, unlockedIds, commafy, userData = {}, member = null, narrowFirst = false) {
+function buildHiddenBlocks(hiddenCategory, unlockedIds, commafy, userData = {}, member = null, narrowFirst = false, info) {
     // Como las demás páginas: completados arriba. Pero la descripción es
     // siempre el misterio, esté o no desbloqueado (así lo descubierto
     // tampoco filtra cómo se consigue; el anuncio solo insinúa).
@@ -303,7 +338,7 @@ function buildHiddenBlocks(hiddenCategory, unlockedIds, commafy, userData = {}, 
             })),
         }
         const width = narrowFirst && index === 0 ? FIRST_BLOCK_LINE_WIDTH : PROGRESS_LINE_WIDTH
-        blocks.push(buildRecordBlock(masked, unlockedIds, getProgress(record, userData, member, commafy), commafy, width))
+        blocks.push(buildRecordBlock(masked, unlockedIds, getProgress(record, userData, member, commafy, info), commafy, width))
     })
     return blocks
 }
@@ -375,10 +410,12 @@ function formatTenure(joinedTimestamp, now = Date.now()) {
 
 // Ancho de las líneas normales en móvil. Las stats van en TextDisplays a
 // ancho completo (el thumbnail solo estrecha el título), así que su listón
-// se apura a 36 (verificado en móvil: cabe hasta ~36 sin saltar; si alguna
-// línea larga salta en un dispositivo estrecho, bajar). La última palabra
-// de cada estadística se adapta (completa → corta → nada).
-const INFO_LINE_WIDTH = 36
+// se apura a 37: las líneas de reacciones con 3 cifras (36,1-36,9) caben en
+// la mayoría de móviles con la unidad completa ("reacciones") en vez de
+// abreviar a "reaccs". Si alguna línea larga salta en un dispositivo
+// estrecho, bajar. La última palabra de cada estadística se adapta
+// (completa → corta → nada).
+const INFO_LINE_WIDTH = 37
 
 function fitInfoLine(...variants) {
     return variants.find(v => estimateVisualWidth(v) <= INFO_LINE_WIDTH)
@@ -388,13 +425,13 @@ function fitInfoLine(...variants) {
 // Página Estadísticas: valores útiles incluso cuando todavía están a cero.
 // Misma lógica en todas las líneas: "**Etiqueta:** valor unidad", con
 // singular/plural correcto. La unidad se acorta sola si no cabe en móvil.
-function buildInfoTexts(userData, member, unlockedIds, tools) {
+function buildInfoTexts(userData, member, unlockedIds, tools, info) {
     const num = v => Number(v) || 0
     const show = v => tools.commafy(num(v))
     const E_MSG = "<:messages:1467163578699354235>"
     const totalNum = num(tools.getMessages(userData))
-    const monthlyNum = num(tools.getMonthlyMessages(userData))
-    const dailyNum = num(userData?.dailyMessages)
+    const monthlyNum = num(tools.getMonthlyMessages(userData, info))
+    const dailyNum = num(tools.getDailyMessages(userData, info))
     const sentNum = num(userData?.reactionsSent)
     const receivedNum = num(userData?.reactionsReceived)
     const countingNum = num(userData?.countingSent)
@@ -517,16 +554,11 @@ async run(client, int, tools) {
     if (!db) return tools.warn("*noData")
     else if (!db.settings.enabled) return tools.warn("*xpDisabled")
 
+    // Sin parche manual: tools.getDailyMessages/getMonthlyMessages con
+    // `db.info` ya devuelven 0 si el periodo es viejo (reset lógico, con
+    // marcador por usuario de fallback). Se pasa `info` a los builders.
     const userData = { ...(db.users?.[memberId] || {}) }
-    const madridDay = new Intl.DateTimeFormat("en-CA", {
-        timeZone: "Europe/Madrid",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-    }).format(new Date())
-    if (db.info?.dailyMessagesPeriod && db.info.dailyMessagesPeriod !== madridDay) {
-        userData.dailyMessages = 0
-    }
+    const info = db.info || null
     const unlockedIds = new Set(Object.keys(userData.records || {}))
     const order = [INFO_ID, ...PAGES]
     let pageNumber = 0 // Estadísticas primero
@@ -541,11 +573,11 @@ async run(client, int, tools) {
         // estrecho en su línea -# para no saltar.
         const narrowFirst = Boolean(avatarUrl)
         const category = id !== INFO_ID ? records.categories.find(c => c.id === id) : null
-        const statGroups = id === INFO_ID ? buildInfoTexts(userData, member, unlockedIds, tools)[0] : null
+        const statGroups = id === INFO_ID ? buildInfoTexts(userData, member, unlockedIds, tools, info)[0] : null
         const pageBlocks = category
             ? (category.hidden
-                ? buildHiddenBlocks(category, unlockedIds, tools.commafy, userData, member, narrowFirst)
-                : buildCategoryBlocks(category, userData, member, unlockedIds, tools.commafy, narrowFirst))
+                ? buildHiddenBlocks(category, unlockedIds, tools.commafy, userData, member, narrowFirst, info)
+                : buildCategoryBlocks(category, userData, member, unlockedIds, tools.commafy, narrowFirst, info))
             : null
         // Sin cabecera de categoría (salvo ocultos, que ya vienen sin ella):
         // el primer récord (pageBlocks[1]) va pegado al título en el mismo

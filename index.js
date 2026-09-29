@@ -181,6 +181,32 @@ function scheduleMadridMonthlyRollover() {
     }, checkDelay)
 }
 
+function getNextMadridMidnight(after = new Date()) {
+    const parts = getMadridParts(after)
+    // Medianoche siguiente en Madrid: iterar candidatos hasta dar con el
+    // día siguiente a las 00:00 (cubre DST sin aritmética manual).
+    const baseUtc = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day))
+    for (let dayOffset = 1; dayOffset <= 2; dayOffset++) {
+        for (let offset = -12; offset <= 14; offset++) {
+            const candidate = new Date(baseUtc + dayOffset * 24 * 3600 * 1000 - offset * 3600 * 1000)
+            if (candidate.getTime() <= after.getTime()) continue
+            const c = getMadridParts(candidate)
+            if (c.hour === "00" && c.minute === "00") return candidate
+        }
+    }
+    return new Date(after.getTime() + 24 * 3600 * 1000)
+}
+
+function scheduleMadridDailyRollover() {
+    const target = getNextMadridMidnight(new Date())
+    const delay = Math.max(target.getTime() - Date.now(), 1000)
+    const checkDelay = Math.min(delay, 24 * 60 * 60 * 1000)
+    setTimeout(async () => {
+        if (Date.now() >= target.getTime()) await processDailyAllGuilds()
+        scheduleMadridDailyRollover()
+    }, checkDelay)
+}
+
 function getSpanishMonthName(period) {
     return new Intl.DateTimeFormat("es-ES", {
         timeZone: "Europe/Madrid",
@@ -239,74 +265,81 @@ async function logMonthlyTop(guild, snapshot, period) {
 }
 
 const monthlyMaintenanceLocks = new Set()
+// Mantenimiento de periodos (diario + mensual, hora española).
+// Reset LÓGICO: no se pone a 0 a todos los usuarios (caro y con carreras).
+// Solo se avanza el marcador global de periodo; cada lectura trata como 0
+// lo de un periodo viejo (Tools.getDailyMessages/... con `info`) y cada
+// write autocura su propio marcador (dailyPeriod/monthlyPeriod en message.js
+// y grantRecord). Así el reset es exacto vía scheduler y barato.
 async function processMonthlyMessages(guild, knownServer, knownMembers) {
-    if (monthlyMaintenanceLocks.has(guild.id)) return
+    if (monthlyMaintenanceLocks.has(guild.id)) return { dailyReset: false, monthlyReset: false, skipped: true }
     monthlyMaintenanceLocks.add(guild.id)
 
     try {
         const currentPeriod = getMadridMonth()
+        const currentDay = recordTracker.getMadridDay(new Date())
 
-        const server = knownServer || await client.db.fetch(guild.id).exec()
-        if (!server?.users) return
+        // Fast path sin lecturas extra: el snapshot que trae message.js/top
+        // ya dice que todo está al día.
+        if (knownServer?.info?.dailyMessagesPeriod === currentDay &&
+            knownServer?.info?.monthlyMessagesPeriod === currentPeriod) {
+            return { dailyReset: false, monthlyReset: false }
+        }
 
-        // Reset diario (mensajes y XP del día, hora española): va antes del
-        // return mensual para correr todos los días, no solo al cambiar de mes.
-        // Sin snapshot ni anuncio: es solo el contador del día, mucho más ruidoso.
+        // El snapshot puede venir viejo (dos mensajes seguidos en el cambio
+        // de día/mes): revalidar con lectura fresca antes de flipear para no
+        // hacer doble reset ni comerse el +1 del primero.
+        const server = await client.db.fetch(guild.id).exec()
+        if (!server) return { dailyReset: false, monthlyReset: false }
+        let dailyReset = false
+        let monthlyReset = false
+
+        // Flip diario ligero: solo el marcador global, sin mass-zero.
         try {
-            const currentDay = recordTracker.getMadridDay(new Date())
             if (server.info?.dailyMessagesPeriod !== currentDay) {
-                const dailyUsers = Object.keys(server.users)
-                for (let index = 0; index < dailyUsers.length; index += memberCleanupBatchSize) {
-                    const batch = dailyUsers.slice(index, index + memberCleanupBatchSize)
-                    const updates = Object.fromEntries(batch.flatMap(userId => [
-                        [`users.${userId}.dailyMessages`, 0],
-                        [`users.${userId}.dailyXP`, 0]
-                    ]))
-                    await client.db.update(guild.id, {
-                        $set: updates
-                    }).exec()
-                }
                 await client.db.update(guild.id, {
                     $set: { "info.dailyMessagesPeriod": currentDay }
                 }).exec()
+                dailyReset = true
             }
         } catch (e) {
-            console.warn(`Could not reset daily counters for ${guild.id}:`, e.message)
+            console.warn(`Could not flip daily period for ${guild.id}:`, e.message)
         }
 
         const previousPeriod = server.info?.monthlyMessagesPeriod
-        if (previousPeriod === currentPeriod) return
+        if (previousPeriod === currentPeriod) return { dailyReset, monthlyReset }
 
-        const members = knownMembers || await fetchMembersForMaintenance(guild)
-        if (!members) return
         if (!previousPeriod) {
             await client.db.update(guild.id, {
                 $set: { "info.monthlyMessagesPeriod": currentPeriod }
             }).exec()
-            return
+            return { dailyReset, monthlyReset }
         }
 
+        // Snapshot del mes que acaba (valores guardados = mes anterior, aún
+        // sin flipear: son los correctos para el top).
+        const members = knownMembers || await fetchMembersForMaintenance(guild)
+        if (!members) return { dailyReset, monthlyReset }
         const monthlyTop = getMonthlySnapshot(server, members)
-        if (!await logMonthlyTop(guild, monthlyTop, previousPeriod)) return
 
-        const resetUsers = Object.keys(server.users)
-        for (let index = 0; index < resetUsers.length; index += memberCleanupBatchSize) {
-            const batch = resetUsers.slice(index, index + memberCleanupBatchSize)
-            const updates = Object.fromEntries(batch.flatMap(userId => [
-                [`users.${userId}.monthlyMessages`, 0],
-                [`users.${userId}.monthlyXP`, 0]
-            ]))
-            await client.db.update(guild.id, {
-                $set: updates
-            }).exec()
-        }
-
+        // El reset NO depende del log: se guarda siempre y el anuncio es
+        // best-effort (antes, si fallaba un destino, el mes no reseteaba
+        // nunca y se acumulaba).
         await client.db.update(guild.id, {
             $set: {
                 "info.monthlyMessagesPeriod": currentPeriod,
                 "info.monthlyTop": { period: previousPeriod, ...monthlyTop }
             }
         }).exec()
+        monthlyReset = true
+
+        try {
+            const logged = await logMonthlyTop(guild, monthlyTop, previousPeriod)
+            if (!logged) console.warn(`Monthly top for ${guild.id} (${previousPeriod}) reset but log incomplete`)
+        } catch (e) {
+            console.warn(`Could not log monthly top for ${guild.id}:`, e.message)
+        }
+        return { dailyReset, monthlyReset }
     } finally {
         monthlyMaintenanceLocks.delete(guild.id)
     }
@@ -320,6 +353,16 @@ async function processMonthlyAllGuilds() {
             await processMonthlyMessages(guild)
         } catch (error) {
             console.warn(`Could not process monthly leaderboard for ${guild.id}:`, error.message)
+        }
+    }
+}
+
+async function processDailyAllGuilds() {
+    for (const guild of client.guilds.cache.values()) {
+        try {
+            await processMonthlyMessages(guild)
+        } catch (error) {
+            console.warn(`Could not process daily rollover for ${guild.id}:`, error.message)
         }
     }
 }
@@ -422,6 +465,7 @@ client.on("clientReady", () => {
         setInterval(cleanAllGuilds, memberCleanupInterval)
     }, cleanupDelay)
     scheduleMadridMonthlyRollover()
+    scheduleMadridDailyRollover()
 
     // run the web server
     if (client.shard.id == 0 && config.enableWebServer) require("./web_app.js")(client)
@@ -489,9 +533,54 @@ async function handleStarboardPost(message) {
     } catch {}
 }
 
+// Pokétwo: las capturas las anuncia su bot en #poketwo con
+// "Congratulations <@id>! You caught a ...". El autor es el bot, así que
+// este handler corre antes del filtro de bots y el contador va al mencionado.
+async function handlePoketwoCatch(message) {
+    try {
+        if (!message.guild || message.system) return
+        const ids = recordTracker.getRecordIds()
+        const channelId = ids.poketwoChannelId
+            || recordsCatalog.allRecords().find(x => x.record.id === "pokemon")?.record.mechanic.channelId
+        const botId = ids.poketwoBotId
+            || recordsCatalog.allRecords().find(x => x.record.id === "pokemon")?.record.mechanic.botId
+        const catcherId = recordTracker.isPoketwoCatchMessage(message, channelId, botId)
+        if (!catcherId) return
+
+        // El mencionado manda: se ignora si es un bot.
+        let catcher = null
+        try {
+            catcher = message.mentions?.users?.get(String(catcherId)) || null
+            if (!catcher) catcher = await client.users.fetch(String(catcherId)).catch(() => null)
+        } catch {}
+        if (catcher?.bot) return
+
+        await client.db.update(message.guild.id, {
+            $inc: { [`users.${catcherId}.pokemonCaught`]: 1 }
+        }).exec().catch(() => null)
+
+        const fresh = await client.db.fetch(message.guild.id).exec().catch(() => null)
+        const userData = fresh?.users?.[catcherId] || { pokemonCaught: 1 }
+        const caughtNow = Number(userData.pokemonCaught) || 1
+        const pokemonRecord = recordsCatalog.allRecords().find(x => x.record.id === "pokemon")?.record
+        if (!pokemonRecord) return
+        const unlocked = recordTracker.unlockedIdSet(userData)
+        const pending = []
+        for (const threshold of recordTracker.newlyReachedThresholds(pokemonRecord, caughtNow, unlocked)) {
+            const unlock = await recordTracker.grantRecord(client, message.guild, message.guild.id, catcherId, pokemonRecord.id, threshold).catch(() => null)
+            if (unlock) {
+                pending.push(unlock)
+                unlocked.add(`${pokemonRecord.id}:${threshold}`)
+            }
+        }
+        if (pending.length) await announceRecordUnlocks(client, message.guild, catcherId, pending)
+    } catch {}
+}
+
 // on message
 client.on("messageCreate", async message => {
     handleStarboardPost(message).catch(() => {})
+    handlePoketwoCatch(message).catch(() => {})
     if (message.system || message.author.bot) return
     else if (!message.guild || !message.member) return // dm stuff
     else client.commands.get("message").run(client, message, client.globalTools)

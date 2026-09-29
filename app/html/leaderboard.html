@@ -794,6 +794,7 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         if (type === "reactions_sent") return Number(user.reactionsSent) || 0
         if (type === "reactions_received") return Number(user.reactionsReceived) || 0
         if (type === "counting_numbers") return Number(user.countingSent) || 0
+        if (type === "pokemon_caught") return Number(user.pokemonCaught) || 0
         if (type === "voice_minutes") return (Number(user.voiceMinutes) || 0) / 60
         if (type === "streak_days") return typeof user.streak === "object" ? Number(user.streak.current ?? user.streak.days) || 0 : Number(user.streak) || 0
         if (type === "economy_participation") return user.records?.[`${record.id}:1`] ? 1 : 0

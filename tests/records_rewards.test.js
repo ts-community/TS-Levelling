@@ -276,7 +276,7 @@ test("sendBatchedUnlocks manda DM en V2 con la condición exacta solo de ocultos
     assert.ok(json.includes("De pasada"), "el DM nombra el logro")
     assert.ok(json.includes("Escribe") && json.includes("en un mensaje."), "el DM revela la condición real")
     assert.ok(json.includes("lentejas"), "detalla la palabra exacta")
-    assert.ok(json.includes("+5.000 XP"), "línea de recompensa")
+    assert.ok(json.includes("+10.000 XP"), "línea de recompensa")
     assert.ok(json.includes("<#1551570600135229440>"), "menciona el canal de records en azul")
     assert.ok(json.includes("no lo cuentes por ahí"), "pide discreción")
     assert.ok(!json.includes("Primeros pasos"), "el visible no va al DM")
@@ -333,7 +333,7 @@ test("unlock sanea done>total: 4/3 se muestra como 3/3", () => {
         ],
     })
     const json = JSON.stringify(msg.msg.components.map(c => c.toJSON()))
-    assert.ok(json.includes("**Legendario** - 3/3 fases"), "topeado al total")
+    assert.ok(json.includes("**Mes pleno** - 3/3 fases"), "topeado al total")
     assert.ok(!json.includes("- 4/3 fases"), "sin fases imposibles")
 })
 

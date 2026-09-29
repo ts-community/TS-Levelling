@@ -91,23 +91,64 @@ class Tools {
             }
         }
 
+        // Reset lógico: si se pasa `info` (doc del server con
+        // dailyMessagesPeriod/monthlyMessagesPeriod) y el periodo no es el
+        // actual en Madrid, el valor efectivo es 0 aunque en DB siga lo de
+        // ayer. Sin `info` se devuelve el valor guardado (compatibilidad).
+        // Si el usuario ya tiene marcador propio (dailyPeriod/monthlyPeriod),
+        // este manda sobre el global.
+        const madridDay = () => {
+            try {
+                return new Intl.DateTimeFormat("en-CA", {
+                    timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit",
+                }).format(new Date())
+            } catch { return null }
+        }
+        const madridMonth = () => {
+            try {
+                const parts = new Intl.DateTimeFormat("en", {
+                    timeZone: "Europe/Madrid", year: "numeric", month: "2-digit",
+                }).formatToParts(new Date())
+                const v = Object.fromEntries(parts.map(p => [p.type, p.value]))
+                return `${v.year}-${v.month}`
+            } catch { return null }
+        }
+        const dailyStale = (userData, info) => {
+            const today = madridDay()
+            if (!today) return false
+            if (userData?.dailyPeriod) return String(userData.dailyPeriod) !== today
+            if (info?.dailyMessagesPeriod) return String(info.dailyMessagesPeriod) !== today
+            return false
+        }
+        const monthlyStale = (userData, info) => {
+            const month = madridMonth()
+            if (!month) return false
+            if (userData?.monthlyPeriod) return String(userData.monthlyPeriod) !== month
+            if (info?.monthlyMessagesPeriod) return String(info.monthlyMessagesPeriod) !== month
+            return false
+        }
+
         this.getMessages = function(userData) {
             return userData?.messages || 0
         }
 
-        this.getMonthlyMessages = function(userData) {
+        this.getMonthlyMessages = function(userData, info) {
+            if (info && monthlyStale(userData, info)) return 0
             return userData?.monthlyMessages || 0
         }
 
-        this.getDailyMessages = function(userData) {
+        this.getDailyMessages = function(userData, info) {
+            if (info && dailyStale(userData, info)) return 0
             return userData?.dailyMessages || 0
         }
 
-        this.getDailyXP = function(userData) {
+        this.getDailyXP = function(userData, info) {
+            if (info && dailyStale(userData, info)) return 0
             return userData?.dailyXP || 0
         }
 
-        this.getMonthlyXP = function(userData) {
+        this.getMonthlyXP = function(userData, info) {
+            if (info && monthlyStale(userData, info)) return 0
             return userData?.monthlyXP || 0
         }
 
