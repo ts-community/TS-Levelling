@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="/css/polaris.css?v=9" type="text/css" rel="stylesheet">
+    <link href="/css/polaris.css?v=10" type="text/css" rel="stylesheet">
     <link rel="icon" href="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless">
     <title>Clasificación</title>
 
@@ -47,36 +47,62 @@
 
         #recordsList {
             display: grid;
+            grid-template-columns: minmax(0, 1fr);
             gap: 24px;
             width: 100%;
+            max-width: 100%;
+            min-width: 0;
         }
         .recordsCategory {
+            min-width: 0;
             padding: 24px;
             border: 1px solid rgba(255, 255, 255, 0.09);
             border-radius: 18px;
             background: linear-gradient(145deg, rgba(255,255,255,0.07), rgba(255,255,255,0.025));
             box-shadow: 0 18px 50px rgba(0,0,0,0.14);
         }
-        .recordsCategoryHeader { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
-        .recordsCategoryHeader h2 { margin: 0; }
-        .recordsCategoryHeader p { margin: 0; opacity: .65; text-align: right; }
-        .recordsGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+        .recordsCategory { color: #fff; }
+        .recordsCategory, .recordsCategory * { font-family: var(--lato), sans-serif; box-sizing: border-box; }
+        .recordsCategoryHeader { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+        .recordsCategoryHeader h2 { display: flex; align-items: center; gap: 12px; margin: 0; font-family: var(--opensans), sans-serif; }
+        .recordsCategoryHeader h2 svg { width: 30px; height: 30px; color: var(--polarisgreen); flex: none; }
+        .recordsCount { margin: 0; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; background: rgba(255,255,255,0.07); color: rgba(255,255,255,.75); }
+        .recordsGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; align-items: start; }
         .recordCard {
+            min-width: 0;
             padding: 16px;
             border-radius: 14px;
-            background: rgba(0,0,0,0.17);
+            background: rgba(0,0,0,0.2);
             border: 1px solid rgba(255,255,255,0.08);
             animation: recordRise .55s both;
-            animation-delay: calc(var(--record-index) * 45ms);
+            animation-delay: calc(var(--record-index) * 25ms);
         }
-        .recordCard h3 { margin: 0 0 8px; font-size: 18px; }
-        .recordCard p { margin: 7px 0 0; font-size: 14px; line-height: 1.45; opacity: .72; }
-        .recordTier { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.07); font-size: 14px; }
-        .recordTier:first-child { border-top: 0; }
-        .recordTier strong { color: var(--polarisgreen); white-space: nowrap; }
-        .recordTier.locked strong { color: rgba(255,255,255,.42); }
-        .recordTier.locked span { filter: blur(4px); user-select: none; }
+        .recordCard.done { border-color: rgba(0,255,128,0.35); }
+        .recordHead { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+        .recordIcon { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: rgba(0,255,128,0.12); color: var(--polarisgreen); }
+        .recordIcon svg { width: 22px; height: 22px; }
+        .recordHead h3 { flex: 1; min-width: 0; margin: 0; font-family: var(--opensans), sans-serif; font-size: 17px; font-weight: 700; overflow-wrap: anywhere; }
+        .recordBadge { flex: none; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,.7); }
+        .recordCard.done .recordBadge { background: rgba(0,255,128,0.18); color: var(--polarisgreen); }
+        .recordTier { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.07); }
+        .recordTierState { flex: none; width: 20px; height: 20px; margin-top: 1px; color: rgba(255,255,255,.35); }
+        .recordTier.complete .recordTierState { color: var(--polarisgreen); }
+        .recordTierBody { flex: 1; min-width: 0; }
+        .recordTierTop { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+        .recordTierName { font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
+        .recordTierReward { flex: none; font-size: 13px; font-weight: 700; color: var(--polarisgreen); white-space: nowrap; }
+        .recordTierDesc { margin: 3px 0 0; font-size: 13px; line-height: 1.4; color: rgba(255,255,255,.72); overflow-wrap: anywhere; }
+        .recordProgress { display: flex; align-items: center; gap: 8px; margin-top: 7px; font-size: 12px; color: rgba(255,255,255,.75); }
+        .recordBar { flex: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.1); overflow: hidden; }
+        .recordBar i { display: block; height: 100%; border-radius: inherit; background: var(--polarisgreen); }
+        .recordProgress span { flex: none; font-variant-numeric: tabular-nums; }
+        .recordTier.locked .recordTierName, .recordTier.locked .recordTierDesc { filter: blur(4px); user-select: none; }
+        .recordTier.locked .recordTierReward { color: rgba(255,255,255,.42); }
         @keyframes recordRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+        @media (max-width: 600px) {
+            .recordsCategory { padding: 16px; }
+            .recordsGrid { grid-template-columns: 1fr; }
+        }
 
         /* Easter egg: huevo escondido abajo a la derecha */
         #secretEasterTrigger {
@@ -235,7 +261,7 @@
     <h2 box="levels" class="lbBox plsLogIn">¡Inicia sesión para ver tu progreso hacia cada nivel!</h2>
     <div id="progress" box="levels" class="leaderboardBox lbBox" style="display: none"></div>
 
-    <div box="records" class="lbBox" style="display: none;">
+    <div box="records" class="lbBox" style="display: none; min-width: 0; max-width: 100%;">
         <div id="recordsList"></div>
     </div>
 
@@ -780,6 +806,47 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         return `${commafy(current)}/${commafy(target)} ${unit}`
     }
 
+    const svgIcon = body => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`
+    const RECORD_ICONS = {
+        // categorías
+        actividad: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+        comunidad: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+        canales: '<circle cx="12" cy="12" r="10"/><path d="M16.2 7.8l-2.1 6.3-6.3 2.1 2.1-6.3z"/>',
+        voz: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4"/>',
+        hidden: '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M1 1l22 22"/>',
+        // récords
+        messages: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/>',
+        monthly_messages: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+        daily_messages: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+        talk_to: '<rect x="3" y="8" width="18" height="12" rx="3"/><path d="M12 8V4"/><circle cx="12" cy="3" r="1"/><circle cx="8.5" cy="14" r="1"/><circle cx="15.5" cy="14" r="1"/>',
+        reactions_sent: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/>',
+        reactions_received: '<path d="M12 2l3 7 7 .6-5.3 4.6 1.6 7L12 17.6 5.7 21.2l1.6-7L2 9.6 9 9z"/>',
+        streak: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+        tenure: '<circle cx="12" cy="8" r="6"/><path d="M15.48 12.89L17 22l-5-3-5 3 1.52-9.11"/>',
+        distinct_channels: '<circle cx="12" cy="12" r="10"/><path d="M16.2 7.8l-2.1 6.3-6.3 2.1 2.1-6.3z"/>',
+        economy_participation: '<circle cx="12" cy="12" r="10"/><path d="M15 9.5a3 3 0 0 0-3-1.5c-1.66 0-3 .9-3 2.25S10.34 12 12 12s3 .75 3 2.25S13.66 16.5 12 16.5a3 3 0 0 1-3-1.5M12 6v2M12 16.5V18"/>',
+        counting: '<path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/>',
+        voice_general: '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/>',
+        voice_all_fixed: '<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>',
+        voice_time: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+        starboard: '<path d="M12 2l3 7 7 .6-5.3 4.6 1.6 7L12 17.6 5.7 21.2l1.6-7L2 9.6 9 9z"/>',
+        night_owl: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+        hidden_command: '<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>',
+        web_easter: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+        secret_word: '<path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M17.8 6.2L19 5M12.2 6.2L11 5M3 21l9-9"/>',
+        // estados
+        _check: '<circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.7 2.7L16 9.5"/>',
+        _open: '<circle cx="12" cy="12" r="10"/>',
+        _lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+        _trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>'
+    }
+    const recordIcon = id => svgIcon(RECORD_ICONS[id] || RECORD_ICONS._trophy)
+
+    // Las descripciones vienen con menciones de Discord (<@id>, <#id>): en la web se muestran genéricas
+    function recordText(value) {
+        return escapeRecordText(String(value ?? "").replace(/<@!?\d+>/g, "@usuario").replace(/<#\d+>/g, "#canal").replace(/<a?:\w+:\d+>/g, ""))
+    }
+
     function renderRecords(categories, unlocked) {
         const unlockedSet = new Set(Object.keys(unlocked || {}))
         let index = 0
@@ -792,18 +859,20 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
                     const key = `${record.id}:${tier.threshold}`
                     const complete = unlockedSet.has(key)
                     const hidden = category.hidden && !complete
-                    const tierName = tier.name
                     const description = hidden ? (record.mystery || 'Un secreto aún por descubrir…') : tier.desc
                     const reward = tier.xp ? `+${commafy(tier.xp)} XP` : 'Sin XP'
+                    const target = record.mechanic?.type === "voice_minutes" ? tier.threshold / 60 : tier.threshold
+                    const progressCurrent = complete ? Math.max(current, target) : current
+                    const pct = target > 0 ? Math.min(100, Math.round(progressCurrent / target * 100)) : (complete ? 100 : 0)
+                    const progress = hidden ? '' : `<div class="recordProgress"><div class="recordBar"><i style="width:${pct}%"></i></div><span>${escapeRecordText(recordProgressText(record, tier, progressCurrent))}</span></div>`
                     index++
-                    const progressCurrent = complete && hidden ? Math.max(current, record.mechanic?.type === "voice_minutes" ? tier.threshold / 60 : tier.threshold) : current
-                    const progress = `<small>📊 ${escapeRecordText(recordProgressText(record, tier, progressCurrent))}</small>`
-                    return `<div class="recordTier ${hidden ? 'locked' : ''}"><span>${hidden ? '🔒' : (complete ? '✓' : '○')} ${escapeRecordText(tierName)}<br>${progress}<br><small>${escapeRecordText(description)}</small></span><strong>${escapeRecordText(reward)}</strong></div>`
+                    const state = svgIcon(RECORD_ICONS[hidden ? '_lock' : (complete ? '_check' : '_open')]).replace('<svg ', '<svg class="recordTierState" ')
+                    return `<div class="recordTier ${complete ? 'complete' : ''} ${hidden ? 'locked' : ''}">${state}<div class="recordTierBody"><div class="recordTierTop"><span class="recordTierName">${escapeRecordText(tier.name)}</span><span class="recordTierReward">${escapeRecordText(reward)}</span></div><p class="recordTierDesc">${recordText(description)}</p>${progress}</div></div>`
                 }).join('')
                 const completed = record.tiers.filter(t => unlockedSet.has(`${record.id}:${t.threshold}`)).length
-                return `<article class="recordCard" style="--record-index:${index}"><h3>${escapeRecordText(record.emoji)} ${escapeRecordText(record.label || record.id)} <small>${completed}/${record.tiers.length}</small></h3><p>${escapeRecordText(record.mechanic?.type || 'logro')}</p>${tiers}</article>`
+                return `<article class="recordCard ${completed === record.tiers.length ? 'done' : ''}" style="--record-index:${index}"><div class="recordHead"><span class="recordIcon">${recordIcon(record.id)}</span><h3>${escapeRecordText(record.label || record.id)}</h3><span class="recordBadge">${completed}/${record.tiers.length}</span></div>${tiers}</article>`
             }).join('')
-            return `<section class="recordsCategory"><div class="recordsCategoryHeader"><h2>${escapeRecordText(category.emoji)} ${escapeRecordText(category.name)}</h2><p>${done}/${total} fases</p></div><div class="recordsGrid">${cards}</div></section>`
+            return `<section class="recordsCategory"><div class="recordsCategoryHeader"><h2>${recordIcon(category.id)}${escapeRecordText(category.name)}</h2><span class="recordsCount">${done}/${total} fases</span></div><div class="recordsGrid">${cards}</div></section>`
         }).join(''))
     }
 

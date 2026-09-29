@@ -1504,7 +1504,8 @@ input:checked + .sliderspan:before {
 
 .sidebarUserInfo .userRole {
     font-size: 12px;
-    opacity: 65%;
+    color: var(--polarisgreen);
+    opacity: 85%;
     margin-top: 1px;
     border-left: none !important;
     padding-left: 0px !important;
