@@ -1112,6 +1112,9 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
                         if (String(storedUser.dailyPeriod) !== today) return 0
                     } else if (data.info?.dailyMessagesPeriod) {
                         if (String(data.info.dailyMessagesPeriod) !== today) return 0
+                        return 0
+                    } else if (data.info) {
+                        return 0
                     }
                     return Number(storedUser.dailyMessages) || 0
                 }
@@ -1124,6 +1127,9 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
                     if (String(storedUser.monthlyPeriod) !== month) return 0
                 } else if (data.info?.monthlyMessagesPeriod) {
                     if (String(data.info.monthlyMessagesPeriod) !== month) return 0
+                    return 0
+                } else if (data.info) {
+                    return 0
                 }
                 return Number(storedUser.monthlyMessages) || 0
             } catch { return 0 }

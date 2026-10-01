@@ -3,7 +3,7 @@ const assert = require("node:assert/strict")
 const { spawnSync } = require("node:child_process")
 const path = require("node:path")
 
-const script = path.join(__dirname, "..", "reset-records.js")
+const script = path.join(__dirname, "..", "scripts", "reset-records.js")
 
 function runCli(...args) {
     return spawnSync(process.execPath, [script, ...args], { encoding: "utf8", timeout: 30000 })

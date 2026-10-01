@@ -10,7 +10,8 @@
   "scripts": {
     "start": "node polaris.js",
     "test": "node --test",
-    "reset-records": "node reset-records.js"
+    "reset-records": "node scripts/reset-records.js",
+    "backfill-periods": "node scripts/backfill-periods.js"
   },
   "dependencies": {
     "@discordjs/builders": "^1.9.0",

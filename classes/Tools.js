@@ -117,15 +117,20 @@ class Tools {
             const today = madridDay()
             if (!today) return false
             if (userData?.dailyPeriod) return String(userData.dailyPeriod) !== today
-            if (info?.dailyMessagesPeriod) return String(info.dailyMessagesPeriod) !== today
-            return false
+            // Sin marcador propio no hay prueba de actividad de hoy: el valor
+            // guardado es de otro día (usuarios anteriores al reset lógico, que
+            // no tienen marcador). El global NO sirve de prueba: solo dice en
+            // qué periodo está el servidor, no cuándo habló este usuario.
+            // Sin `info` el llamador devuelve el guardado por compatibilidad.
+            return true
         }
         const monthlyStale = (userData, info) => {
             const month = madridMonth()
             if (!month) return false
             if (userData?.monthlyPeriod) return String(userData.monthlyPeriod) !== month
-            if (info?.monthlyMessagesPeriod) return String(info.monthlyMessagesPeriod) !== month
-            return false
+            // Igual que en diario: sin marcador propio el acumulado es del mes
+            // pasado y debe mostrarse como 0.
+            return true
         }
 
         this.getMessages = function(userData) {

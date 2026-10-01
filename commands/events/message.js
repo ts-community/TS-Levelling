@@ -81,10 +81,10 @@ async runInner(client, message, tools) {
     })()
     const dailyWasStale = userData.dailyPeriod
         ? String(userData.dailyPeriod) !== todayDay
-        : (db.info?.dailyMessagesPeriod ? String(db.info.dailyMessagesPeriod) !== todayDay : false)
+        : true
     const monthlyWasStale = userData.monthlyPeriod
         ? String(userData.monthlyPeriod) !== currentMonth
-        : (db.info?.monthlyMessagesPeriod ? String(db.info.monthlyMessagesPeriod) !== currentMonth : false)
+        : true
 
     {
         const inc = { [`users.${author}.messages`]: 1 }
@@ -105,6 +105,10 @@ async runInner(client, message, tools) {
         }
         const counterUpdate = { $inc: inc }
         if (Object.keys(set).length) counterUpdate.$set = set
+        counterUpdate.$max = {
+            [`users.${author}.dailyMessagesMax`]: dailyWasStale ? 1 : (userData.dailyMessages || 0) + 1,
+            [`users.${author}.monthlyMessagesMax`]: monthlyWasStale ? 1 : (userData.monthlyMessages || 0) + 1,
+        }
         await client.db.update(message.guild.id, counterUpdate).exec()
         // Reflejar el flip en memoria para los checks de récords de abajo.
         if (dailyWasStale) {

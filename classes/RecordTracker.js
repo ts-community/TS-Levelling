@@ -66,34 +66,34 @@ function getMadridMonth(date = new Date()) {
 function isDailyStale(userData, info, now = new Date()) {
     const today = typeof now === "string" ? now : getMadridDay(now)
     if (userData?.dailyPeriod) return String(userData.dailyPeriod) !== today
-    if (info?.dailyMessagesPeriod) return String(info.dailyMessagesPeriod) !== today
-    return false
+    // Sin marcador propio no hay prueba de actividad de hoy (usuarios de
+    // antes del reset lógico). El global no prueba nada del usuario.
+    return true
 }
 
 function isMonthlyStale(userData, info, now = new Date()) {
     const month = typeof now === "string" ? now : getMadridMonth(now)
     if (userData?.monthlyPeriod) return String(userData.monthlyPeriod) !== month
-    if (info?.monthlyMessagesPeriod) return String(info.monthlyMessagesPeriod) !== month
-    return false
+    return true
 }
 
 function getEffectiveDailyMessages(userData, info, now = new Date()) {
-    if (isDailyStale(userData, info, now)) return 0
+    if (info && isDailyStale(userData, info, now)) return 0
     return Number(userData?.dailyMessages) || 0
 }
 
 function getEffectiveDailyXP(userData, info, now = new Date()) {
-    if (isDailyStale(userData, info, now)) return 0
+    if (info && isDailyStale(userData, info, now)) return 0
     return Number(userData?.dailyXP) || 0
 }
 
 function getEffectiveMonthlyMessages(userData, info, now = new Date()) {
-    if (isMonthlyStale(userData, info, now)) return 0
+    if (info && isMonthlyStale(userData, info, now)) return 0
     return Number(userData?.monthlyMessages) || 0
 }
 
 function getEffectiveMonthlyXP(userData, info, now = new Date()) {
-    if (isMonthlyStale(userData, info, now)) return 0
+    if (info && isMonthlyStale(userData, info, now)) return 0
     return Number(userData?.monthlyXP) || 0
 }
 
@@ -341,10 +341,10 @@ async function grantRecordInner(client, guild, resolvedGuildId, userId, found, t
             const month = getMadridMonth(new Date())
             dailyStale = beforeUser.dailyPeriod
                 ? String(beforeUser.dailyPeriod) !== today
-                : (fresh?.info?.dailyMessagesPeriod ? String(fresh.info.dailyMessagesPeriod) !== today : false)
+                : true
             monthlyStale = beforeUser.monthlyPeriod
                 ? String(beforeUser.monthlyPeriod) !== month
-                : (fresh?.info?.monthlyMessagesPeriod ? String(fresh.info.monthlyMessagesPeriod) !== month : false)
+                : true
             if (dailyStale) {
                 updates.$set[`users.${userId}.dailyXP`] = tier.xp
                 updates.$set[`users.${userId}.dailyPeriod`] = today
@@ -537,13 +537,10 @@ async function grantEconomyParticipation(client, guild, guildId, userId) {
 
 // Envía todos los desbloqueos pendientes de golpe en un solo mensaje.
 // unlocks: array de lo que devuelve grantRecord (con recordsChannel, member, etc.)
-// Envía todos los desbloqueos pendientes de golpe en un solo mensaje.
-// unlocks: array de lo que devuelve grantRecord (con recordsChannel, member, etc.)
 // Además avisa por DM al autor con la condición real de cada oculto (en
 // público solo sale el announce): así sabe por qué lo consiguió sin
 // filtrarlo. Si tiene los DMs cerrados no llega y no pasa nada.
 async function sendHiddenDm(client, userId, unlocks, avatarUrl = "") {
-    return true // Temporalmente desactivado: no se envían DMs de récords ocultos.
     const hidden = (unlocks || []).filter(u => u.category?.hidden || u.category?.id === "hidden")
     if (!hidden.length) return false
     try {
@@ -613,6 +610,37 @@ async function sendBatchedUnlocks({ client, userId, avatarUrl, unlocks }) {
     await sendHiddenDm(client, userId, unlocks, avatarUrl)
 }
 
+// --- Saneado único de la migración al reset lógico --------------------------
+// Plan puro (testeable sin DB) para backfill-periods.js: si el marcador del
+// usuario no es el periodo actual, sus contadores son brutos viejos y hay
+// que ponerlos a 0 sellando el marcador. Null si ya está al día.
+function planUserPeriodReset(userId, userData, today, month) {
+    const monthlyStale = String(userData?.monthlyPeriod || "") !== String(month)
+    const dailyStale = String(userData?.dailyPeriod || "") !== String(today)
+    if (!monthlyStale && !dailyStale) return null
+
+    const set = {}
+    if (monthlyStale) {
+        set[`users.${userId}.monthlyMessages`] = 0
+        set[`users.${userId}.monthlyXP`] = 0
+        set[`users.${userId}.monthlyPeriod`] = String(month)
+    }
+    if (dailyStale) {
+        set[`users.${userId}.dailyMessages`] = 0
+        set[`users.${userId}.dailyXP`] = 0
+        set[`users.${userId}.dailyPeriod`] = String(today)
+    }
+    return {
+        userId,
+        monthly: monthlyStale,
+        daily: dailyStale,
+        update: { $set: set },
+        zeroedMonthlyMessages: monthlyStale ? (Number(userData?.monthlyMessages) || 0) : 0,
+        zeroedMonthlyXP: monthlyStale ? (Number(userData?.monthlyXP) || 0) : 0,
+        zeroedDailyMessages: dailyStale ? (Number(userData?.dailyMessages) || 0) : 0,
+    }
+}
+
 module.exports = {
     getMadridDay,
     getMadridMonth,
@@ -644,6 +672,7 @@ module.exports = {
     buildRecordResetUpdate,
     PROGRESS_FIELDS,
     planUserReset,
+    planUserPeriodReset,
     sendHiddenDm,
     sendBatchedUnlocks,
 }

@@ -21,8 +21,7 @@ const startTime = Date.now()
 
 const memberCleanupInterval = 6 * 60 * 60 * 1000
 const memberCleanupBatchSize = 500
-const monthlyLogChannelId = "1127922884568957010"
-const importantLogThreadId = "1547719103169564783"
+const monthlyLogChannelId = "1160813323655331850"
 const staffRoleIds = new Set([
     "1106553480803516437",
     "1107345436492185753",
@@ -215,53 +214,97 @@ function getSpanishMonthName(period) {
     }).format(new Date(`${period}-02T12:00:00Z`))
 }
 
-function getMonthlySnapshot(server, members) {
+function getMonthlySnapshot(server, members, period) {
+    // Snapshot del mes que acaba (`period`): solo cuenta la actividad cuyo
+    // marcador es ese mes. Quien no habló en ese mes tiene el bruto viejo en
+    // DB (el reset es lógico, nunca se pone a 0) y debe valer 0 aquí; si no,
+    // el top de noviembre saldría con el XP de septiembre de los inactivos.
+    // Tras el fix de stale, quien estuvo activo ese mes tiene el marcador.
     const users = Object.entries(server.users || {})
-        .map(([id, data]) => ({ id, data, member: members.get(id) }))
-        .filter(user => (user.data.monthlyXP || 0) > 0)
+        .map(([id, data]) => {
+            const inPeriod = data?.monthlyPeriod
+                ? String(data.monthlyPeriod) === String(period)
+                : false
+            return {
+                id, data, member: members.get(id),
+                monthlyXP: inPeriod ? (Number(data.monthlyXP) || 0) : 0,
+                monthlyMessages: inPeriod ? (Number(data.monthlyMessages) || 0) : 0,
+            }
+        })
+        .filter(user => user.monthlyXP > 0)
 
     users.sort((a, b) =>
-        (b.data.monthlyXP || 0) - (a.data.monthlyXP || 0)
-        || (b.data.monthlyMessages || 0) - (a.data.monthlyMessages || 0))
+        b.monthlyXP - a.monthlyXP
+        || b.monthlyMessages - a.monthlyMessages)
     const staff = users.filter(user => user.member?.roles.cache.some(role => staffRoleIds.has(role.id)))
     const membersTop = users.filter(user => !staff.includes(user))
     const serialize = entries => entries.slice(0, 10).map(user => ({
         id: user.id,
         level: client.globalTools.getLevel(user.data.xp || 0, server.settings),
-        xp: user.data.monthlyXP || 0,
-        messages: user.data.monthlyMessages || 0
+        xp: user.monthlyXP,
+        messages: user.monthlyMessages
     }))
 
-    return { staff: serialize(staff), members: serialize(membersTop) }
+    return {
+        staff: serialize(staff),
+        members: serialize(membersTop),
+        totals: { staff: staff.length, members: membersTop.length },
+    }
+}
+
+function getNextPeriod(period) {
+    const [yearPart, monthPart] = String(period).split("-")
+    let year = Number(yearPart)
+    let month = Number(monthPart) + 1
+    if (month === 13) {
+        month = 1
+        year++
+    }
+    return `${year}-${String(month).padStart(2, "0")}`
 }
 
 async function logMonthlyTop(guild, snapshot, period) {
-    const [channel, thread] = await Promise.all([
-        client.channels.fetch(monthlyLogChannelId).catch(() => null),
-        client.channels.fetch(importantLogThreadId).catch(() => null)
-    ])
-    const destinations = [channel, thread]
-        .filter(destination => destination?.guild?.id === guild.id && destination.isTextBased())
-        .filter((destination, index, all) => all.findIndex(item => item.id === destination.id) === index)
-    if (destinations.length < 2) return false
+    const channel = await client.channels.fetch(monthlyLogChannelId).catch(() => null)
+    if (!channel || channel.guild?.id !== guild.id || !channel.isTextBased()) return false
 
     const formatTop = (title, entries) => {
         const lines = entries.map((user, index) =>
             `${index + 1}. <@${user.id}> - Nivel ${user.level} - **${client.globalTools.commafy(user.xp)} XP** - ${client.globalTools.commafy(user.messages)} mensajes`)
-        return [`### ${title}`, lines.length ? lines.join("\n") : "-# Sin mensajes registrados"].join("\n")
+        return [`### ${title}`, lines.length ? lines.join("\n") : "-# Sin actividad registrada"].join("\n")
     }
-    const monthName = getSpanishMonthName(period)
+    const capitalize = text => text ? text.charAt(0).toUpperCase() + text.slice(1) : text
+    const monthName = capitalize(getSpanishMonthName(period))
+    const nextMonthName = capitalize(getSpanishMonthName(getNextPeriod(period)))
+    const staffCount = Number(snapshot.totals?.staff) || (snapshot.staff || []).length
+    const memberCount = Number(snapshot.totals?.members) || (snapshot.members || []).length
 
-    const message = {
-        content: [
-            `## Registro mensual - ${monthName}`,
-            formatTop("Top 10 Staff", snapshot.staff),
-            formatTop("Top 10 Miembros", snapshot.members)
-        ].join("\n\n"),
-        allowedMentions: { parse: [] }
+    const separator = () => new Discord.SeparatorBuilder()
+        .setDivider(true)
+        .setSpacing(Discord.SeparatorSpacingSize.Small)
+    const text = content => new Discord.TextDisplayBuilder().setContent(content)
+    const container = new Discord.ContainerBuilder()
+        .setAccentColor(0x8ecae6)
+        .addTextDisplayComponents(text(`# 📋 Registro mensual - ${monthName}`))
+        .addSeparatorComponents(separator())
+        .addTextDisplayComponents(text(formatTop("Staff más activos", snapshot.staff || [])))
+        .addSeparatorComponents(separator())
+        .addTextDisplayComponents(text(formatTop("Miembros más activos", snapshot.members || [])))
+        .addSeparatorComponents(separator())
+        .addTextDisplayComponents(text(
+            `-# Cierre de ${monthName} - ${staffCount} staff y ${memberCount} miembros con actividad - Contadores a 0 para ${nextMonthName}`
+        ))
+
+    try {
+        await channel.send({
+            components: [container],
+            flags: Discord.MessageFlags.IsComponentsV2,
+            allowedMentions: { parse: [] },
+        })
+        return true
+    } catch (error) {
+        console.warn(`Could not send monthly top for ${guild.id} (${period}):`, error.message)
+        return false
     }
-    const results = await Promise.allSettled(destinations.map(destination => destination.send(message)))
-    return results.every(result => result.status === "fulfilled")
 }
 
 const monthlyMaintenanceLocks = new Set()
@@ -320,7 +363,7 @@ async function processMonthlyMessages(guild, knownServer, knownMembers) {
         // sin flipear: son los correctos para el top).
         const members = knownMembers || await fetchMembersForMaintenance(guild)
         if (!members) return { dailyReset, monthlyReset }
-        const monthlyTop = getMonthlySnapshot(server, members)
+        const monthlyTop = getMonthlySnapshot(server, members, previousPeriod)
 
         // El reset NO depende del log: se guarda siempre y el anuncio es
         // best-effort (antes, si fallaba un destino, el mes no reseteaba

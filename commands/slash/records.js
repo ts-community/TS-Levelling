@@ -81,6 +81,12 @@ function effectivePeriodValue(userData, info, kind) {
                 if (String(userData.dailyPeriod) !== today) return 0
             } else if (info?.dailyMessagesPeriod) {
                 if (String(info.dailyMessagesPeriod) !== today) return 0
+                // Sin marcador propio no hay prueba de actividad de hoy.
+                return 0
+            } else if (info) {
+                // Hay doc de server pero ni usuario ni global tienen marcador:
+                // el valor es anterior al reset lógico, no es de hoy.
+                return 0
             }
             return Number(userData?.dailyMessages) || 0
         }
@@ -93,6 +99,10 @@ function effectivePeriodValue(userData, info, kind) {
             if (String(userData.monthlyPeriod) !== month) return 0
         } else if (info?.monthlyMessagesPeriod) {
             if (String(info.monthlyMessagesPeriod) !== month) return 0
+            // Sin marcador propio no hay prueba de actividad este mes.
+            return 0
+        } else if (info) {
+            return 0
         }
         return Number(userData?.monthlyMessages) || 0
     } catch {
@@ -106,10 +116,14 @@ function getProgress(record, userData, member, commafy, info) {
         return makeProgress(Number(userData?.messages) || 0, record.tiers, v => commafy(v))
     }
     if (type === "messages_monthly") {
-        return makeProgress(effectivePeriodValue(userData, info, "monthly"), record.tiers, v => commafy(v))
+        const progress = makeProgress(effectivePeriodValue(userData, info, "monthly"), record.tiers, v => commafy(v))
+        progress.maximumLabel = commafy(Math.max(Number(userData?.monthlyMessagesMax) || 0, Number(userData?.monthlyMessages) || 0))
+        return progress
     }
     if (type === "messages_daily") {
-        return makeProgress(effectivePeriodValue(userData, info, "daily"), record.tiers, v => commafy(v))
+        const progress = makeProgress(effectivePeriodValue(userData, info, "daily"), record.tiers, v => commafy(v))
+        progress.maximumLabel = commafy(Math.max(Number(userData?.dailyMessagesMax) || 0, Number(userData?.dailyMessages) || 0))
+        return progress
     }
     if (type === "member_tenure") {
         if (!member?.joinedTimestamp) return null
@@ -265,6 +279,14 @@ function buildRecordBlock(record, unlockedIds, progress, commafy, lineWidth = PR
     // Algunos récords miden el avance en fases propias (p. ej. Ruta completa:
     // 5 canales con un solo tier de recompensa).
     const total = progress?.phasesTotal ?? tiers.length
+    // Los tiers ya desbloqueados (flags) cuentan aunque el periodo en curso
+    // esté a 0: el récord es de una sola vez (el XP no se repite) y lo hecho
+    // queda hecho. El progreso numérico sigue siendo el del periodo actual
+    // hacia el siguiente objetivo.
+    const flagCompleted = Math.min(
+        tiers.filter(t => unlockedIds.has(`${record.id}:${t.threshold}`)).length,
+        total,
+    )
     let completed
     let currentTier
     if (progress) {
@@ -272,7 +294,7 @@ function buildRecordBlock(record, unlockedIds, progress, commafy, lineWidth = PR
             completed = total
             currentTier = tiers[tiers.length - 1]
         } else {
-            completed = progress.completed
+            completed = Math.max(progress.completed, flagCompleted)
             currentTier = progress.tier
         }
     } else {
@@ -281,6 +303,7 @@ function buildRecordBlock(record, unlockedIds, progress, commafy, lineWidth = PR
     }
 
     const allDone = completed >= total
+    if (allDone && progress?.maximumLabel) currentTier = tiers[tiers.length - 1]
     const phaseWord = total === 1 ? "fase" : "fases"
 
     const lines = [allDone
@@ -292,22 +315,25 @@ function buildRecordBlock(record, unlockedIds, progress, commafy, lineWidth = PR
         target: 1,
         targetLabel: commafy(1),
     } : progress
-    const progressLine = fitProgressLine(record, binaryProgress, currentTier, commafy, lineWidth)
+    const displayProgress = allDone && progress?.maximumLabel
+        ? { ...progress, currentLabel: progress.maximumLabel, target: currentTier.threshold, targetLabel: commafy(currentTier.threshold) }
+        : binaryProgress
+    const progressLine = fitProgressLine(record, displayProgress, currentTier, commafy, lineWidth)
     lines.push(allDone ? `-# ~~${progressLine}~~` : `-# ${progressLine}`)
     return lines.join("\n")
 }
 
-// Los completados van arriba; el resto por dificultad (el último umbral
-// es la meta real del récord). Así se ve de un vistazo lo conseguido.
+// Los completados van arriba; el resto en el orden del config
+// (config/records.js manda: lo que reordenes allí se ve aquí).
+// Así se ve de un vistazo lo conseguido sin romper tu orden.
 function sortRecordsByProgress(category, unlockedIds) {
     const isDone = r => r.tiers.every(t => unlockedIds.has(`${r.id}:${t.threshold}`))
+    const order = new Map(category.records.map((r, i) => [r.id, i]))
     return [...category.records].sort((a, b) => {
         const ad = isDone(a) ? 0 : 1
         const bd = isDone(b) ? 0 : 1
         if (ad !== bd) return ad - bd
-        const aDifficulty = a.tiers[a.tiers.length - 1]?.threshold || 0
-        const bDifficulty = b.tiers[b.tiers.length - 1]?.threshold || 0
-        return bDifficulty - aDifficulty
+        return (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)
     })
 }
 
@@ -432,16 +458,17 @@ function buildInfoTexts(userData, member, unlockedIds, tools, info) {
     const totalNum = num(tools.getMessages(userData))
     const monthlyNum = num(tools.getMonthlyMessages(userData, info))
     const dailyNum = num(tools.getDailyMessages(userData, info))
+    const monthlyMax = Math.max(num(userData?.monthlyMessagesMax), num(userData?.monthlyMessages))
+    const dailyMax = Math.max(num(userData?.dailyMessagesMax), num(userData?.dailyMessages))
     const sentNum = num(userData?.reactionsSent)
     const receivedNum = num(userData?.reactionsReceived)
     const countingNum = num(userData?.countingSent)
+    const pokemonNum = num(userData?.pokemonCaught)
     const streakRaw = userData?.streak
     const streakDays = typeof streakRaw === "object" ? Number(streakRaw?.current ?? streakRaw?.days) || 0 : Number(streakRaw) || 0
     const streakMax = typeof streakRaw === "object"
         ? Number(streakRaw?.max ?? streakRaw?.maximum ?? streakRaw?.best) || streakDays
         : streakDays
-    const streak = `${show(streakDays)} ${streakDays === 1 ? "día" : "días"}`
-    const maxStreak = `${show(streakMax)} ${streakMax === 1 ? "día" : "días"}`
     const voiceMinutes = num(userData?.voiceMinutes) + getActiveVoiceMinutes(userData, member)
     const voice = formatVoiceTime(voiceMinutes)
     const voiceShort = formatVoiceTimeShort(voiceMinutes)
@@ -452,33 +479,53 @@ function buildInfoTexts(userData, member, unlockedIds, tools, info) {
         `- ${emoji} **${shortLabel}:** ${show(value)} ${value === 1 ? "mensaje" : "mensajes"}`,
         `- ${emoji} **${label}:** ${show(value)}`,
     )
+    const msgLineWithMaximum = (emoji, label, shortLabel, value, maximum) => {
+        const currentUnit = value === 1 ? "mensaje" : "mensajes"
+        const currentShortUnit = value === 1 ? "msg" : "msgs"
+        const currentLabel = compactProgressLabel(show(value))
+        const maximumLabel = compactProgressLabel(show(maximum))
+        return fitInfoLine(
+            `- ${emoji} **${label}:** ${currentLabel} ${currentUnit} (máx. ${maximumLabel})`,
+            `- ${emoji} **${label}:** ${currentLabel} ${currentShortUnit} (máx. ${maximumLabel})`,
+            `- ${emoji} **${shortLabel}:** ${currentLabel} ${currentShortUnit} (máx. ${maximumLabel})`,
+            `- ${emoji} **${shortLabel}:** ${currentLabel} (máx. ${maximumLabel})`,
+        )
+    }
+    const streakLineWithMaximum = fitInfoLine(
+        `- 🔥 **Racha:** ${show(streakDays)} ${streakDays === 1 ? "día" : "días"} (máx. ${show(streakMax)} ${streakMax === 1 ? "día" : "días"})`,
+        `- 🔥 **Racha:** ${show(streakDays)} d (máx. ${show(streakMax)} d)`,
+        `- 🔥 **Racha:** ${show(streakDays)} (máx. ${show(streakMax)})`,
+    )
     const groups = [
         [
             `### 💬 Actividad`,
-            msgLine(E_MSG, "Mensajes totales", "Total", totalNum),
-            msgLine("📅", "Mensajes este mes", "Este mes", monthlyNum),
-            msgLine("☀️", "Mensajes diarios", "Diarios", dailyNum),
+            msgLine("💬", "Mensajes totales", "Total", totalNum),
+            msgLineWithMaximum("📅", "Mensajes este mes", "Este mes", monthlyNum, monthlyMax),
+            msgLineWithMaximum("☀️", "Mensajes diarios", "Diarios", dailyNum, dailyMax),
         ].join("\n"),
         [
             `### 🤝 Comunidad`,
+            `- 🏅 **Antigüedad:** ${tenure}`,
+            streakLineWithMaximum,
             // La etiqueta es fija ("Reacciones enviadas/recibidas"): lo que
             // se adapta es la unidad (reacciones → reaccs → nada).
-            fitInfoLine(
-                `- ❤️ **Reacciones enviadas:** ${show(sentNum)} ${sentNum === 1 ? "reacción" : "reacciones"}`,
-                `- ❤️ **Reacciones enviadas:** ${show(sentNum)} reaccs`,
-                `- ❤️ **Reacciones enviadas:** ${show(sentNum)}`,
-            ),
             fitInfoLine(
                 `- 💘 **Reacciones recibidas:** ${show(receivedNum)} ${receivedNum === 1 ? "reacción" : "reacciones"}`,
                 `- 💘 **Reacciones recibidas:** ${show(receivedNum)} reaccs`,
                 `- 💘 **Reacciones recibidas:** ${show(receivedNum)}`,
             ),
-            `- 🔥 **Racha actual:** ${streak}`,
-            `- 🏆 **Racha máxima:** ${maxStreak}`,
-            `- 🏅 **Antigüedad:** ${tenure}`,
+            fitInfoLine(
+                `- ❤️ **Reacciones enviadas:** ${show(sentNum)} ${sentNum === 1 ? "reacción" : "reacciones"}`,
+                `- ❤️ **Reacciones enviadas:** ${show(sentNum)} reaccs`,
+                `- ❤️ **Reacciones enviadas:** ${show(sentNum)}`,
+            ),
         ].join("\n"),
         [
             `### 🧭 Canales`,
+            fitInfoLine(
+                `- 💥 **Pokemons capturados:** ${show(pokemonNum)} ${pokemonNum === 1 ? "pokemon" : "pokemons"}`,
+                `- 💥 **Pokemons capturados:** ${show(pokemonNum)}`,
+            ),
             fitInfoLine(
                 `- 🔢 **Números en counting:** ${show(countingNum)} ${countingNum === 1 ? "número" : "números"}`,
                 `- 🔢 **Números en counting:** ${show(countingNum)} ${countingNum === 1 ? "núm." : "núms."}`,
@@ -663,7 +710,7 @@ async run(client, int, tools) {
             await interaction.deferUpdate()
             const target = order.indexOf(interaction.values?.[0])
             if (target !== -1) pageNumber = target
-            await sendPage(pageNumber, interaction, interaction.member || member)
+            await sendPage(pageNumber, interaction, member)
         } catch (error) {
             console.warn(`Could not update records board for ${int.guild?.id}:`, error.message)
         } finally {

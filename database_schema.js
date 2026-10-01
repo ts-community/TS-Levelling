@@ -130,7 +130,7 @@ Object.entries(settings).forEach(x => {
 
 const schema = { 
     _id: String,
-    users: { type: Object }, // xp, monthlyXP, dailyXP, cooldown, hidden, records { "<recordId>:<threshold>": true }, + progreso: streak {current,max,lastDay}, reactionsSent, reactionsReceived, channels, countingSent, pokemonCaught, voiceJoined, voiceMinutes + contadores: messages, monthlyMessages, dailyMessages
+    users: { type: Object }, // xp, monthlyXP, dailyXP, cooldown, hidden, records { "<recordId>:<threshold>": true }, + progreso: streak {current,max,lastDay}, reactionsSent, reactionsReceived, channels, countingSent, pokemonCaught, voiceJoined, voiceMinutes + contadores: messages, monthlyMessages, dailyMessages, monthlyMessagesMax, dailyMessagesMax
     settings: settingsObj,
     info: {
         lastUpdate: { type: Number, default: 0 },

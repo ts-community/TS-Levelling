@@ -31,7 +31,7 @@ const categories = [
             {
                 id: "messages",
                 label: "Mensajes",
-                emoji: MESSAGES_EMOJI,
+                emoji: "💬",
                 mechanic: { type: "messages_total" },
                 unit: "mensajes",
                 unitOne: "mensaje",
@@ -67,9 +67,9 @@ const categories = [
                 unitOne: "mensaje",
                 suffix: "en un día",
                 tiers: [
-                    { threshold: 500, xp: 1000, name: "Día activo", desc: "Envía 500 mensajes en el servidor durante un mismo día." },
-                    { threshold: 1000, xp: 3000, name: "Jornada", desc: "Envía 1.000 mensajes en el servidor durante un mismo día." },
-                    { threshold: 2000, xp: 5000, name: "Maratón", desc: "Envía 2.000 mensajes en el servidor durante un mismo día." },
+                    { threshold: 200, xp: 1000, name: "Día activo", desc: "Envía 200 mensajes en el servidor durante un mismo día." },
+                    { threshold: 500, xp: 3000, name: "Jornada", desc: "Envía 500 mensajes en el servidor durante un mismo día." },
+                    { threshold: 1000, xp: 5000, name: "Maratón", desc: "Envía 1.000 mensajes en el servidor durante un mismo día." },
                 ]
             },
             {
@@ -86,7 +86,7 @@ const categories = [
                         threshold: 1,
                         xp: 1000,
                         name: "Contacto",
-                        desc: `Menciona o responde a un mensaje de <@${CHANNELS.iaBotId}>.`
+                        desc: `Menciona o responde a un mensaje del bot de IA del servidor, <@${CHANNELS.iaBotId}>.`
                     },
                 ]
             },
@@ -100,31 +100,17 @@ const categories = [
         desc: "Reacciones, rachas y antigüedad.",
         records: [
             {
-                id: "reactions_sent",
-                label: "Reacciones",
-                emoji: "❤️",
-                mechanic: { type: "reactions_sent" },
-                unit: "reacciones",
-                unitOne: "reacción",
-                suffix: "",
+                id: "tenure",
+                label: "Antigüedad",
+                emoji: "🏅",
+                mechanic: { type: "member_tenure", unit: "years" },
+                unit: "años",
+                unitOne: "año",
+                suffix: "en el servidor",
                 tiers: [
-                    { threshold: 10, xp: 1000, name: "Primer gesto", desc: "Envía 10 reacciones a mensajes del servidor." },
-                    { threshold: 50, xp: 3000, name: "Fiel apoyo", desc: "Envía 50 reacciones a mensajes del servidor." },
-                    { threshold: 100, xp: 5000, name: "Gran apoyo", desc: "Envía 100 reacciones a mensajes del servidor." },
-                ]
-            },
-            {
-                id: "reactions_received",
-                label: "Reacciones recibidas",
-                emoji: "💘",
-                mechanic: { type: "reactions_received" },
-                unit: "reacciones",
-                unitOne: "reacción",
-                suffix: "recibidas",
-                tiers: [
-                    { threshold: 10, xp: 1000, name: "Apreciado", desc: "Recibe 10 reacciones en tus mensajes." },
-                    { threshold: 50, xp: 5000, name: "Muy valorado", desc: "Recibe 50 reacciones en tus mensajes." },
-                    { threshold: 100, xp: 15000, name: "Favorito", desc: "Recibe 100 reacciones en tus mensajes." },
+                    { threshold: 1, xp: 5000, name: "Veterano", desc: "Lleva 1 año en la comunidad." },
+                    { threshold: 2, xp: 15000, name: "Histórico", desc: "Lleva 2 años en la comunidad." },
+                    { threshold: 3, xp: 30000, name: "Institución", desc: "Lleva 3 años en la comunidad." },
                 ]
             },
             {
@@ -142,19 +128,33 @@ const categories = [
                 ]
             },
             {
-                id: "tenure",
-                label: "Antigüedad",
-                emoji: "🏅",
-                mechanic: { type: "member_tenure", unit: "years" },
-                unit: "años",
-                unitOne: "año",
-                suffix: "en el servidor",
+                id: "reactions_received",
+                label: "Reacciones recibidas",
+                emoji: "💘",
+                mechanic: { type: "reactions_received" },
+                unit: "reacciones",
+                unitOne: "reacción",
+                suffix: "recibidas",
                 tiers: [
-                    { threshold: 1, xp: 5000, name: "Veterano", desc: "Lleva 1 año en la comunidad." },
-                    { threshold: 2, xp: 15000, name: "Histórico", desc: "Lleva 2 años en la comunidad." },
-                    { threshold: 3, xp: 30000, name: "Institución", desc: "Lleva 3 años en la comunidad." },
+                    { threshold: 10, xp: 1000, name: "Apreciado", desc: "Recibe 10 reacciones en tus mensajes." },
+                    { threshold: 50, xp: 5000, name: "Muy valorado", desc: "Recibe 50 reacciones en tus mensajes." },
+                    { threshold: 100, xp: 15000, name: "Favorito", desc: "Recibe 100 reacciones en tus mensajes." },
                 ]
             },
+            {
+                id: "reactions_sent",
+                label: "Reacciones",
+                emoji: "❤️",
+                mechanic: { type: "reactions_sent" },
+                unit: "reacciones",
+                unitOne: "reacción",
+                suffix: "",
+                tiers: [
+                    { threshold: 10, xp: 1000, name: "Primer gesto", desc: "Envía 10 reacciones a mensajes del servidor." },
+                    { threshold: 50, xp: 3000, name: "Fiel apoyo", desc: "Envía 50 reacciones a mensajes del servidor." },
+                    { threshold: 100, xp: 5000, name: "Gran apoyo", desc: "Envía 100 reacciones a mensajes del servidor." },
+                ]
+            }
         ]
     },
 
@@ -164,6 +164,71 @@ const categories = [
         emoji: "🧭",
         desc: "Explora el servidor y participa en sus sistemas.",
         records: [
+            {
+                id: "pokemon",
+                label: "Poketwo",
+                emoji: "💥",
+                mechanic: {
+                    type: "pokemon_caught",
+                    channelId: CHANNELS.poketwoChannelId,
+                    botId: CHANNELS.poketwoBotId
+                },
+                unit: "pokemons",
+                unitOne: "pokemon",
+                suffix: "capturados",
+                tiers: [
+                    {
+                        threshold: 10,
+                        xp: 3000,
+                        name: "Aprendiz",
+                        desc: `Captura 10 pokemons en el canal <#${CHANNELS.poketwoChannelId}>.`
+                    },
+                    {
+                        threshold: 50,
+                        xp: 10000,
+                        name: "Entrenador",
+                        desc: `Captura 50 pokemons en el canal <#${CHANNELS.poketwoChannelId}>.`
+                    },
+                    {
+                        threshold: 200,
+                        xp: 30000,
+                        name: "Maestro",
+                        desc: `Captura 200 pokemons en el canal <#${CHANNELS.poketwoChannelId}>.`
+                    },
+                ]
+            },
+            {
+                id: "counting",
+                label: "Counting",
+                emoji: "🔢",
+                mechanic: {
+                    type: "counting_numbers",
+                    channelId: CHANNELS.countingChannelId
+                },
+                unit: "números",
+                unitOne: "número",
+                suffix: "en counting",
+                tiers: [
+                    {
+                        threshold: 10,
+                        xp: 1000,
+                        name: "El 10",
+                        desc: `Completa 10 números en el canal <#${CHANNELS.countingChannelId}>.`
+                    },
+                    {
+                        threshold: 100,
+                        xp: 5000,
+                        name: "El 100",
+                        desc: `Completa 100 números en el canal <#${CHANNELS.countingChannelId}>.`
+                    },
+                    {
+                        threshold: 500,
+                        xp: 15000,
+                        name: "El 500",
+                        desc: `Completa 500 números en el canal <#${CHANNELS.countingChannelId}>.`
+                    },
+                ]
+            },
             {
                 id: "distinct_channels",
                 label: "Canales distintos",
@@ -197,72 +262,7 @@ const categories = [
                         desc: `Envía un mensaje en el canal <#${CHANNELS.economyChannelId}>.`
                     },
                 ]
-            },
-            {
-                id: "pokemon",
-                label: "Pokémon",
-                emoji: "⚾",
-                mechanic: {
-                    type: "pokemon_caught",
-                    channelId: CHANNELS.poketwoChannelId,
-                    botId: CHANNELS.poketwoBotId
-                },
-                unit: "pokémon",
-                unitOne: "pokémon",
-                suffix: "capturados",
-                tiers: [
-                    {
-                        threshold: 10,
-                        xp: 3000,
-                        name: "Aprendiz",
-                        desc: `Captura 10 pokémon en el canal <#${CHANNELS.poketwoChannelId}>.`
-                    },
-                    {
-                        threshold: 50,
-                        xp: 10000,
-                        name: "Entrenador",
-                        desc: `Captura 50 pokémon en el canal <#${CHANNELS.poketwoChannelId}>.`
-                    },
-                    {
-                        threshold: 200,
-                        xp: 30000,
-                        name: "Maestro",
-                        desc: `Captura 200 pokémon en el canal <#${CHANNELS.poketwoChannelId}>.`
-                    },
-                ]
-            },
-            {
-                id: "counting",
-                label: "Counting",
-                emoji: "🔢",
-                mechanic: {
-                    type: "counting_numbers",
-                    channelId: CHANNELS.countingChannelId
-                },
-                unit: "números",
-                unitOne: "número",
-                suffix: "en counting",
-                tiers: [
-                    {
-                        threshold: 10,
-                        xp: 1000,
-                        name: "El 10",
-                        desc: `Envía 10 números correctos en el canal <#${CHANNELS.countingChannelId}>.`
-                    },
-                    {
-                        threshold: 100,
-                        xp: 5000,
-                        name: "El 100",
-                        desc: `Envía 100 números correctos en el canal <#${CHANNELS.countingChannelId}>.`
-                    },
-                    {
-                        threshold: 500,
-                        xp: 15000,
-                        name: "El 500",
-                        desc: `Envía 500 números correctos en el canal <#${CHANNELS.countingChannelId}>.`
-                    },
-                ]
-            },
+            }
         ]
     },
 
@@ -272,51 +272,6 @@ const categories = [
         emoji: "🎙️",
         desc: "Tiempo en voz y presencia en los canales de audio.",
         records: [
-            {
-                id: "voice_general",
-                label: "General de voz",
-                emoji: "🔊",
-                mechanic: {
-                    type: "voice_join_channel",
-                    channelId: CHANNELS.voiceGeneralId
-                },
-                tiers: [
-                    {
-                        threshold: 1,
-                        xp: 1000,
-                        name: "Al habla",
-                        desc: `Entra al canal de voz <#${CHANNELS.voiceGeneralId}>.`
-                    },
-                ]
-            },
-            {
-                id: "voice_all_fixed",
-                label: "Tour de voz",
-                emoji: "🎧",
-                mechanic: {
-                    type: "voice_join_all_fixed",
-                    fixedChannelIds: [
-                        CHANNELS.voiceGeneralId,
-                        CHANNELS.voiceMusicaId,
-                        CHANNELS.voiceDuoId,
-                        CHANNELS.voiceTrioId,
-                        CHANNELS.voiceAmistosoId,
-                    ],
-                    afkChannelId: CHANNELS.voiceAfkId,
-                    excludedChannelIds: [CHANNELS.voiceEventosId],
-                },
-                unit: "canales",
-                unitOne: "canal",
-                suffix: "distintos",
-                tiers: [
-                    {
-                        threshold: 1,
-                        xp: 3000,
-                        name: "De gira",
-                        desc: "Entra en los 5 canales fijos de voz del servidor."
-                    },
-                ]
-            },
             {
                 id: "voice_time",
                 label: "Tiempo en voz",
@@ -352,6 +307,51 @@ const categories = [
                     },
                 ]
             },
+            {
+                id: "voice_all_fixed",
+                label: "Tour de voz",
+                emoji: "🎧",
+                mechanic: {
+                    type: "voice_join_all_fixed",
+                    fixedChannelIds: [
+                        CHANNELS.voiceGeneralId,
+                        CHANNELS.voiceMusicaId,
+                        CHANNELS.voiceDuoId,
+                        CHANNELS.voiceTrioId,
+                        CHANNELS.voiceAmistosoId,
+                    ],
+                    afkChannelId: CHANNELS.voiceAfkId,
+                    excludedChannelIds: [CHANNELS.voiceEventosId],
+                },
+                unit: "canales",
+                unitOne: "canal",
+                suffix: "distintos",
+                tiers: [
+                    {
+                        threshold: 1,
+                        xp: 3000,
+                        name: "De gira",
+                        desc: "Entra en los 5 canales fijos de voz del servidor."
+                    },
+                ]
+            },
+            {
+                id: "voice_general",
+                label: "General de voz",
+                emoji: "🔊",
+                mechanic: {
+                    type: "voice_join_channel",
+                    channelId: CHANNELS.voiceGeneralId
+                },
+                tiers: [
+                    {
+                        threshold: 1,
+                        xp: 1000,
+                        name: "Al habla",
+                        desc: `Entra al canal de voz <#${CHANNELS.voiceGeneralId}>.`
+                    },
+                ]
+            }
         ]
     },
 
@@ -382,22 +382,17 @@ const categories = [
                 ]
             },
             {
-                id: "night_owl",
-                label: "Ritmo nocturno",
-                emoji: "🦉",
-                mechanic: {
-                    type: "night_message",
-                    startHour: 4,
-                    endHour: 5,
-                    timezone: "Europe/Madrid"
-                },
-                mystery: "Hay horas que casi nadie ve…",
+                id: "web_easter",
+                label: "Easter egg",
+                emoji: "🌐",
+                mechanic: { type: "web_easter_egg" },
+                mystery: "Hay más mundo fuera de aquí…",
                 tiers: [
                     {
                         threshold: 1,
-                        xp: 5000,
-                        name: "Insomnio",
-                        desc: "Envía un mensaje entre las 04:00 y las 05:00, hora española."
+                        xp: 30000,
+                        name: "Al otro lado",
+                        desc: "Encuentra el secreto escondido en la web del servidor."
                     },
                 ]
             },
@@ -420,21 +415,6 @@ const categories = [
                 ]
             },
             {
-                id: "web_easter",
-                label: "Easter egg",
-                emoji: "🌐",
-                mechanic: { type: "web_easter_egg" },
-                mystery: "Hay más mundo fuera de aquí…",
-                tiers: [
-                    {
-                        threshold: 1,
-                        xp: 30000,
-                        name: "Al otro lado",
-                        desc: "Encuentra el secreto escondido en la web."
-                    },
-                ]
-            },
-            {
                 id: "secret_word",
                 label: "Palabra secreta",
                 emoji: "🔮",
@@ -452,6 +432,26 @@ const categories = [
                     },
                 ]
             },
+            {
+                id: "night_owl",
+                label: "Ritmo nocturno",
+                emoji: "🦉",
+                mechanic: {
+                    type: "night_message",
+                    startHour: 4,
+                    endHour: 5,
+                    timezone: "Europe/Madrid"
+                },
+                mystery: "Hay horas que casi nadie ve…",
+                tiers: [
+                    {
+                        threshold: 1,
+                        xp: 5000,
+                        name: "Insomnio",
+                        desc: "Envía un mensaje entre las 04:00 y las 05:00, hora española."
+                    },
+                ]
+            }
         ]
     },
 ]

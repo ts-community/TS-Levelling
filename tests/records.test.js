@@ -47,12 +47,12 @@ test("tiers are sorted and have sane values", () => {
     }
 })
 
-test("records go from easiest to hardest within each category", () => {
+test("records follow the config order within each category", () => {
     const order = Object.fromEntries(records.categories.map(c => [c.id, c.records.map(r => r.id)]))
     assert.deepEqual(order.actividad, ["messages", "monthly_messages", "daily_messages", "talk_to"])
-    assert.deepEqual(order.comunidad, ["reactions_sent", "reactions_received", "streak", "tenure"])
-    assert.deepEqual(order.canales, ["distinct_channels", "economy_participation", "pokemon", "counting"])
-    assert.deepEqual(order.voz, ["voice_general", "voice_all_fixed", "voice_time"])
+    assert.deepEqual(order.comunidad, ["tenure", "streak", "reactions_received", "reactions_sent"])
+    assert.deepEqual(order.canales, ["pokemon", "counting", "distinct_channels", "economy_participation"])
+    assert.deepEqual(order.voz, ["voice_time", "voice_all_fixed", "voice_general"])
 })
 
 test("each page has its own accent color", () => {
@@ -222,7 +222,7 @@ test("progress numbers come from real data", () => {
     assert.equal(p.target, 1000)
 
     p = command.getProgress(byId.daily_messages, { dailyMessages: 60 }, null, commafy)
-    assert.equal(p.target, 500)
+    assert.equal(p.target, 200)
 
     p = command.getProgress(byId.reactions_received, { reactionsReceived: 12 }, null, commafy)
     assert.equal(p.target, 50)
@@ -377,26 +377,40 @@ test("completed records sort first and render struck through", () => {
     const category = records.categories.find(c => c.id === "actividad")
     // buildCategoryBlocks[0] es la cabecera; los récords empiezan en [1].
     const plain = command.buildCategoryBlocks(category, {}, null, new Set(), tools.commafy)
-    assert.ok(plain[1].includes("**Primeros pasos**"), "sin completar: el más difícil primero")
+    assert.ok(plain[1].includes("**Primeros pasos**"), "sin completar: el primero del config")
     assert.ok(!plain[1].includes("~~"), "sin completar: sin tachado")
 
     const withDone = command.buildCategoryBlocks(category, {}, null, new Set(["talk_to:1"]), tools.commafy)
     assert.ok(withDone[1].startsWith("### ~~🤖 **Contacto** - 1/1 fase~~"), "completado arriba aunque sea el más fácil")
-    assert.ok(withDone[1].includes("> ~~Menciona o responde a un mensaje de <@"), "descripción tachada")
+    assert.ok(withDone[1].includes("> ~~Menciona o responde a un mensaje del bot de ia"), "descripción tachada")
     assert.ok(withDone[1].includes("<:XP:1467192533812645939> **+1.000 XP**~~"), "recompensa tachada")
 })
 
-test("completed records keep difficulty order among themselves", () => {
+test("records render in config order when nothing is completed", () => {
+    // El orden visible lo manda config/records.js (p. ej. Poketwo antes que
+    // Counting aunque su umbral final sea menor).
+    const canales = records.categories.find(c => c.id === "canales")
+    const blocks = command.buildCategoryBlocks(canales, {}, null, new Set(), tools.commafy)
+    const titles = blocks.slice(1).map(b => b.split("\n")[0])
+    const pokeIdx = titles.findIndex(t => t.includes("Aprendiz"))
+    const countIdx = titles.findIndex(t => t.includes("El 10"))
+    assert.ok(pokeIdx !== -1 && countIdx !== -1 && pokeIdx < countIdx, "Poketwo antes que Counting")
+    const comunidad = records.categories.find(c => c.id === "comunidad")
+    const comBlocks = command.buildCategoryBlocks(comunidad, {}, null, new Set(), tools.commafy)
+    assert.ok(comBlocks[1].includes("Veterano"), "Antigüedad primera del config")
+})
+
+test("completed records keep config order among themselves", () => {
     const category = records.categories.find(c => c.id === "actividad")
-    // monthly (3 fases) + talk_to (1 fase) completados: el más difícil primero,
-    // y messages (sin completar) después aunque sea el más difícil del catálogo.
+    // monthly + talk_to completados: primero en orden del config,
+    // y messages (sin completar) después aunque abra la categoría.
     const ids = new Set([
         "monthly_messages:1000", "monthly_messages:2000", "monthly_messages:5000", "talk_to:1",
     ])
     // userData acorde a los flags: el progreso mensual también lo da por completo.
     const blocks = command.buildCategoryBlocks(category, { monthlyMessages: 6000 }, null, ids, tools.commafy)
-    assert.ok(blocks[1].includes("**Mes pleno**"), "completado más difícil primero")
-    assert.ok(blocks[2].includes("**Contacto**"), "completado más fácil segundo")
+    assert.ok(blocks[1].includes("**Mes pleno**"), "completado primero del config")
+    assert.ok(blocks[2].includes("**Contacto**"), "completado segundo del config")
     assert.ok(blocks[3].includes("**Primeros pasos**"), "sin completar después")
     assert.ok(!blocks[1].includes("?????") && blocks[1].includes("- 3/3 fases"), "título normal")
 })
@@ -460,11 +474,11 @@ test("info page shows record stats without faking missing data", () => {
     assert.ok(!stats.includes("-#"), "estadísticas sin pequeño")
     assert.ok(!stats.includes("General"), "sin grupo general")
     assert.ok(stats.includes("**Mensajes totales:** 10 mensajes"))
-    assert.ok(stats.includes("**Mensajes este mes:** 3 mensajes"))
-    assert.ok(stats.includes("**Mensajes diarios:** 7 mensajes"))
+    assert.ok(stats.includes("**Mensajes este mes:** 3 msgs (máx. 3)"))
+    assert.ok(stats.includes("**Mensajes diarios:** 7 msgs (máx. 7)"))
     assert.ok(stats.includes("**Reacciones enviadas:** 25 reacciones"))
     assert.ok(stats.includes("**Reacciones recibidas:** 0 reacciones"))
-    assert.ok(stats.includes("**Racha actual:** 0 días"))
+    assert.ok(stats.includes("**Racha:** 0 días (máx. 0 días)"))
     assert.ok(groups[0].includes("### 💬 Actividad"), "cabecera de actividad")
     assert.ok(groups[1].includes("### 🤝 Comunidad"), "cabecera de comunidad")
     assert.ok(groups[2].includes("### 🧭 Canales"), "cabecera de canales")
@@ -479,7 +493,7 @@ test("info page shows record stats without faking missing data", () => {
             streak: { current: 9 }, channels: { a: 1, b: 2 }, countingSent: 120, voiceMinutes: 900 },
         member, new Set(), tools)[0].join("\n")
     assert.ok(full.includes("**Reacciones recibidas:** 40 reacciones"))
-    assert.ok(full.includes("**Racha actual:** 9 días"))
+    assert.ok(full.includes("**Racha:** 9 días (máx. 9 días)"))
     assert.ok(!full.includes("**Canales con mensajes:**"))
     assert.ok(full.includes("**Números en counting:** 120 números"))
     assert.ok(full.includes("**Tiempo en voz:** 15 horas"))
@@ -495,8 +509,7 @@ test("info stats use singular and adapt the last word to fit mobile", () => {
     assert.ok(stats.includes("**Mensajes totales:** 1 mensaje"))
     assert.ok(stats.includes("**Reacciones enviadas:** 1 reacción"))
     assert.ok(stats.includes("**Reacciones recibidas:** 1 reacción"))
-    assert.ok(stats.includes("**Racha actual:** 1 día"))
-    assert.ok(stats.includes("**Racha máxima:** 1 día"))
+    assert.ok(stats.includes("**Racha:** 1 día (máx. 1 día)"))
     assert.ok(stats.includes("**Números en counting:** 1 número"))
     assert.ok(stats.includes("**Tiempo en voz:** 0 minutos"), "con 0 minutos, no 0 horas")
     // Con valores grandes la última palabra se acorta o se omite, sin saltos.
@@ -517,7 +530,7 @@ test("info stats use singular and adapt the last word to fit mobile", () => {
         { messages: 234, monthlyMessages: 40, countingSent: 0 }, null, new Set(), tools)
     const smallStats = small.join("\n")
     assert.ok(smallStats.includes("**Mensajes totales:** 234 mensajes"))
-    assert.ok(smallStats.includes("**Mensajes este mes:** 40 mensajes"))
+    assert.ok(smallStats.includes("**Mensajes este mes:** 40 msgs (máx. 40)"))
     assert.ok(smallStats.includes("**Números en counting:** 0 números"))
 })
 
@@ -578,5 +591,35 @@ test("pokemon progress comes from pokemonCaught", () => {
     assert.equal(p.target, 200)
     const block = command.buildRecordBlock(byId.pokemon, new Set(), command.getProgress(byId.pokemon, { pokemonCaught: 7 }, null, commafy), commafy)
     assert.ok(block.includes("**Aprendiz** - 0/3 fases"), block.split("\n")[0])
-    assert.ok(block.includes("📊 **7/10 pokémon**"), block.split("\n").at(-1))
+    assert.ok(block.includes("📊 **7/10 pokemons**"), block.split("\n").at(-1))
+})
+
+test("unlocked period tiers stay done when the new period starts at 0", () => {
+    const byId = Object.fromEntries(records.allRecords().map(({ record }) => [record.id, record]))
+    const commafy = tools.commafy
+    // Mes nuevo a 0 con la primera fase hecha en septiembre: 1/3, no 0/3.
+    // El progreso numérico sigue siendo el de octubre hacia el siguiente.
+    let block = command.buildRecordBlock(
+        byId.monthly_messages, new Set(["monthly_messages:1000"]),
+        command.getProgress(byId.monthly_messages, { monthlyMessages: 0 }, null, commafy), commafy)
+    assert.ok(block.includes("- 1/3 fases"), block.split("\n")[0])
+    assert.ok(!block.includes("~~"), "sin tachar: aún no está todo hecho")
+    // Día nuevo igual.
+    block = command.buildRecordBlock(
+        byId.daily_messages, new Set(["daily_messages:200"]),
+        command.getProgress(byId.daily_messages, { dailyMessages: 0 }, null, commafy), commafy)
+    assert.ok(block.includes("- 1/3 fases"), block.split("\n")[0])
+    // Todo desbloqueado y periodo a 0: 3/3 tachado.
+    block = command.buildRecordBlock(
+        byId.monthly_messages,
+        new Set(["monthly_messages:1000", "monthly_messages:2000", "monthly_messages:5000"]),
+        command.getProgress(byId.monthly_messages, { monthlyMessages: 0, monthlyMessagesMax: 6000 }, null, commafy), commafy)
+    assert.ok(block.includes("- 3/3 fases"), block.split("\n")[0])
+    assert.ok(block.includes("~~"), "todo hecho: tachado")
+    assert.ok(block.includes("📊 **6k/5k mensajes**"), "completado: muestra el máximo histórico")
+    // Racha: flag histórico de 30 días con racha actual de 2 también cuenta.
+    block = command.buildRecordBlock(
+        byId.streak, new Set(["streak:3", "streak:7", "streak:30"]),
+        command.getProgress(byId.streak, { streak: { current: 2, max: 30 } }, null, commafy), commafy)
+    assert.ok(block.includes("- 3/3 fases"), block.split("\n")[0])
 })

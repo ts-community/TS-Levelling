@@ -10,7 +10,7 @@ Date.now = () => 1_700_000_000_000
 const NOW = Date.now()
 
 // ---------------------------------------------------------------
-// Fake in-memory MongoDB model (dotted paths, $set/$inc/$unset)
+// Fake in-memory MongoDB model (dotted paths, $set/$inc/$max/$unset)
 // ---------------------------------------------------------------
 function deepClone(value) {
     return value === undefined ? value : JSON.parse(JSON.stringify(value))
@@ -84,6 +84,12 @@ function createFakeDb(overrides = {}) {
                     for (const [p, v] of Object.entries(data.$inc)) {
                         const current = getPath(doc, p)
                         setPath(doc, p, (current === undefined ? 0 : current) + v)
+                    }
+                }
+                if (data.$max) {
+                    for (const [p, v] of Object.entries(data.$max)) {
+                        const current = getPath(doc, p)
+                        if (current === undefined || current < v) setPath(doc, p, v)
                     }
                 }
                 if (data.$unset) for (const p of Object.keys(data.$unset)) unsetPath(doc, p)
@@ -213,6 +219,8 @@ test("message flow: first message grants xp and bumps counters", async () => {
     assert.equal(user.messages, 1)
     assert.equal(user.monthlyMessages, 1)
     assert.equal(user.dailyMessages, 1)
+    assert.equal(user.monthlyMessagesMax, 1)
+    assert.equal(user.dailyMessagesMax, 1)
     assert.equal(user.xp, 100) // rng() is stubbed to 100
     assert.equal(user.monthlyXP, 100)
     assert.equal(user.dailyXP, 100)
@@ -252,6 +260,8 @@ test("message flow: cooldown blocks xp on the second message", async () => {
     assert.equal(user.messages, 2)
     assert.equal(user.monthlyMessages, 2)
     assert.equal(user.dailyMessages, 2)
+    assert.equal(user.monthlyMessagesMax, 2)
+    assert.equal(user.dailyMessagesMax, 2)
     assert.equal(user.xp, 100) // no extra xp inside the cooldown
     assert.equal(user.monthlyXP, 100)
     assert.equal(user.dailyXP, 100)

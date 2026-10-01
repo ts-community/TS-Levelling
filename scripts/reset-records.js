@@ -3,16 +3,16 @@
 // que el bot haya enviado en el canal de récords.
 //
 // Uso:
-//   node reset-records.js                  -> vista previa (dry-run, no toca nada)
-//   node reset-records.js --apply          -> ejecuta (pide confirmación)
-//   node reset-records.js --apply --yes    -> ejecuta sin preguntar
-//   node reset-records.js --guild <id>     -> solo ese servidor
-//   node reset-records.js --user <id>      -> solo ese usuario (en todos los
+//   node scripts/reset-records.js                  -> vista previa (dry-run, no toca nada)
+//   node scripts/reset-records.js --apply          -> ejecuta (pide confirmación)
+//   node scripts/reset-records.js --apply --yes    -> ejecuta sin preguntar
+//   node scripts/reset-records.js --guild <id>     -> solo ese servidor
+//   node scripts/reset-records.js --user <id>      -> solo ese usuario (en todos los
 //      servidores salvo que se combine con --guild). Con --user no se borran
 //      mensajes del canal: solo se revierte su XP y sus flags.
-//   node reset-records.js --keep-progress  -> conserva el progreso (racha,
+//   node scripts/reset-records.js --keep-progress  -> conserva el progreso (racha,
 //      reacciones, canales, counting, voz) y solo quita flags + XP de récords
-//   node reset-records.js --no-delete-msgs -> no borra mensajes del canal
+//   node scripts/reset-records.js --no-delete-msgs -> no borra mensajes del canal
 //   npm run reset-records -- <opciones>    -> atajo (pasa las opciones)
 //
 // Lo que QUITA por usuario (solo existe por los récords):
@@ -26,12 +26,12 @@
 
 require('dotenv').config();
 
-const Model = require('./classes/DatabaseModel.js');
-const tracker = require('./classes/RecordTracker.js');
+const Model = require('../classes/DatabaseModel.js');
+const tracker = require('../classes/RecordTracker.js');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v10');
 
-const db = new Model("servers", require("./database_schema.js").schema);
+const db = new Model("servers", require("../database_schema.js").schema);
 
 const colors = {
     reset: '\x1b[0m',
@@ -68,7 +68,7 @@ function parseArgs(argv) {
 
 function printHelp() {
     console.log(`
-Uso: node reset-records.js [opciones]
+Uso: node scripts/reset-records.js [opciones]
 
   (sin opciones)         Vista previa de lo que se revertiría, sin tocar la DB
   --apply                 Ejecuta los cambios (pide confirmación)
