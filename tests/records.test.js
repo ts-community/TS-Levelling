@@ -382,7 +382,7 @@ test("completed records sort first and render struck through", () => {
 
     const withDone = command.buildCategoryBlocks(category, {}, null, new Set(["talk_to:1"]), tools.commafy)
     assert.ok(withDone[1].startsWith("### ~~🤖 **Contacto** - 1/1 fase~~"), "completado arriba aunque sea el más fácil")
-    assert.ok(withDone[1].includes("> ~~Menciona o responde a un mensaje del bot de ia"), "descripción tachada")
+    assert.ok(withDone[1].includes("> ~~Menciona o responde a un mensaje del bot de IA"), "descripción tachada")
     assert.ok(withDone[1].includes("<:XP:1467192533812645939> **+1.000 XP**~~"), "recompensa tachada")
 })
 
@@ -475,7 +475,7 @@ test("info page shows record stats without faking missing data", () => {
     assert.ok(!stats.includes("General"), "sin grupo general")
     assert.ok(stats.includes("**Mensajes totales:** 10 mensajes"))
     assert.ok(stats.includes("**Mensajes este mes:** 3 msgs (máx. 3)"))
-    assert.ok(stats.includes("**Mensajes diarios:** 7 msgs (máx. 7)"))
+    assert.ok(stats.includes("**Mensajes diarios:** 7 mensajes (máx. 7)"))
     assert.ok(stats.includes("**Reacciones enviadas:** 25 reacciones"))
     assert.ok(stats.includes("**Reacciones recibidas:** 0 reacciones"))
     assert.ok(stats.includes("**Racha:** 0 días (máx. 0 días)"))

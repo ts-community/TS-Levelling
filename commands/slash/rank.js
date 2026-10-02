@@ -47,7 +47,6 @@ module.exports = {
         let levelData = tools.getLevel(xp, db.settings, true)
         let totalMsgs = tools.commafy(tools.getMessages(currentXP))
         let monthlyMsgs = tools.commafy(tools.getMonthlyMessages(currentXP, db.info))
-        // TODO: completados reales cuando exista la lógica de récords.
         let recordsTotal = recordsConfig.countTiers(recordsConfig.allRecords())
         let maxLevel = levelData.level >= db.settings.maxLevel
 

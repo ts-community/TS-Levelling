@@ -1,6 +1,5 @@
 const fs = require("fs")
 const path = require("path")
-
 const {
     AttachmentBuilder,
     ContainerBuilder,
@@ -12,122 +11,72 @@ const {
     MessageFlags,
 } = require("discord.js")
 
-
+// Homenaje a Roger, viejo miembro del staff con la pfp de Anakin que un
+// día partió y no volvió. El vídeo vive en assets/roger/anakin.mp4: si aún
+// no está subido (o pasa del límite de subida de Discord), el comando
+// responde solo el texto (sin romper).
 const VIDEO_PATH = path.join(__dirname, "..", "..", "assets", "roger", "anakin.mp4")
 const VIDEO_NAME = "anakin.mp4"
-
-
-const RECORDS_EMOJI = "<:records:1549908515399929959>"
-
+// Tope seguro en cualquier servidor (sin contar boosts): por encima la API
+// rechaza el adjunto con 400 y el comando fallaría.
+const VIDEO_MAX_BYTES = 10 * 1024 * 1024
 
 module.exports = {
-
     metadata: {
         name: "roger",
         description: "Hay comandos que no existen… hasta que los usas.",
     },
 
+    videoPath: VIDEO_PATH,
+    videoMaxBytes: VIDEO_MAX_BYTES,
 
     async run(client, int, tools) {
+        // El desbloqueo del logro "hidden_command" se maneja en index.js
+        // (slash) y en message.js (si se escribe): aquí solo el homenaje.
+        const recordsTag = tools?.commandTag?.("records") ?? "`/records`"
+        const header = [
+            "*🫡 Roger that.*",
+            "Has descubierto un comando oculto de Records: **Señas**.",
+        ].join("\n")
+        const text = [
+            "-# Este edit es un homenaje a un viejo miembro del staff que un día partió y no volvió…",
+        ].join("\n")
+        const hint = `-# Usa el comando ${recordsTag} para ver tus records`
 
-        const recordsTag =
-            tools?.commandTag?.("records") ?? "`/records`"
-
-
-        const separator = () =>
-            new SeparatorBuilder()
-                .setDivider(true)
-                .setSpacing(SeparatorSpacingSize.Small)
-
+        const sep = () => new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
 
         const container = new ContainerBuilder()
-            .setAccentColor(0xe63946)
-
-            // Título + descubrimiento
-            .addTextDisplayComponents(
-                new TextDisplayBuilder()
-                    .setContent(
-                        [
-                            "🫡 Roger that.",
-                            "",
-                            "Has descubierto un comando oculto de Records: **Señas**.",
-                        ].join("\n")
-                    )
-            )
-
-            .addSeparatorComponents(separator())
-
-            // Homenaje
-            .addTextDisplayComponents(
-                new TextDisplayBuilder()
-                    .setContent(
-                        [
-                            "-# Este edit es un homenaje",
-                            "-# a un viejo miembro del staff",
-                            "-# que un día partió y no volvió…",
-                        ].join("\n")
-                    )
-            )
-
+            .setAccentColor(tools?.COLOR ?? 0x00ff80)
+            .addTextDisplayComponents(new TextDisplayBuilder().setContent(text))
+            .addSeparatorComponents(sep())
+            .addTextDisplayComponents(new TextDisplayBuilder().setContent(header))
+            .addSeparatorComponents(sep())
 
         let files = []
-
-
         try {
-
             if (fs.existsSync(VIDEO_PATH)) {
-
-                files = [
-                    new AttachmentBuilder(
-                        VIDEO_PATH,
-                        {
-                            name: VIDEO_NAME,
-                        }
-                    ),
-                ]
-
-
-                container
-                    .addSeparatorComponents(separator())
-
-                    .addMediaGalleryComponents(
-                        new MediaGalleryBuilder()
-                            .addItems([
-                                new MediaGalleryItemBuilder()
-                                    .setURL(
-                                        `attachment://${VIDEO_NAME}`
-                                    )
-                                    .setDescription(
-                                        "Edit homenaje a Roger"
-                                    ),
-                            ])
-                    )
-
+                const size = fs.statSync(VIDEO_PATH).size
+                if (size <= VIDEO_MAX_BYTES) {
+                    files = [new AttachmentBuilder(VIDEO_PATH, { name: VIDEO_NAME })]
+                    container
+                        .addMediaGalleryComponents(new MediaGalleryBuilder().addItems([
+                            new MediaGalleryItemBuilder()
+                                .setURL(`attachment://${VIDEO_NAME}`)
+                                .setDescription("Edit homenaje a Roger"),
+                        ]))
+                        .addSeparatorComponents(sep())
+                } else {
+                    console.warn(`roger: ${VIDEO_NAME} pesa ${(size / 1024 / 1024).toFixed(1)}MB, más de 10MB: sin vídeo.`)
+                }
             }
-
         } catch {}
 
-
-        container
-            .addSeparatorComponents(separator())
-
-            // Footer
-            .addTextDisplayComponents(
-                new TextDisplayBuilder()
-                    .setContent(
-                        `-# ${RECORDS_EMOJI} Usa ${recordsTag} para ver tus Records`
-                    )
-            )
-
+        container.addTextDisplayComponents(new TextDisplayBuilder().setContent(hint))
 
         return int.reply({
             components: [container],
             files,
-            flags:
-                MessageFlags.IsComponentsV2 |
-                MessageFlags.Ephemeral,
+            flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
         })
-
     }
-
 }

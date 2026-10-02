@@ -106,7 +106,7 @@ test("stat entry lines put the number first and markers last", () => {
     // IDs numéricos como en producción (con :x/:y el marcador mediría como texto).
     assert.equal(
         top.buildStatEntryLine({ ...base, shownName: "Dave", endMarkers: "  <:member:123456789012345678> **Tú**" }),
-        "💘 **#1 - 120 reaccs** - <@1>  <:member:123456789012345678> **Tú**",
+        "💘 **#1 - 120 recibidas** - <@1>  <:member:123456789012345678> **Tú**",
     )
     assert.equal(
         top.buildStatEntryLine({ ...base, shownName: "Dave", endMarkers: "  <:no_en_el_server:123456789012345678>" }),
@@ -157,10 +157,11 @@ test("tenure top shows exact years, months and days", () => {
 })
 
 test("stat entry lines shrink before wrapping on mobile", () => {
-    // Nombres medios-largos que antes saltaban: ahora usan la unidad corta.
+    // Nombres medios-largos que antes saltaban: ahora usan la unidad corta
+    // (que conserva recibidas/enviadas para no confundirlas).
     assert.equal(
         top.buildStatEntryLine({ emoji: "💘", position: 1, mention: "<@1>", shownName: "Carlos Ruiz", endMarkers: "", viewKey: "reacciones_recibidas", commafied: "1.234", value: 1234 }),
-        "💘 **#1 - 1.234 reaccs** - <@1>",
+        "💘 **#1 - 1.234 recibidas** - <@1>",
     )
     assert.equal(
         top.buildStatEntryLine({ emoji: "🔥", position: 5, mention: "<@5>", shownName: "Sofía Martínez García", endMarkers: "", viewKey: "racha", commafied: "30", value: 30 }),
@@ -187,6 +188,67 @@ test("stat entry lines shrink before wrapping on mobile", () => {
     assert.equal(
         top.buildStatEntryLine({ emoji: "🎙️", position: 1, mention: "<@1>", shownName: "Ana", endMarkers: "", viewKey: "voz", commafied: "45", value: 45 }),
         "🎙️ **#1 - 45 minutos** - <@1>",
+    )
+})
+
+test("stat entry lines keep monthly/daily markers when shrinking", () => {
+    // Máximos: la cascada conserva siempre mes/día (nunca "mensajes máx."
+    // ambiguo ni salto directo al número).
+    assert.equal(
+        top.buildStatEntryLine({ emoji: "🏆", position: 1, mention: "<@1>", shownName: "Ana", endMarkers: "", viewKey: "mensajes_mes_max", commafied: "9", value: 9 }),
+        "🏆 **#1 - 9 mensajes máx. en un mes** - <@1>",
+    )
+    assert.equal(
+        top.buildStatEntryLine({ emoji: "🏆", position: 1, mention: "<@1>", shownName: "Lucía Fernández", endMarkers: "", viewKey: "mensajes_mes_max", commafied: "1.234", value: 1234 }),
+        "🏆 **#1 - 1.234 máx. mes** - <@1>",
+    )
+    assert.equal(
+        top.buildStatEntryLine({ emoji: "🏆", position: 1, mention: "<@1>", shownName: "Lucía Fernández", endMarkers: "", viewKey: "mensajes_dia_max", commafied: "1.234", value: 1234 }),
+        "🏆 **#1 - 1.234 máx. día** - <@1>",
+    )
+    // Mensajes del mes/día: también conservan el marcador temporal.
+    assert.equal(
+        top.buildStatEntryLine({ emoji: "📅", position: 1, mention: "<@1>", shownName: "Sofía Martínez García", endMarkers: "", viewKey: "mensajes_mes", commafied: "1.234", value: 1234 }),
+        "📅 **#1 - 1.234 mes** - <@1>",
+    )
+    assert.equal(
+        top.buildStatEntryLine({ emoji: "☀️", position: 1, mention: "<@1>", shownName: "Sofía Martínez García", endMarkers: "", viewKey: "mensajes_dia", commafied: "1.234", value: 1234 }),
+        "☀️ **#1 - 1.234 hoy** - <@1>",
+    )
+    // Racha máxima conserva "máx." para no confundirse con la actual.
+    assert.equal(
+        top.buildStatEntryLine({ emoji: "🏆", position: 1, mention: "<@1>", shownName: "Sofía Martínez García", endMarkers: "", viewKey: "racha_max", commafied: "30", value: 30 }),
+        "🏆 **#1 - 30 máx.** - <@1>",
+    )
+    // Última palabra antes del número pelado: "reaccs" con nombres largos.
+    assert.equal(
+        top.buildStatEntryLine({ emoji: "❤️", position: 1, mention: "<@1>", shownName: "Martín García López", endMarkers: "", viewKey: "reacciones_enviadas", commafied: "1.234", value: 1234 }),
+        "❤️ **#1 - 1.234 reaccs** - <@1>",
+    )
+    // Máximos con marca Tú: "día"/"mes" antes que el número pelado.
+    assert.equal(
+        top.buildStatEntryLine({ emoji: "🏆", position: 1, mention: "<@1>", shownName: "TS | tumonulo", endMarkers: "  <:member:123456789012345678> **Tú**", viewKey: "mensajes_dia_max", commafied: "186", value: 186 }),
+        "🏆 **#1 - 186 día** - <@1>  <:member:123456789012345678> **Tú**",
+    )
+    assert.equal(
+        top.buildStatEntryLine({ emoji: "🏆", position: 1, mention: "<@1>", shownName: "TS | tumonulo", endMarkers: "  <:member:123456789012345678> **Tú**", viewKey: "mensajes_mes_max", commafied: "186", value: 186 }),
+        "🏆 **#1 - 186 mes** - <@1>  <:member:123456789012345678> **Tú**",
+    )
+    // El selector de variación (U+FE0F) no mide: ❤️ es un solo glifo.
+    assert.equal(top.estimateVisualWidth("❤️"), 1)
+})
+
+test("marked lines shrink earlier so they do not wrap on mobile", () => {
+    const marker = "  <:member:123456789012345678> **Tú**"
+    // Caso real: nombre medio + Tú con texto completo saltaba de línea.
+    assert.equal(
+        top.buildStatEntryLine({ emoji: "💥", position: 2, mention: "<@123>", shownName: "TS | tumonulo", endMarkers: marker, viewKey: "pokemon", commafied: "3", value: 3 }),
+        "💥 **#2 - 3 pokes** - <@123>  <:member:123456789012345678> **Tú**",
+    )
+    // Sin marca no se encoge de más.
+    assert.equal(
+        top.buildStatEntryLine({ emoji: "💥", position: 2, mention: "<@123>", shownName: "TS | tumonulo", endMarkers: "", viewKey: "pokemon", commafied: "3", value: 3 }),
+        "💥 **#2 - 3 pokemons** - <@123>",
     )
 })
 

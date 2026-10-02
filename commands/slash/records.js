@@ -473,13 +473,15 @@ function buildInfoTexts(userData, member, unlockedIds, tools, info) {
     const voice = formatVoiceTime(voiceMinutes)
     const voiceShort = formatVoiceTimeShort(voiceMinutes)
     const tenure = member?.joinedTimestamp ? formatTenure(member.joinedTimestamp) : formatCount(0, "día")
-    const msgLine = (emoji, label, shortLabel, value) => fitInfoLine(
+    // La etiqueta siempre lleva "Mensajes" (Mensajes totales / Mensajes
+    // este mes / Mensajes diarios): lo que se acorta es la unidad
+    // (mensajes → msgs → nada), nunca la etiqueta.
+    const msgLine = (emoji, label, value) => fitInfoLine(
         `- ${emoji} **${label}:** ${show(value)} ${value === 1 ? "mensaje" : "mensajes"}`,
         `- ${emoji} **${label}:** ${show(value)} ${value === 1 ? "msg" : "msgs"}`,
-        `- ${emoji} **${shortLabel}:** ${show(value)} ${value === 1 ? "mensaje" : "mensajes"}`,
         `- ${emoji} **${label}:** ${show(value)}`,
     )
-    const msgLineWithMaximum = (emoji, label, shortLabel, value, maximum) => {
+    const msgLineWithMaximum = (emoji, label, value, maximum) => {
         const currentUnit = value === 1 ? "mensaje" : "mensajes"
         const currentShortUnit = value === 1 ? "msg" : "msgs"
         const currentLabel = compactProgressLabel(show(value))
@@ -487,8 +489,7 @@ function buildInfoTexts(userData, member, unlockedIds, tools, info) {
         return fitInfoLine(
             `- ${emoji} **${label}:** ${currentLabel} ${currentUnit} (máx. ${maximumLabel})`,
             `- ${emoji} **${label}:** ${currentLabel} ${currentShortUnit} (máx. ${maximumLabel})`,
-            `- ${emoji} **${shortLabel}:** ${currentLabel} ${currentShortUnit} (máx. ${maximumLabel})`,
-            `- ${emoji} **${shortLabel}:** ${currentLabel} (máx. ${maximumLabel})`,
+            `- ${emoji} **${label}:** ${currentLabel} (máx. ${maximumLabel})`,
         )
     }
     const streakLineWithMaximum = fitInfoLine(
@@ -499,9 +500,9 @@ function buildInfoTexts(userData, member, unlockedIds, tools, info) {
     const groups = [
         [
             `### 💬 Actividad`,
-            msgLine("💬", "Mensajes totales", "Total", totalNum),
-            msgLineWithMaximum("📅", "Mensajes este mes", "Este mes", monthlyNum, monthlyMax),
-            msgLineWithMaximum("☀️", "Mensajes diarios", "Diarios", dailyNum, dailyMax),
+            msgLine("💬", "Mensajes totales", totalNum),
+            msgLineWithMaximum("📅", "Mensajes este mes", monthlyNum, monthlyMax),
+            msgLineWithMaximum("☀️", "Mensajes diarios", dailyNum, dailyMax),
         ].join("\n"),
         [
             `### 🤝 Comunidad`,

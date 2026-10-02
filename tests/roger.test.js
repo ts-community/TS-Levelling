@@ -35,13 +35,13 @@ test("roger replies ephemeral in Components V2", async () => {
     assert.equal(payload.components.length, 1)
     const [container] = payload.components.map(c => c.toJSON())
     const kinds = container.components.map(c => c.type)
-    // encabezado, separador, cuerpo, [galería, separador si hay vídeo], pista final.
-    assert.deepEqual(kinds, hasVideo() ? [10, 14, 10, 12, 14, 10] : [10, 14, 10, 10])
+    // homenaje, separador, descubrimiento, separador, [galería, separador si hay vídeo], pista final.
+    assert.deepEqual(kinds, hasVideo() ? [10, 14, 10, 14, 12, 14, 10] : [10, 14, 10, 14, 10])
     const json = JSON.stringify(container)
-    assert.ok(json.includes("Has encontrado un easter egg"), "encabezado del descubrimiento")
+    assert.ok(json.includes("Has descubierto un comando oculto"), "encabezado del descubrimiento")
     assert.ok(json.includes("Roger that"), "homenaje")
     assert.ok(json.includes("Señas"), "explica el comando oculto")
-    assert.ok(json.includes("Pista"), "pista final")
+    assert.ok(json.includes("Usa el comando"), "pista final")
     assert.ok(json.includes("`/records`"), "pista con fallback sin tools")
 })
 

@@ -54,6 +54,10 @@ function charWidth(ch) {
     if (ch === "." || ch === ",") return 0.4
     if (ch === "-") return 0.55
     if (ch === "#") return 0.9
+    // Selectores de variación (U+FE0F/U+FE0E) y ZWJ (U+200D): no se
+    // renderizan, solo modifican el emoji anterior. Contarlos como 1
+    // robaba ~1.0 en las líneas con ❤️/☀️/🎙️ y hacía encoger antes.
+    if (ch === "\uFE0F" || ch === "\uFE0E" || ch === "\u200D") return 0
     if ("ijl".includes(ch)) return 0.55
     if ("tf".includes(ch)) return 0.7
     if ("mw".includes(ch)) return 1.4
@@ -171,27 +175,33 @@ const STAT_MODES = {
         get: u => Number(u.messages) || 0,
     },
     mensajes_mes: {
-        menuEmoji: "📅", label: "Mensajes del mes", title: "Top de Mensajes del Mes",
+        menuEmoji: "📅", label: "Mensajes este mes", title: "Top de Mensajes Este Mes",
         unit: "mensajes este mes", abbr: "msgs mes", emoji: "<:messages:1467163578699354235>",
-        one: "mensaje este mes", shortUnit: "mensajes", shortOne: "mensaje",
+        one: "mensaje este mes", midUnit: "msgs mes", midOne: "msg mes",
+        shortUnit: "mes", shortOne: "mes",
         get: u => Number(u.monthlyMessages) || 0,
     },
     mensajes_dia: {
-        menuEmoji: "☀️", label: "Mensajes del día", title: "Top de Mensajes del Día",
+        menuEmoji: "☀️", label: "Mensajes diarios", title: "Top de Mensajes Diarios",
         unit: "mensajes hoy", abbr: "msgs hoy", emoji: "☀️",
-        one: "mensaje hoy", shortUnit: "mensajes", shortOne: "mensaje",
+        one: "mensaje hoy", midUnit: "msgs hoy", midOne: "msg hoy",
+        shortUnit: "hoy", shortOne: "hoy",
         get: u => Number(u.dailyMessages) || 0,
     },
     mensajes_mes_max: {
-        menuEmoji: "🏆", label: "Máximo mensual", title: "Top de Máximos Mensuales",
+        menuEmoji: "🏆", label: "Mensajes Máximos Mensuales", title: "Top de Mensajes Máximos Mensuales",
         unit: "mensajes máx. en un mes", abbr: "msgs máx. mes", emoji: "🏆",
-        one: "mensaje máx. en un mes", shortUnit: "mensajes máx.", shortOne: "mensaje máx.",
+        one: "mensaje máx. en un mes", midUnit: "msgs máx. mes", midOne: "msg máx. mes",
+        shortUnit: "máx. mes", shortOne: "máx. mes",
+        tinyUnit: "mes", tinyOne: "mes",
         get: u => Math.max(Number(u.monthlyMessagesMax) || 0, Number(u.monthlyMessages) || 0),
     },
     mensajes_dia_max: {
-        menuEmoji: "🏆", label: "Máximo diario", title: "Top de Máximos Diarios",
+        menuEmoji: "🏆", label: "Mensajes Máximos Diarios", title: "Top de Mensajes Máximos Diarios",
         unit: "mensajes máx. en un día", abbr: "msgs máx. día", emoji: "🏆",
-        one: "mensaje máx. en un día", shortUnit: "mensajes máx.", shortOne: "mensaje máx.",
+        one: "mensaje máx. en un día", midUnit: "msgs máx. día", midOne: "msg máx. día",
+        shortUnit: "máx. día", shortOne: "máx. día",
+        tinyUnit: "día", tinyOne: "día",
         get: u => Math.max(Number(u.dailyMessagesMax) || 0, Number(u.dailyMessages) || 0),
     },
     racha: {
@@ -202,8 +212,9 @@ const STAT_MODES = {
     },
     racha_max: {
         menuEmoji: "🏆", label: "Racha máxima", title: "Top de Racha Máxima",
-        unit: "días de racha máx.", abbr: "días", emoji: "🏆",
-        one: "día de racha máx.", shortUnit: "días", shortOne: "día",
+        unit: "días de racha máx.", abbr: "días máx.", emoji: "🏆",
+        one: "día de racha máx.", midUnit: "días máx.", midOne: "día máx.",
+        shortUnit: "máx.", shortOne: "máx.",
         get: u => {
             const raw = u.streak
             if (raw == null) return 0
@@ -219,20 +230,25 @@ const STAT_MODES = {
     },
     reacciones_recibidas: {
         menuEmoji: "💘", label: "Reacciones recibidas", title: "Top de Reacciones Recibidas",
-        unit: "reacciones recibidas", abbr: "reacciones", emoji: "💘",
-        one: "reacción recibida", shortUnit: "reaccs", shortOne: "reacción",
+        unit: "reacciones recibidas", abbr: "reaccs recibidas", emoji: "💘",
+        one: "reacción recibida", midUnit: "reaccs recibidas", midOne: "reacc. recibida",
+        shortUnit: "recibidas", shortOne: "recibida",
+        tinyUnit: "reaccs", tinyOne: "reaccs",
         get: u => Number(u.reactionsReceived) || 0,
     },
     reacciones_enviadas: {
         menuEmoji: "❤️", label: "Reacciones enviadas", title: "Top de Reacciones Enviadas",
-        unit: "reacciones enviadas", abbr: "reacciones", emoji: "❤️",
-        one: "reacción enviada", shortUnit: "reaccs", shortOne: "reacción",
+        unit: "reacciones enviadas", abbr: "reaccs enviadas", emoji: "❤️",
+        one: "reacción enviada", midUnit: "reaccs enviadas", midOne: "reacc. enviada",
+        shortUnit: "enviadas", shortOne: "enviada",
+        tinyUnit: "reaccs", tinyOne: "reaccs",
         get: u => Number(u.reactionsSent) || 0,
     },
     pokemon: {
         menuEmoji: "💥", label: "Poketwo", title: "Top de Poketwo",
         unit: "pokemons", abbr: "pkm", emoji: "💥",
-        one: "pokemon", shortUnit: "pkm", shortOne: "pkm",
+        one: "pokemon", shortUnit: "pokes", shortOne: "poke",
+        tinyUnit: "pkm", tinyOne: "pkm",
         get: u => Number(u.pokemonCaught) || 0,
     },
     counting: {
@@ -389,6 +405,12 @@ function buildStatEntryLine({ emoji, position, mention, shownName, endMarkers, v
     // antes de encoger.
     const probeWidth = valueText =>
         estimateVisualWidth(`${emoji} **#${position} - ${valueText}** - @${shownName || ""}${endMarkers || ""}`)
+    // Con marca visible (Tú / nombre buscado) la línea lleva texto extra
+    // tras la mención cuya píldora ya va justa de margen: listón 3 uds.
+    // más estricto para que no salte en móvil estrecho. La marca de
+    // "fuera del server" (solo icono) no necesita margen extra.
+    const markerText = String(endMarkers || "").replace(/<a?:\w+:\d+>/g, "")
+    const lineLimit = markerText.trim() ? TOP_STAT_LINE_WIDTH - 3 : TOP_STAT_LINE_WIDTH
     let valueText
     if (viewKey === "antiguedad") {
         valueText = displayValueShort || "0 d"
@@ -396,14 +418,33 @@ function buildStatEntryLine({ emoji, position, mention, shownName, endMarkers, v
         const full = topVoiceText(value)
         const short = topVoiceTextShort(value)
         const compact = topVoiceTextCompact(value)
-        valueText = [full, short, compact].find(text => probeWidth(text) <= TOP_STAT_LINE_WIDTH) ?? compact
+        valueText = [full, short, compact].find(text => probeWidth(text) <= lineLimit) ?? compact
     } else {
+        // Cascada completa → intermedia → corta → mínima → solo número.
+        // La intermedia (midUnit) y la corta (shortUnit) siempre conservan
+        // el marcador distintivo (mes/hoy/máx. mes/máx. día/recibidas/
+        // enviadas/máx.) para no confundir mensual con diario ni
+        // recibidas con enviadas. La mínima (tinyUnit) es de una sola
+        // palabra como último texto antes del número pelado (p. ej.
+        // "reaccs"). Solo el número es el último recurso si ni la forma
+        // mínima cabe con nombres muy largos.
         const one = Number(value) === 1
         const full = `${commafied} ${one && mode.one ? mode.one : mode.unit}`
-        const short = mode.shortUnit
-            ? `${commafied} ${one ? (mode.shortOne || mode.shortUnit) : mode.shortUnit}`
-            : full
-        valueText = [full, short, commafied].find(text => probeWidth(text) <= TOP_STAT_LINE_WIDTH) ?? commafied
+        const candidates = [full]
+        if (mode.midUnit) {
+            const mid = `${commafied} ${one ? (mode.midOne || mode.midUnit) : mode.midUnit}`
+            if (!candidates.includes(mid)) candidates.push(mid)
+        }
+        if (mode.shortUnit) {
+            const short = `${commafied} ${one ? (mode.shortOne || mode.shortUnit) : mode.shortUnit}`
+            if (!candidates.includes(short)) candidates.push(short)
+        }
+        if (mode.tinyUnit) {
+            const tiny = `${commafied} ${one ? (mode.tinyOne || mode.tinyUnit) : mode.tinyUnit}`
+            if (!candidates.includes(tiny)) candidates.push(tiny)
+        }
+        candidates.push(commafied)
+        valueText = candidates.find(text => probeWidth(text) <= lineLimit) ?? commafied
     }
     return `${emoji} **#${position} - ${valueText}** - ${mention}${endMarkers || ""}`
 }
@@ -461,10 +502,10 @@ metadata: {
             { name: "🗓️ XP del mes", value: "xp_mes" },
             { name: "✨ XP del día", value: "xp_dia" },
             { name: "💬 Mensajes totales", value: "mensajes" },
-            { name: "📅 Mensajes del mes", value: "mensajes_mes" },
+            { name: "📅 Mensajes este mes", value: "mensajes_mes" },
             { name: "☀️ Mensajes diarios", value: "mensajes_dia" },
-            { name: "🏆 Máximo mensual", value: "mensajes_mes_max" },
-            { name: "🏆 Máximo diario", value: "mensajes_dia_max" },
+            { name: "🏆 Mensajes Máximos Mensuales", value: "mensajes_mes_max" },
+            { name: "🏆 Mensajes Máximos Diarios", value: "mensajes_dia_max" },
             { name: "🔥 Racha actual", value: "racha" },
             { name: "🏆 Racha máxima", value: "racha_max" },
             { name: "🏅 Antigüedad", value: "antiguedad" },
