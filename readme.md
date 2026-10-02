@@ -34,9 +34,9 @@ El comando `/rank` muestra el rango, nivel, experiencia, mensajes, posición en 
 Mientras el usuario puede seguir progresando, la tarjeta muestra cuánto le falta para alcanzar el siguiente rango.
 
 <div align="center">
-  <img src="./assets/showcase/rank-legendary.webp" alt="Rango Legendario" width="350">
+  <img src="./assets/showcase/rank-legendary.webp" alt="Rango Legendario" height="500">
   &nbsp;&nbsp;&nbsp;
-  <img src="./assets/showcase/rank-pro.webp" alt="Rango Pro" width="350">
+  <img src="./assets/showcase/rank-pro.webp" alt="Rango Pro" height="500">
 </div>
 
 La tarjeta cambia automáticamente al alcanzar **Pro**, el rango máximo. En este caso, en lugar del progreso hacia el siguiente rango, muestra cuánto le falta para adelantar al siguiente usuario de la clasificación.
@@ -46,9 +46,9 @@ La tarjeta cambia automáticamente al alcanzar **Pro**, el rango máximo. En est
 El comando `/top` muestra la clasificación del servidor, con paginación y vistas de XP total, XP del mes, XP del día y estadísticas como mensajes, rachas, reacciones, Poketwo, Counting, voz y más.
 
 <div align="center">
-  <img src="./assets/showcase/top-xp.webp" alt="Top de XP" width="350">
+  <img src="./assets/showcase/top-xp.webp" alt="Top de XP" height="500">
   &nbsp;&nbsp;&nbsp;
-  <img src="./assets/showcase/top-poketwo.webp" alt="Top de Poketwo" width="350">
+  <img src="./assets/showcase/top-poketwo.webp" alt="Top de Poketwo" height="500">
 </div>
 
 Cada estadística tiene su propio ranking, como el de XP total o el de Poketwo mostrado arriba.
@@ -58,9 +58,9 @@ Cada estadística tiene su propio ranking, como el de XP total o el de Poketwo m
 Los **Records** son logros del servidor que otorgan experiencia al completarlos. El comando `/records` muestra las estadísticas del usuario y su progreso.
 
 <div align="center">
-  <img src="./assets/showcase/records-stats.webp" alt="Estadísticas de Records" width="300">
+  <img src="./assets/showcase/records-stats.webp" alt="Estadísticas de Records" height="500">
   &nbsp;&nbsp;&nbsp;
-  <img src="./assets/showcase/records-categoria.webp" alt="Records de Actividad" width="300">
+  <img src="./assets/showcase/records-categoria.webp" alt="Records de Actividad" height="500">
 </div>
 
 Los Records están organizados por categorías, cada una con diferentes tiers, requisitos y recompensas.
@@ -68,13 +68,13 @@ Los Records están organizados por categorías, cada una con diferentes tiers, r
 Además, existen **5 records ocultos**. Su condición no se muestra hasta que el usuario consigue descubrirlos.
 
 <div align="center">
-  <img src="./assets/showcase/records-ocultos.webp" alt="Records ocultos" width="350">
+  <img src="./assets/showcase/records-ocultos.webp" alt="Records ocultos" height="500">
 </div>
 
 Al completar un Record, el bot muestra un aviso en el canal de Records. Si se trata de un Record oculto, también se informa al usuario por MD.
 
 <div align="center">
-  <img src="./assets/showcase/records-unlock.webp" alt="Record cumplido" width="350">
+  <img src="./assets/showcase/records-unlock.webp" alt="Record cumplido" height="500">
 </div>
 
 ## 🎉 Avisos automáticos
@@ -82,9 +82,9 @@ Al completar un Record, el bot muestra un aviso en el canal de Records. Si se tr
 El bot genera avisos durante la progresión del usuario.
 
 <div align="center">
-  <img src="./assets/showcase/levelup.webp" alt="Subida de rango" width="350">
+  <img src="./assets/showcase/levelup.webp" alt="Subida de rango" height="500">
   &nbsp;&nbsp;&nbsp;
-  <img src="./assets/showcase/overtake.webp" alt="Adelantamiento" width="350">
+  <img src="./assets/showcase/overtake.webp" alt="Adelantamiento" height="500">
 </div>
 
 Al alcanzar un nuevo rango, el bot felicita al usuario mostrando su nueva tarjeta.
