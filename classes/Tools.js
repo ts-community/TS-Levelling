@@ -352,13 +352,35 @@ class Tools {
         }
 
         // check if user is allowed to interact with a button
+        // allowedUsers: array de IDs (o un solo ID). Por defecto solo el autor del comando.
         this.canPressButton = function(b, allowedUsers) {
-            return (b.user.id.includes(allowedUsers || [int?.user.id]))
+            const allowed = allowedUsers ?? [int?.user.id]
+            const list = Array.isArray(allowed) ? allowed : [allowed]
+            return list.map(String).includes(String(b?.user?.id))
+        }
+
+        // Aviso en español cuando alguien que no es el autor intenta usar botones/menús de otro.
+        // commandName (opcional): "top", "records"... para añadir "Usa /comando para abrir el tuyo."
+        this.notYourButtonMsg = function(commandName) {
+            const suffix = commandName ? ` Usa ${this.commandTag(commandName)} para abrir el tuyo.` : ""
+            return `⛔ Solo quien usó este comando puede usar estos botones.${suffix}`
+        }
+
+        // Responde efímero en español al usuario que no puede interactuar.
+        this.denyButton = function(interaction, commandName) {
+            const content = this.notYourButtonMsg(commandName)
+            try {
+                if (interaction?.deferred || interaction?.replied) return interaction.followUp({ content, ephemeral: true }).catch(() => {})
+                return interaction.reply({ content, ephemeral: true }).catch(() => {})
+            } catch { return null }
         }
 
         // ignore the press if the user can't press that button
-        this.buttonReply = function(int, message) {
-            return message ? int.reply(message) : int.deferUpdate()
+        this.buttonReply = function(interaction, message) {
+            if (!interaction) return null
+            try {
+                return message ? interaction.reply(message) : interaction.deferUpdate().catch(() => {})
+            } catch { return null }
         }
 
         // creates a component row without all the bullshit
@@ -460,7 +482,9 @@ class Tools {
                 let collector = msg.createMessageComponentCollector({ time: secs * 1000 })
 
                 collector.on('collect', (b) => {
-                    if (!activeConfirmation || !this.canPressButton(b)) return this.buttonReply()
+                    // Solo el autor del comando puede confirmar. Aviso en español.
+                    if (!this.canPressButton(b)) return this.denyButton(b)
+                    if (!activeConfirmation) return this.buttonReply(b)
 
                     else {
                         activeConfirmation = false

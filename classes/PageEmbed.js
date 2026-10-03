@@ -90,7 +90,9 @@ class PageEmbed {
         let collector = msg.createMessageComponentCollector({ time: this.timeoutSecs * 1000 })
         if (this.ownerID) activeCollectors[this.ownerID] = collector
         collector.on('collect', b => {
-            if (buttonPressed || !tools.canPressButton(b, [this.ownerID])) return tools.buttonReply(b)
+            // Paginación solo para quien abrió la lista. Aviso en español.
+            if (!tools.canPressButton(b, [this.ownerID])) return tools.denyButton(b)
+            if (buttonPressed) return tools.buttonReply(b)
             else buttonPressed = true
             collector.stop()
 

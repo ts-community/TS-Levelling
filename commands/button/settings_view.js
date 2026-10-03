@@ -56,7 +56,7 @@ async run(client, int, tools, selected) {
     })
 
     let buttons = tools.button([
-        {style: "Secondary", label: "Back", customID: `settings_list~${group}~${int.user.id}`},
+        {style: "Secondary", label: "Back", customId: `settings_list~${group}~${int.user.id}`},
         {style: "Primary", label: (setting.type == "bool") ? "Toggle" : "Edit", customId: `settings_edit~${settingID}~${int.user.id}`}
     ])
 

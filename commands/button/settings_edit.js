@@ -9,7 +9,8 @@ metadata: {
 async run(client, int, tools, modal) {
 
     let buttonData = int.customId.split("~")
-    if (!modal && buttonData[2] != int.user.id) return int.deferUpdate() 
+    // Solo quien abrió el ajuste puede editarlo. Aviso en español.
+    if (!modal && buttonData[2] != int.user.id) return tools.denyButton(int)
 
     let settingID = modal || buttonData[1]
     let setting = schema[settingID]

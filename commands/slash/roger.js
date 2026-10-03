@@ -45,11 +45,14 @@ module.exports = {
 
         const sep = () => new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
 
+        // Rojo intenso tipo espada láser
+        const ROGER_RED = 0xff0000
+
         const container = new ContainerBuilder()
-            .setAccentColor(tools?.COLOR ?? 0x00ff80)
-            .addTextDisplayComponents(new TextDisplayBuilder().setContent(text))
-            .addSeparatorComponents(sep())
+            .setAccentColor(ROGER_RED)
             .addTextDisplayComponents(new TextDisplayBuilder().setContent(header))
+            .addSeparatorComponents(sep())
+            .addTextDisplayComponents(new TextDisplayBuilder().setContent(text))
             .addSeparatorComponents(sep())
 
         let files = []

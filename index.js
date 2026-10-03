@@ -794,10 +794,12 @@ client.on("interactionCreate", async int => {
     
     if (!int.guild) return int.reply("You can't use commands in DMs!")
         
-    // for setting changes
+    // for setting changes (solo quien abrió los ajustes puede usar el menú)
     if (int.isStringSelectMenu()) {
         if (int.customId.startsWith("configmenu_")) {
-            if (int.customId.split("_")[1] != int.user.id) return int.deferUpdate()
+            if (int.customId.split("_")[1] != int.user.id) {
+                return new Tools(client, int).denyButton(int)
+            }
             let configData = int.values[0].split("_").slice(1)
             let configCmd = (configData[0] == "dir" ? "button:settings_list" : "button:settings_view")
             client.commands.get(configCmd).run(client, int, new Tools(client, int), configData)
@@ -805,11 +807,13 @@ client.on("interactionCreate", async int => {
         return;
     }
 
-    // also for setting changes
+    // also for setting changes (solo quien abrió el ajuste puede enviar el modal)
     else if (int.isModalSubmit()) {
         if (int.customId.startsWith("configmodal")) {
             let modalData = int.customId.split("~")
-            if (modalData[2] != int.user.id) return int.deferUpdate()
+            if (modalData[2] != int.user.id) {
+                return new Tools(client, int).denyButton(int)
+            }
             client.commands.get("button:settings_edit").run(client, int, new Tools(client, int), modalData[1])
         }
         return;

@@ -33,7 +33,7 @@ async run(client, int, tools) {
     : {style: "Success", label: "Enable XP", emoji: "✨", customId: "toggle_xp" }
 
     let buttons = tools.button([
-        {style: "Success", label: "Edit Settings", emoji: "🛠", customID: "settings_list"},
+        {style: "Success", label: "Edit Settings", emoji: "🛠", customId: "settings_list"},
         toggleButton,
         {style: "Link", label: "Edit Online", emoji: "🌎", url: `${tools.WEBSITE}/settings/${int.guild.id}`},
         {style: "Secondary", label: "Export Data", emoji: "⏏️", customId: "export_xp"}

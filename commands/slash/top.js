@@ -907,7 +907,8 @@ async run(client, int, tools) {
     let buttonPressed = false
     const collector = message.createMessageComponentCollector({ time: 24 * 60 * 60 * 1000 })
     collector.on("collect", async button => {
-        if (button.user.id !== int.user.id) return tools.buttonReply(button)
+        // Solo quien usó /top puede paginar o cambiar la vista. Aviso en español.
+        if (button.user.id !== int.user.id) return tools.denyButton(button, "top")
         if (buttonPressed) {
             await button.deferUpdate().catch(() => {})
             return

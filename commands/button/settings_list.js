@@ -12,9 +12,11 @@ metadata: {
 async run(client, int, tools, selected) {
 
     let buttonData = [];
-    if (int.isButton) {
+    const isButtonPress = typeof int.isButton === "function" ? int.isButton() : !!int.isButton
+    if (isButtonPress) {
         buttonData = int.customId.split("~")
-        if (buttonData[2] && buttonData[2] != int.user.id) return int.deferUpdate() 
+        // Solo quien abrió los ajustes puede navegar por ellos. Aviso en español.
+        if (buttonData[2] && buttonData[2] != int.user.id) return tools.denyButton(int)
     }
 
     let db = await tools.fetchSettings()
@@ -40,7 +42,7 @@ async run(client, int, tools, selected) {
         else return "📝"
     }
 
-    let dirName = (selected ? selected[1] : int.isButton ? buttonData[1] : rootFolder) || rootFolder
+    let dirName = (selected ? selected[1] : isButtonPress ? buttonData[1] : rootFolder) || rootFolder
     let entries = config[dirName]
 
     if (!entries) return tools.warn("Invalid category!")
