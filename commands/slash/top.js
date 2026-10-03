@@ -494,10 +494,10 @@ function buildViewMenu(viewKey, disabled = false, groupValue = null, selectedVie
 module.exports = {
 metadata: {
     name: "top",
-    description: "View the server's XP leaderboard.",
+    description: "Ver la clasificación de XP del servidor.",
     args: [
-        { type: "user", name: "member", description: "Finds a certain member's position on the leaderboard", required: false },
-        { type: "string", name: "view", description: "Choose the leaderboard category to open", required: false, choices: [
+        { type: "user", name: "member", description: "Busca la posición de un miembro en la clasificación", required: false },
+        { type: "string", name: "view", description: "Elige qué clasificación abrir", required: false, choices: [
             { name: "📊 XP total", value: "xp" },
             { name: "🗓️ XP del mes", value: "xp_mes" },
             { name: "✨ XP del día", value: "xp_dia" },
@@ -539,9 +539,9 @@ async run(client, int, tools) {
     let lbLink = `${tools.WEBSITE}/leaderboard/${int.guild.id}`
 
     let db = await tools.fetchAll()
-    if (!db) return tools.warn(`Nobody in this server is ranked yet!`)
+    if (!db) return tools.warn(`¡Aún no hay nadie en la clasificación de este servidor!`)
     else if (!db.settings?.enabled) return tools.warn("*xpDisabled")
-    else if (db.settings.leaderboard?.disabled) return tools.warn("The leaderboard is disabled in this server!" + (tools.canManageServer(int.member) ? `\nAs a moderator, you can still privately view the leaderboard here: ${lbLink}` : ""))
+    else if (db.settings.leaderboard?.disabled) return tools.warn("¡La clasificación está desactivada en este servidor!" + (tools.canManageServer(int.member) ? `\nComo moderador, puedes verla en privado aquí: ${lbLink}` : ""))
     // isHidden ya se resolvió arriba para el defer (no se puede cambiar después).
 
     if (client.monthlyMaintenance) {
@@ -552,7 +552,7 @@ async run(client, int, tools) {
 
     let pageSize = 8
     const userEntries = tools.xpObjToArray(db.users || {})
-    const requestedView = int.options.get("view")?.value
+    const requestedView = int.options?.get?.("view")?.value
     const requestedViewKey = requestedView === "monthly" ? "xp_mes"
         : requestedView === "daily" ? "xp_dia"
             : requestedView
@@ -654,10 +654,12 @@ async run(client, int, tools) {
     let pageNumber = 1
 
     let highlight = null
-    let userSearch = int.options.get("user") || int.options.get("member") // option is "user" if from context menu
+    // En menús de contexto (View on leaderboard) no hay options: se usa targetUser.
+    // Igual que la opción member, pero desde el menú de contexto (Ver en el top).
+    let userSearch = int.options?.get?.("user") || int.options?.get?.("member") || (int.targetUser ? { user: int.targetUser } : null)
     if (userSearch) {
         let foundRanking = rankings.findIndex(x => x.id == userSearch.user.id)
-        if (isNaN(foundRanking) || foundRanking < 0) return tools.warn(int.user.id == userSearch.user.id ? "No estas en el top!" : "Este miembro no esta en el top!")
+        if (isNaN(foundRanking) || foundRanking < 0) return tools.warn(int.user.id == userSearch.user.id ? "¡No estás en el top!" : "¡Este miembro no está en el top!")
         else pageNumber = Math.floor(foundRanking / pageSize) + 1
         highlight = userSearch.user.id
     }
@@ -855,7 +857,7 @@ async run(client, int, tools) {
         }
     }
 
-    if (pageNumber < 1 || pageNumber > totalPages) return tools.warn("There are no members on this page!")
+    if (pageNumber < 1 || pageNumber > totalPages) return tools.warn("¡No hay miembros en esta página!")
 
     const sendPage = async (page, editor, disabled = false) => {
         const { container, pageUserIds } = await buildContainer(page, disabled)

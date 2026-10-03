@@ -13,9 +13,9 @@ async run(client, int, tools) {
 
     if (!tools.canManageServer(int.member, settings.manualPerms)) return tools.warn("*notMod")
 
-    if (enabled == settings.enabled) return tools.warn(`XP is already ${enabled ? "enabled" : "disabled"} in this server!`)
+    if (enabled == settings.enabled) return tools.warn(`¡El XP ya está ${enabled ? "activado" : "desactivado"} en este servidor!`)
 
     client.db.update(int.guild.id, { $set: { 'settings.enabled': enabled, 'info.lastUpdate': Date.now() }}).then(() => {
-        int.reply(`✅ **XP is now ${enabled ? "enabled" : "disabled"} in this server!**`)
-    }).catch(() => tools.warn("Something went wrong while trying to toggle XP!"))
+        int.reply(`✅ **¡XP ${enabled ? "activado" : "desactivado"} en este servidor!**`)
+    }).catch(() => tools.warn("¡Algo ha salido mal al cambiar el XP!"))
 }}

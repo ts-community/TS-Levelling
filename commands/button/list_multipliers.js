@@ -16,12 +16,12 @@ async run(client, int, tools) {
     let mType = isChannel ? "channel" : "role"
     let mList = db.settings.multipliers[isChannel ? "channels" : "roles"]
 
-    if (!mList.length) return tools.warn(`This server doesn't have any ${mType} multipliers!`)
+    if (!mList.length) return tools.warn(`¡Este servidor no tiene ningún multiplicador de ${isChannel ? "canales" : "roles"}!`)
 
     let embed = tools.createEmbed({
-        title: `${tools.capitalize(mType)} Multipliers (${mList.length})`,
+        title: `Multiplicadores de ${isChannel ? "canales" : "roles"} (${mList.length})`,
         color: tools.COLOR,
-        footer: "Add or remove multipliers with /multiplier"
+        footer: "Añade o quita multiplicadores con /multiplier"
     })
 
     let multipliers = mList.sort((a, b) => a.boost - b.boost);

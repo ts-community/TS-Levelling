@@ -35,19 +35,38 @@ class Tools {
 
         // some common error messages
         this.errors = {
-            xpDisabled: `XP is not enabled in this server!${this.canManageServer() ? ` (enable with ${this.commandTag("config")})` : ""}`,
-            noData: "This server doesn't have any data yet!",
-            noBotXP: "Bots can't earn XP, silly!",
+            xpDisabled: `¡El XP no está activado en este servidor!${this.canManageServer() ? ` (actívalo con ${this.commandTag("config")})` : ""}`,
+            noData: "Este servidor aún no tiene datos.",
+            noBotXP: "¡Los bots no pueden ganar XP, bobo!",
             noBotView: "Los bots no ganan XP, no hay nada que ver aquí.",
-            cantManageRoles: "I don't have permission to manage roles!",
-            notMod: "You don't have permission to use this command!"
+            cantManageRoles: "¡No tengo permiso para gestionar roles!",
+            notMod: "¡No tienes permiso para usar este comando!"
         }
 
         // Usuario objetivo de los comandos de consulta (/rank, /records,
-        // /top): la opción "user" o "member". null si es el propio autor.
+        // /top): la opción "user" o "member", o el objetivo del menú de
+        // contexto (Check XP y cía no tienen options). null si es el autor.
         this.getTargetUser = function() {
-            const found = int?.options?.get("user") || int?.options?.get("member")
-            return found?.user ?? found?.member?.user ?? null
+            const found = int?.options?.get?.("user") || int?.options?.get?.("member")
+            return found?.user ?? found?.member?.user ?? int?.targetUser ?? null
+        }
+
+        // Miembro objetivo unificado para slash (opción member) y menús de
+        // contexto (targetMember/targetUser). Devuelve { member, user }.
+        // member es null si el usuario salió del servidor o no se encontró.
+        this.resolveTargetMember = async function() {
+            const opt = int?.options?.get?.("user") || int?.options?.get?.("member")
+            if (opt?.member) return { member: opt.member, user: opt.user || opt.member.user }
+            if (opt?.user && int?.guild) {
+                const fetched = await int.guild.members.fetch(opt.user.id).catch(() => null)
+                return { member: fetched, user: opt.user }
+            }
+            if (int?.targetMember) return { member: int.targetMember, user: int.targetUser || int.targetMember.user }
+            if (int?.targetUser) {
+                const fetched = int?.guild ? await int.guild.members.fetch(int.targetUser.id).catch(() => null) : null
+                return { member: fetched, user: int.targetUser }
+            }
+            return { member: int?.member || null, user: int?.user || null }
         }
 
         // fetch settings from db/cache (+ some xp)
@@ -314,7 +333,7 @@ class Tools {
 
         // error message if user has no xp
         this.noXPYet = function(user) {
-            return this.warn(user.bot ? "*noBotXP" : user.id != int.user.id ? `${user.displayName} doesn't have any XP yet!` : `You don't have any XP yet!`)
+            return this.warn(user.bot ? "*noBotXP" : user.id != int.user.id ? `¡${user.displayName} aún no tiene XP!` : `¡Aún no tienes XP! Habla un poco y vuelve a mirar.`)
         }
 
         // crea un embed desde un objeto, porque desprezar cómo lo hace discord.js
@@ -503,12 +522,15 @@ class Tools {
         }
 
         // edit the message if possible, otherwise post as reply
+        // En slash no hay int.message: se usa editReply si ya se respondió/difirió.
         this.editOrReply = function(data, forceReply) {
-            if (forceReply) int.reply(data).catch(() => null)
-    
-            else int.message.edit(data).catch(() => {
-                int.reply(data).catch(() => null)
-            }).then(() => int.deferUpdate())
+            try {
+                if (forceReply || (!int.deferred && !int.replied && !int.message)) return int.reply(data).catch(() => null)
+                if (int.deferred || int.replied) return int.editReply(data).catch(() => null)
+                return int.message.edit(data).then(() => int.deferUpdate().catch(() => null)).catch(() => {
+                    int.reply(data).catch(() => null)
+                })
+            } catch { return null }
         }
 
         // xp is stored as an object, convert to array

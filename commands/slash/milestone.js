@@ -11,28 +11,28 @@ module.exports = {
   async run(client, int, tools) {
     // Verificar permisos
     if (!tools.canManageServer(int.member)) {
-      return tools.warn("You don't have permission to use this command.")
+      return tools.warn("No tienes permiso para usar este comando.")
     }
 
     const milestoneRoleId = config.roles?.milestones?.id
     if (!milestoneRoleId) {
-      return tools.warn("Milestone role is not configured.")
+      return tools.warn("El rol de hito no está configurado.")
     }
 
     const milestoneRole = int.guild.roles.cache.get(milestoneRoleId)
     if (!milestoneRole) {
-      return tools.warn("Milestone role not found in this server.")
+      return tools.warn("No se ha encontrado el rol de hito en este servidor.")
     }
 
     // Verificar que el bot tenga permisos para asignar roles
     const botMember = int.guild.members.me
     if (!botMember.permissions.has("ManageRoles")) {
-      return tools.warn("Bot doesn't have 'Manage Roles' permission.")
+      return tools.warn("El bot no tiene permiso para gestionar roles.")
     }
 
     // Verificar jerarquía de roles
     if (milestoneRole.position >= botMember.roles.highest.position) {
-      return tools.warn("Milestone role is higher than bot's highest role. Cannot assign it.")
+      return tools.warn("El rol de hito está por encima del rol más alto del bot. No puede asignarlo.")
     }
 
     // Extraer todos los IDs de roles de rank
@@ -48,7 +48,7 @@ module.exports = {
     console.log(`[SYNC] ========================================`)
 
     await int.reply({
-      content: "⏳ **Sync started.** This may take several minutes.\nCheck console for detailed progress.",
+      content: "⏳ **Sincronización iniciada.** Puede tardar varios minutos.\nMira la consola para ver el progreso detallado.",
       flags: 64 // ephemeral flag
     })
 
@@ -83,7 +83,7 @@ module.exports = {
     } catch (err) {
       console.error(`[SYNC][ERROR] Failed to fetch members:`, err)
       return int.followUp({
-        content: `❌ Error fetching members: ${err.message}`,
+        content: `❌ Error al obtener los miembros.`,
         flags: 64
       })
     }
@@ -165,13 +165,13 @@ module.exports = {
 
     return int.followUp({
       content: 
-        `✅ **Sync completed!**\n\n` +
-        `📊 **Stats:**\n` +
-        `• Total members: **${processed}**\n` +
-        `• Milestone added: **${updated}**\n` +
-        `• Skipped: **${skipped}**\n` +
-        `• Errors: **${errors}**\n` +
-        `• Time: **${totalTime}s**`,
+        `✅ **¡Sincronización completada!**\n\n` +
+        `📊 **Estadísticas:**\n` +
+        `• Miembros totales: **${processed}**\n` +
+        `• Hito añadido: **${updated}**\n` +
+        `• Omitidos: **${skipped}**\n` +
+        `• Errores: **${errors}**\n` +
+        `• Tiempo: **${totalTime}s**`,
       flags: 64
     })
   }

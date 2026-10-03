@@ -17,9 +17,9 @@ const path = require("path")
 module.exports = {
     metadata: {
         name: "rank",
-        description: "View your current XP, level, and cooldown.",
+        description: "Ver tu XP, nivel y cooldown.",
         args: [
-            { type: "user", name: "member", description: "Which member to view", required: false },
+            { type: "user", name: "member", description: "De qué miembro ver la tarjeta", required: false },
         ]
     },
 
@@ -28,10 +28,10 @@ module.exports = {
         // ya no se puede hacer efímero).
         if (tools.getTargetUser()?.bot) return int.reply({ content: tools.errors.noBotView, ephemeral: true })
         await int.deferReply()
-        let member = int.member
-        let foundUser = int.options.get("user") || int.options.get("member")
-        if (foundUser) member = foundUser.member
-        if (!member) return tools.warn("That member couldn't be found!")
+        // Igual que la opción member, pero desde el menú de contexto (Ver XP).
+        const target = await tools.resolveTargetMember()
+        let member = target.member
+        if (!member) return tools.warn("No se ha encontrado a ese miembro en el servidor.")
 
         // ---- FIX: necesitamos todos los usuarios para calcular el rank correctamente
         let db = await tools.fetchAll()
@@ -40,8 +40,8 @@ module.exports = {
         else if (!db.settings.enabled) return tools.warn("*xpDisabled")
 
         let currentXP = db.users[member.id]
-        if (db.settings.rankCard.disabled) return tools.warn("Rank cards are disabled in this server!")
-        if (!currentXP || !currentXP.xp) return tools.noXPYet(foundUser ? foundUser.user : int.user)
+        if (db.settings.rankCard.disabled) return tools.warn("Las tarjetas de rango están desactivadas en este servidor.")
+        if (!currentXP || !currentXP.xp) return tools.noXPYet(target.user || int.user)
 
         let xp = currentXP.xp
         let levelData = tools.getLevel(xp, db.settings, true)
@@ -177,7 +177,7 @@ module.exports = {
             progressBar = `${initialEmoji}${barStr}${TARGET_USER} (${progressPercent.toFixed(2)}%)`
 
         // ─── CASO 3: rol normal → barra estándar hacia el siguiente reward role ─
-        } else if (nextRole) {
+        } else if (nextRole && role) {
             const currentRoleData = db.settings.rewards.find(r => r.id === role.id)
             const nextRoleData   = db.settings.rewards.find(r => r.id === nextRole.id)
 
@@ -206,9 +206,22 @@ module.exports = {
             progressBar = `${role.emoji}${barStr}${nextRole.emoji} (${progressPercent.toFixed(2)}%)`
 
         // ─── CASO fallback: isMaxRole pero sin overtakeData válido ────────────
-        } else {
+        } else if (role) {
             progressBar = `${role.emoji}${CHAOS.repeat(barSize)} (MAX)`
             progressPercent = 100
+        // ─── Sin rol de rango (sin rewards o nivel sin rol): barra neutra ───
+        } else {
+            // progreso hacia el siguiente nivel (sin rol al que apuntar)
+            const rangeXP = Math.max(1, (levelData.xpRequired || 1) - (levelData.previousLevel || 0))
+            const progressXP = Math.min(Math.max(xp - (levelData.previousLevel || 0), 0), rangeXP)
+            progressPercent = (progressXP / rangeXP) * 100
+            const completedBars = Math.round((progressPercent / 100) * barSize)
+            let barStr = ""
+            for (let i = 0; i < barSize; i++) {
+                if (i === 11) barStr += '\n'
+                barStr += i < completedBars ? DROP : DROP_GHOST
+            }
+            progressBar = `${BELOW_USER}${barStr} (${progressPercent.toFixed(2)}%)`
         }
 
         // ─── Texto debajo de la barra ─────────────────────────────────────────
@@ -217,6 +230,8 @@ module.exports = {
             nextLevelXP = `Eres el primero del servidor, ¡no hay nadie que adelantar!`
         } else if (isMaxRole && overtakeData?.targetUserID) {
             nextLevelXP = `${tools.commafy(messagesToNextRole)} mensajes para adelantar a <@${overtakeData.targetUserID}> (lvl. ${tools.commafy(overtakeData.targetLevel)})`
+        } else if (!role || !nextRole) {
+            nextLevelXP = `${tools.commafy(Math.max(0, (levelData.xpRequired || 0) - xp))} XP para subir al nivel ${levelData.level + 1}`
         } else {
             nextLevelXP = `${tools.commafy(messagesToNextRole)} mensajes para el siguiente rango`
         }
@@ -239,12 +254,19 @@ module.exports = {
             return `**${total}** (${monthly})`
         }
 
-        const bannerPath = path.join(__dirname, "../../assets/banners/", rank.banner.url)
-        const bannerAttachment = new AttachmentBuilder(bannerPath, { name: rank.banner.url })
+        // Sin rank/role (sin rewards o nivel sin rol): tarjeta sin banner ni rol.
+        const hasRankCard = Boolean(rank && role)
+        const bannerAttachment = hasRankCard
+            ? new AttachmentBuilder(path.join(__dirname, "../../assets/banners/", rank.banner.url), { name: rank.banner.url })
+            : null
+        const headerLine = hasRankCard
+            ? `## ${role.emoji} <@&${role.id}>  <:top:1467967277251956887> #${userRank || "?"}`
+            : `## <:top:1467967277251956887> #${userRank || "?"}`
 
         let container = new ContainerBuilder()
             .setAccentColor(parseInt(rank?.color?.replace('#', ''), 16) || 3447003)
-            .addMediaGalleryComponents([
+        if (hasRankCard) {
+            container.addMediaGalleryComponents([
                 new MediaGalleryBuilder()
                     .setId(1)
                     .addItems([
@@ -253,15 +275,17 @@ module.exports = {
                             .setDescription(rank.banner.alt)
                     ])
             ])
+        }
+        container
             .addSeparatorComponents(new SeparatorBuilder())
             .addSectionComponents(new SectionBuilder()
                 .addTextDisplayComponents(
                     new TextDisplayBuilder().setContent([
-                        `## ${role.emoji} <@&${role.id}>  <:top:1467967277251956887> #${userRank || "?"}`,
+                        headerLine,
                         `**<:XP:1467192533812645939>** **Nivel ${levelData.level}** (${tools.commafy(xp)} XP)`,
                         `**<:messages:1467163578699354235>** ${formatMessagesLine(totalMsgs, monthlyMsgs)}`,
                         `**${recordsConfig.RECORDS_EMOJI}** **${tools.getRecordsCompleted(currentXP)}/${recordsTotal} Records** completados`,
-                        `**<:next_level:1452305752390766633>** ${tools.commafy(levelData.xpRequired - xp)} XP para subir`,
+                        `**<:next_level:1452305752390766633>** ${tools.commafy(Math.max(0, (levelData.xpRequired || 0) - xp))} XP para subir`,
                         `**<:cooldown:1452305790495887515>** ${cooldown}`
                     ].join('\n'))
                 )
@@ -312,11 +336,11 @@ module.exports = {
                 .addTextDisplayComponents(new TextDisplayBuilder().setContent(nextLevelXP))
         }
 
-        return int.editReply({ 
-            components: [container], 
-            files: [bannerAttachment], 
-            flags: MessageFlags.IsComponentsV2, 
-            allowedMentions: { parse: [] }, 
+        return int.editReply({
+            components: [container],
+            files: bannerAttachment ? [bannerAttachment] : [],
+            flags: MessageFlags.IsComponentsV2,
+            allowedMentions: { parse: [] },
         })
     }
 }

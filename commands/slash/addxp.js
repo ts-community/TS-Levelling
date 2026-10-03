@@ -5,22 +5,22 @@ const { isProRank, getOvertakenIds, withAuthorLock } = require("../events/messag
 module.exports = {
 metadata: {    permission: "ManageGuild",
     name: "addxp",
-    description: "Add or remove XP from a member. (requires manage server permission)",
+    description: "Añade o quita XP a un miembro. (requiere permiso de gestionar el servidor)",
     args: [
-        { type: "user", name: "member", description: "Which member to modify", required: true },
-        { type: "integer", name: "xp", description: "How much XP to add (negative number to remove XP)", min: -1e10, max: 1e10, required: true },
-        { type: "string", name: "operation", description: "How the XP amount should be interpreted", required: false, choices: [
-            {name: "Add XP", value: "add_xp"},
-            {name: "Set XP to", value: "set_xp"},
-            {name: "Add levels", value: "add_level"},
-            {name: "Set level to", value: "set_level"},
+        { type: "user", name: "member", description: "A qué miembro modificar", required: true },
+        { type: "integer", name: "xp", description: "Cuánto XP añadir (negativo para quitar)", min: -1e10, max: 1e10, required: true },
+        { type: "string", name: "operation", description: "Cómo interpretar la cantidad", required: false, choices: [
+            {name: "Añadir XP", value: "add_xp"},
+            {name: "Fijar XP en", value: "set_xp"},
+            {name: "Añadir niveles", value: "add_level"},
+            {name: "Fijar nivel en", value: "set_level"},
         ]},
     ]
 },
 
 async run(client, int, tools) {
     const lockUser = int.options.get("member")?.member?.user
-    if (!lockUser) return tools.warn("I couldn't find that member!")
+    if (!lockUser) return tools.warn("No se ha encontrado a ese miembro.")
     return withAuthorLock(int.guild?.id, lockUser.id, () => module.exports.runInner(client, int, tools))
 },
 
@@ -31,15 +31,15 @@ async runInner(client, int, tools) {
     const operation = int.options.get("operation")?.value || "add_xp"
 
     let user = member?.user
-    if (!user) return tools.warn("I couldn't find that member!")
+    if (!user) return tools.warn("No se ha encontrado a ese miembro.")
 
     let db = await tools.fetchSettings(user.id)
     if (!db) return tools.warn("*noData")
     else if (!tools.canManageServer(int.member, db.settings.manualPerms)) return tools.warn("*notMod")
     else if (!db.settings.enabled) return tools.warn("*xpDisabled")
 
-    if (amount === 0 && operation.startsWith("add")) return tools.warn("Invalid amount of XP!")
-    else if (user.bot) return tools.warn("You can't give XP to bots, silly!")
+    if (amount === 0 && operation.startsWith("add")) return tools.warn("¡Cantidad de XP no válida!")
+    else if (user.bot) return tools.warn("¡No puedes dar XP a bots, bobo!")
 
     let currentXP = db.users[user.id]
     let xp = currentXP?.xp || 0
@@ -69,7 +69,7 @@ async runInner(client, int, tools) {
     let xpDiff = newXP - xp
 
     client.db.update(int.guild.id, { $set: { [`users.${user.id}.xp`]: newXP } }).then(async () => {
-        int.reply(`${newXP > xp ? "⏫" : "⏬"} ${user.displayName} now has **${tools.commafy(newXP)}** XP${newLevel != level ? ` and is **level ${newLevel}**` : ""}! (previously ${tools.commafy(xp)}, ${xpDiff >= 0 ? "+" : ""}${tools.commafy(xpDiff)})`)
+        int.reply(`${newXP > xp ? "⏫" : "⏬"} ¡${user.displayName} ahora tiene **${tools.commafy(newXP)}** de XP${newLevel != level ? ` y es **nivel ${newLevel}**` : ""}! (antes ${tools.commafy(xp)}, ${xpDiff >= 0 ? "+" : ""}${tools.commafy(xpDiff)})`)
 
         let pseudoMessage = {
             id: null, content: "",
@@ -121,8 +121,7 @@ async runInner(client, int, tools) {
                 }
             } catch {}
         }
-}).catch((e) => {
-    const msg = `Something went wrong while trying to modify XP! \`\`\`${e.message}\`\`\``;
-    tools.warn(msg.length > 2000 ? msg.substring(0, 1997) + '...' : msg);
+}).catch(() => {
+    tools.warn("¡Algo ha salido mal al modificar el XP!");
 })
 }}

@@ -11,12 +11,12 @@ async run(client, int, tools) {
 
     if (!tools.canManageServer(int.member, db.settings.manualPerms)) return tools.warn("*notMod")
 
-    if (!db.settings.rewards.length) return tools.warn("This server doesn't have any reward roles!")
+    if (!db.settings.rewards.length) return tools.warn("¡Este servidor no tiene ningún rol de recompensa!")
 
     let embed = tools.createEmbed({
-        title: `Reward Roles (${db.settings.rewards.length})`,
+        title: `Roles de recompensa (${db.settings.rewards.length})`,
         color: tools.COLOR,
-        footer: "Add or remove reward roles with /rewardrole"
+        footer: "Añade o quita roles con /rewardrole"
     })
 
     let rewards = db.settings.rewards.sort((a, b) => a.level - b.level);

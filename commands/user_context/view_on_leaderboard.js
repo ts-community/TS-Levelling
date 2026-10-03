@@ -1,6 +1,6 @@
 module.exports = {
 metadata: {
-    name: "View on leaderboard",
+    name: "Ver en el top",
     slashEquivalent: "top"
 }
 }

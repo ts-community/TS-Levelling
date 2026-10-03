@@ -792,7 +792,7 @@ client.on("guildMemberAdd", member => {
 // on interaction
 client.on("interactionCreate", async int => {
     
-    if (!int.guild) return int.reply("You can't use commands in DMs!")
+    if (!int.guild) return int.reply("¡No puedes usar comandos por MD!")
         
     // for setting changes (solo quien abrió los ajustes puede usar el menú)
     if (int.isStringSelectMenu()) {
@@ -822,13 +822,14 @@ client.on("interactionCreate", async int => {
     // general commands and buttons
     let foundCommand = client.commands.get(int.isButton() ? `button:${int.customId.split("~")[0]}` : int.commandName)
     if (!foundCommand) return
-    else if (foundCommand.metadata.slashEquivalent) foundCommand = client.commands.get(foundCommand.metadata.slashEquivalent)
+    else if (foundCommand.metadata.slashEquivalent) foundCommand = client.commands.get(foundCommand.metadata.slashEquivalent) || null
+    if (!foundCommand) return
 
     let tools = new Tools(client, int)
 
     // dev perm check
-    if (foundCommand.metadata.dev && !tools.isDev()) return tools.warn("Only developers can use this!")
-    else if (config.lockBotToDevOnly && !tools.isDev()) return tools.warn("Only developers can use this bot!")
+    if (foundCommand.metadata.dev && !tools.isDev()) return tools.warn("¡Solo los desarrolladores pueden usar esto!")
+    else if (config.lockBotToDevOnly && !tools.isDev()) return tools.warn("¡Solo los desarrolladores pueden usar este bot!")
 
     try {
         await foundCommand.run(client, int, tools)
@@ -853,7 +854,7 @@ client.on("interactionCreate", async int => {
         console.error(e)
 
         const errorReply = {
-            content: "**Error!** " + e.message,
+            content: "¡Ha habido un error! Inténtalo de nuevo.",
             ephemeral: true
         }
 

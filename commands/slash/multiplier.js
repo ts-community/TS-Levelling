@@ -32,7 +32,7 @@ async run(client, int, tools) {
     let boost = tools.clamp(+boostVal.toFixed(2), 0, 100)
     let remove = !!int.options.get("remove")?.value
     
-    if (!channel && !role) return
+    if (!channel && !role) return tools.warn("No se ha encontrado ese rol o canal.")
     let target = (channel || role)
     let tag = role ? `<@&${role.id}>` : `<#${channel.id}>`
 
@@ -46,8 +46,8 @@ async run(client, int, tools) {
 
     function finish(msg) {
         let viewMultipliers = tools.row([
-            tools.button({style: role ? "Primary" : "Secondary", label: `Role multipliers (${newList.roles.length})`, customId: "list_multipliers~roles"}),
-            tools.button({style: role ? "Secondary" : "Primary", label: `Channel multipliers (${newList.channels.length})`, customId: "list_multipliers~channels"})
+            tools.button({style: role ? "Primary" : "Secondary", label: `Multiplicadores de roles (${newList.roles.length})`, customId: "list_multipliers~roles"}),
+            tools.button({style: role ? "Secondary" : "Primary", label: `Multiplicadores de canales (${newList.channels.length})`, customId: "list_multipliers~channels"})
         ])
 
         client.db.update(int.guild.id, { $set: { [`settings.multipliers.${typeIndex}`]: newList[typeIndex], 'info.lastUpdate': Date.now() }}).then(() => {
@@ -57,8 +57,8 @@ async run(client, int, tools) {
 
     // deleting a multiplier
     if (remove) {
-        if (!foundExisting) return tools.warn(`This ${type} never had a multiplier to begin with!`)
-        return finish(`❌ **Successfully deleted ${foundExisting.boost}x multiplier for ${tag}.**`)
+        if (!foundExisting) return tools.warn(`Este ${type} nunca tuvo multiplicador.`)
+        return finish(`❌ **Multiplicador de ${foundExisting.boost}x para ${tag} eliminado.**`)
     }
 
     // set up multiplier data
@@ -68,10 +68,10 @@ async run(client, int, tools) {
 
     // if multiplier already exists, replace it
     if (foundExisting) {
-        if (foundExisting.boost == boost) return tools.warn(`This ${type} already gives a ${boost}x multiplier!`)
-        return finish(`📝 **${tag} now gives ${boostStr}!** (previously ${foundExisting.boost}x)`)
+        if (foundExisting.boost == boost) return tools.warn(`¡Este ${type} ya da un multiplicador de ${boost}x!`)
+        return finish(`📝 **¡${tag} ahora da ${boostStr}!** (antes ${foundExisting.boost}x)`)
     }
-    
-    return finish(`✅ **${tag} now gives ${boostStr}!**`)
+
+    return finish(`✅ **¡${tag} ahora da ${boostStr}!**`)
 
 }}

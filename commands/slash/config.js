@@ -29,20 +29,20 @@ async run(client, int, tools) {
     })
 
     let toggleButton = settings.enabled ?
-      {style: "Danger", label: "Disable XP", emoji: "❕", customId: "toggle_xp" }
-    : {style: "Success", label: "Enable XP", emoji: "✨", customId: "toggle_xp" }
+      {style: "Danger", label: "Desactivar XP", emoji: "❕", customId: "toggle_xp" }
+    : {style: "Success", label: "Activar XP", emoji: "✨", customId: "toggle_xp" }
 
     let buttons = tools.button([
-        {style: "Success", label: "Edit Settings", emoji: "🛠", customId: "settings_list"},
+        {style: "Success", label: "Editar ajustes", emoji: "🛠", customId: "settings_list"},
         toggleButton,
-        {style: "Link", label: "Edit Online", emoji: "🌎", url: `${tools.WEBSITE}/settings/${int.guild.id}`},
-        {style: "Secondary", label: "Export Data", emoji: "⏏️", customId: "export_xp"}
+        {style: "Link", label: "Editar online", emoji: "🌎", url: `${tools.WEBSITE}/settings/${int.guild.id}`},
+        {style: "Secondary", label: "Exportar datos", emoji: "⏏️", customId: "export_xp"}
     ])
 
     let listButtons = tools.button([
-        {style: "Primary", label: `Reward Roles (${settings.rewards.length})`, customId: "list_reward_roles"},
-        {style: "Primary", label: `Role Multipliers (${settings.multipliers.roles.length})`, customId: "list_multipliers~roles"},
-        {style: "Primary", label: `Channel Multipliers (${settings.multipliers.channels.length})`, customId: "list_multipliers~channels"}
+        {style: "Primary", label: `Roles de recompensa (${settings.rewards.length})`, customId: "list_reward_roles"},
+        {style: "Primary", label: `Multiplicadores de roles (${settings.multipliers.roles.length})`, customId: "list_multipliers~roles"},
+        {style: "Primary", label: `Multiplicadores de canales (${settings.multipliers.channels.length})`, customId: "list_multipliers~channels"}
     ])
 
     return int.reply({embeds: [embed], components: [tools.row(buttons)[0], tools.row(listButtons)[0]]})

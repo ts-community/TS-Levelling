@@ -58,8 +58,8 @@ class PageEmbed {
         let lastPage = (this.page >= this.pages)
 
         let pageOptions = [
-            {style: firstPage ? "Secondary" : "Success", label: `<< Page ${firstPage ? this.pages : Math.max((this.page - 1) || 1, 1)}`, customId: 'prev'},
-            {style: lastPage ? "Secondary" : "Success", label: `Page ${lastPage ? 1 : Math.min((this.page + 1), this.pages)} >>`, customId: 'next'}
+            {style: firstPage ? "Secondary" : "Success", label: `<< Página ${firstPage ? this.pages : Math.max((this.page - 1) || 1, 1)}`, customId: 'prev'},
+            {style: lastPage ? "Secondary" : "Success", label: `Página ${lastPage ? 1 : Math.min((this.page + 1), this.pages)} >>`, customId: 'next'}
         ]
 
         if (this.pages == 2) {
@@ -70,7 +70,7 @@ class PageEmbed {
         let pageButtons = this.pages <= 1 ? this.extraButtons : tools.button(pageOptions).concat(this.extraButtons)
 
         let footerText = this.footer || ""
-        if (this.pages > 1) footerText += `\nPage ${this.page} of ${this.pages}`
+        if (this.pages > 1) footerText += `\nPágina ${this.page} de ${this.pages}`
         if (footerText) this.embed.setFooter({text: footerText})
 
         let pgButtonRow = pageButtons[0] ? tools.row(pageButtons) : null

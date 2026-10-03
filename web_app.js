@@ -208,8 +208,8 @@ app.get("/easteregg", async function(req, res) {
                     }
                     .card {
                         position: relative;
-                        width: min(92vw, 600px);
-                        padding: 2rem 1.5rem 1.5rem;
+                        width: min(92vw, 560px);
+                        padding: 1.4rem 1.25rem 1.1rem;
                         background: linear-gradient(180deg, rgba(16, 24, 40, 0.82), rgba(9, 14, 25, 0.88));
                         border: 1px solid rgba(151, 215, 255, 0.2);
                         border-radius: 24px;
@@ -229,49 +229,44 @@ app.get("/easteregg", async function(req, res) {
                         align-items: center;
                         justify-content: center;
                         position: relative;
-                        width: 66px;
-                        height: 92px;
-                        border-radius: 50% 50% 48% 48% / 38% 38% 62% 62%;
-                        font-size: 2.4rem;
+                        width: 52px;
+                        height: 72px;
+                        border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+                        font-size: 1.9rem;
                         background: linear-gradient(135deg, rgba(135,243,255,0.18), rgba(167,139,250,0.22));
                         border: 1px solid rgba(255,255,255,0.18);
                         box-shadow: 0 14px 30px rgba(135, 243, 255, 0.18);
-                        margin-bottom: 1rem;
-                        animation: eggFloat 3.2s ease-in-out infinite, eggGlow 2.4s ease-in-out infinite alternate;
+                        margin-bottom: 0.6rem;
                     }
-                    .badge::after { content: ""; position: absolute; inset: -5px; border-radius: inherit; border: 1px solid rgba(255,255,255,.25); animation: eggRing 2.8s ease-out infinite; }
-                    @keyframes eggFloat { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-9px) rotate(3deg); } }
-                    @keyframes eggGlow { from { box-shadow: 0 12px 26px rgba(135,243,255,.18); } to { box-shadow: 0 16px 42px rgba(167,139,250,.5); } }
-                    @keyframes eggRing { from { opacity: .7; transform: scale(.92); } to { opacity: 0; transform: scale(1.35); } }
                     .status-success .badge { box-shadow: 0 14px 30px rgba(126, 240, 188, 0.22); }
                     .status-info .badge { box-shadow: 0 14px 30px rgba(135, 243, 255, 0.22); }
                     h1 {
                         margin: 0;
-                        font-size: clamp(2rem, 4vw, 3rem);
+                        font-size: clamp(1.5rem, 3.4vw, 2.2rem);
                         line-height: 1.1;
                         letter-spacing: -0.04em;
                     }
                     p {
-                        margin: 1rem auto 0;
+                        margin: 0.7rem auto 0;
                         max-width: 52ch;
                         color: var(--muted);
-                        font-size: 1.04rem;
-                        line-height: 1.7;
+                        font-size: 0.98rem;
+                        line-height: 1.55;
                     }
                     strong {
                         color: var(--success);
                     }
                     .details {
-                        margin: 1.4rem auto 0;
+                        margin: 1rem auto 0;
                         max-width: 560px;
                         display: grid;
-                        gap: 0.6rem;
+                        gap: 0.5rem;
                         text-align: left;
                     }
                     .detail {
                         display: grid;
                         gap: 0.15rem;
-                        padding: 0.8rem 1rem;
+                        padding: 0.6rem 0.85rem;
                         border-radius: 16px;
                         background: rgba(135, 243, 255, 0.07);
                         border: 1px solid rgba(135, 243, 255, 0.14);
@@ -285,10 +280,10 @@ app.get("/easteregg", async function(req, res) {
                     .detail > strong img { height: 1.3em; width: auto; vertical-align: -0.25em; margin-right: 0.15em; }
                     .detail > small { color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
                     .actions {
-                        margin-top: 1.5rem;
+                        margin-top: 1.1rem;
                         display: flex;
                         justify-content: center;
-                        gap: 0.7rem;
+                        gap: 0.6rem;
                         flex-wrap: wrap;
                     }
                     a {
@@ -296,7 +291,7 @@ app.get("/easteregg", async function(req, res) {
                         align-items: center;
                         justify-content: center;
                         gap: 0.5rem;
-                        padding: 0.85rem 1.4rem;
+                        padding: 0.7rem 1.2rem;
                         border-radius: 999px;
                         text-decoration: none;
                         color: #081521;
@@ -327,10 +322,11 @@ app.get("/easteregg", async function(req, res) {
                         *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
                     }
                     @media (max-width: 520px) {
-                        .card { width: min(94vw, 600px); padding: 1.6rem 1rem 1.1rem; }
-                        h1 { font-size: 1.8rem; }
-                        p { font-size: .95rem; line-height: 1.55; }
-                        .detail { padding: .7rem .75rem; }
+                        .card { width: min(94vw, 560px); padding: 1.1rem 0.9rem 0.85rem; }
+                        .badge { width: 44px; height: 60px; font-size: 1.6rem; margin-bottom: 0.5rem; }
+                        h1 { font-size: 1.45rem; }
+                        p { font-size: .92rem; line-height: 1.5; }
+                        .detail { padding: .55rem .7rem; }
                         .actions a { width: 100%; }
                     }
                 </style>
@@ -473,6 +469,7 @@ app.get("/easteregg", async function(req, res) {
     }
 
     const leaderboardHref = `/leaderboard/${encodeURIComponent(guildId)}`
+    const recordsHref = `/records/${encodeURIComponent(guildId)}`
 
     if (result.unlocked) {
         return res.send(renderPage({
@@ -482,9 +479,9 @@ app.get("/easteregg", async function(req, res) {
             status: "success",
             showConfetti: true,
             actionHref: leaderboardHref,
-            actionLabel: "Ver mi clasificación",
-            secondaryHref: "/servers",
-            secondaryLabel: "Volver al dashboard",
+            actionLabel: "Ver clasificación",
+            secondaryHref: recordsHref,
+            secondaryLabel: "Ver mis records",
         }));
     }
 
@@ -495,9 +492,9 @@ app.get("/easteregg", async function(req, res) {
         status: "info",
         showConfetti: false,
         actionHref: leaderboardHref,
-        actionLabel: "Ver mi clasificación",
-        secondaryHref: "/servers",
-        secondaryLabel: "Volver al dashboard",
+        actionLabel: "Ver clasificación",
+        secondaryHref: recordsHref,
+        secondaryLabel: "Ver mis records",
     }));
 })
 

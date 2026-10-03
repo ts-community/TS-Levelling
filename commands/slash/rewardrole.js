@@ -31,7 +31,7 @@ async run(client, int, tools) {
     if (foundExisting) newRoles.splice(existingIndex, 1)    // remove by default
 
     function finish(msg) {
-        let viewRewardRoles = tools.row(tools.button({style: "Primary", label: `View all rewards (${newRoles.length})`, customId: "list_reward_roles"}))
+        let viewRewardRoles = tools.row(tools.button({style: "Primary", label: `Ver todas las recompensas (${newRoles.length})`, customId: "list_reward_roles"}))
 
         client.db.update(int.guild.id, { $set: { 'settings.rewards': newRoles, 'info.lastUpdate': Date.now() }}).then(() => {
             return int.reply({ content: msg, components: viewRewardRoles })        
@@ -40,32 +40,32 @@ async run(client, int, tools) {
     
     // deleting a reward role
     if (level == 0) {
-        if (!foundExisting) return tools.warn("Reward roles can't be granted at level 0! Use this to delete existing reward roles.")
-        return finish(`❌ **Successfully deleted reward role <@&${role.id}> for level ${foundExisting.level}.**`, newRoles)
+        if (!foundExisting) return tools.warn("¡Los roles de recompensa no se pueden dar en el nivel 0! Úsalo para eliminar roles existentes.")
+        return finish(`❌ **Rol de recompensa <@&${role.id}> del nivel ${foundExisting.level} eliminado.**`, newRoles)
     }
 
     // no manage roles perm
     if (!int.guild.members.me.permissions.has(Discord.PermissionFlagsBits.ManageRoles)) return tools.warn("*cantManageRoles")
 
     // can't grant role
-    if (!role.editable) return tools.warn(`I don't have permission to grant <@&${role.id}>!`)
+    if (!role.editable) return tools.warn(`¡No tengo permiso para dar <@&${role.id}>!`)
 
     // set up new role data
     let roleData = { id: role.id, level }
     let extraStrings = []
-    if (isKeep) { roleData.keep = true; extraStrings.push("always kept") }
-    if (isDontSync) { roleData.noSync = true; extraStrings.push("ignores sync") }
+    if (isKeep) { roleData.keep = true; extraStrings.push("se conserva siempre") }
+    if (isDontSync) { roleData.noSync = true; extraStrings.push("ignora el sync") }
 
     newRoles.push(roleData)
     let extraStr = (extraStrings.length < 1) ? "" : ` (${extraStrings.join(", ")})`
 
     // if reward already exists, replace existing role
     if (foundExisting) {
-        if (foundExisting.level == level) return tools.warn(`This role is already granted at level ${level}!`)
-        return finish(`📝 **<@&${role.id}> will now be granted at level ${level}!** (previously ${foundExisting.level})${extraStr}`)
+        if (foundExisting.level == level) return tools.warn(`¡Este rol ya se da en el nivel ${level}!`)
+        return finish(`📝 **¡<@&${role.id}> ahora se dará en el nivel ${level}!** (antes ${foundExisting.level})${extraStr}`)
     }
 
     // otherwise, just add the role
-    return finish(`✅ **<@&${role.id}> will now be granted at level ${level}!**${extraStr}`)
+    return finish(`✅ **¡<@&${role.id}> ahora se dará en el nivel ${level}!**${extraStr}`)
 
 }}

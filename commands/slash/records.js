@@ -583,9 +583,9 @@ function buildCatSelect(currentId, unlockedIds, disabled = false) {
 module.exports = {
 metadata: {
     name: "records",
-    description: "View your server Records (achievements).",
+    description: "Ver tus Records (logros) del servidor.",
     args: [
-        { type: "user", name: "member", description: "Which member to inspect", required: false },
+        { type: "user", name: "member", description: "De qué miembro mirarlos", required: false },
     ],
 },
 
@@ -594,8 +594,12 @@ async run(client, int, tools) {
     // ya no se puede hacer efímero).
     if (tools.getTargetUser()?.bot) return int.reply({ content: tools.errors.noBotView, ephemeral: true })
     await int.deferReply({ flags: MessageFlags.IsComponentsV2 })
-    const targetMember = int.options.get("user") || int.options.get("member")
-    const member = targetMember?.member || int.member
+    // Igual que la opción member, pero desde el menú de contexto (Ver Records).
+    const target = await tools.resolveTargetMember()
+    if (!target.member && target.user && target.user.id !== int.user.id) {
+        return tools.warn("No se ha encontrado a ese miembro en el servidor.")
+    }
+    const member = target.member || int.member
     const memberId = member?.id || int.user.id
 
     let db = await tools.fetchSettings(memberId)
