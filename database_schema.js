@@ -81,7 +81,13 @@ const settings = {
     },
 
     hideMultipliers: { type: "bool", default: false },
-    manualPerms: { type: "bool", default: false }
+    manualPerms: { type: "bool", default: false },
+
+    // Roles que pueden usar /drop sin gestionar el servidor (los gestores
+    // siempre pueden). Se administra con /drop-admin.
+    dropRoles: { type: "collection", values: {
+        id: { type: "string", accept: ["discord:role"] },
+    }},
 }
 
 const settingsArray = []
@@ -131,6 +137,7 @@ Object.entries(settings).forEach(x => {
 const schema = { 
     _id: String,
     users: { type: Object }, // xp, monthlyXP, dailyXP, cooldown, hidden, records { "<recordId>:<threshold>": true }, + progreso: streak {current,max,lastDay}, reactionsSent, reactionsReceived, channels, countingSent, pokemonCaught, voiceJoined, voiceMinutes + contadores: messages, monthlyMessages, dailyMessages, monthlyMessagesMax, dailyMessagesMax
+    drops: { type: Object, default: {} }, // drops de XP reclamables por web: { "<CODE>": { name, amount, maxClaims, claims: [userIds], expiresAt, createdBy, createdAt } }
     settings: settingsObj,
     info: {
         lastUpdate: { type: Number, default: 0 },

@@ -209,11 +209,22 @@ class Tools {
             return true
         }
 
-        // calculate xp to reach a level
+        // calculate xp to reach a level (memoized per settings object: the
+        // function is pure, so caching by (settings, lvl) returns identical
+        // values while skipping the curve reduce on repeated calls)
+        const xpForLevelCache = new WeakMap()
         this.xpForLevel = function(lvl, settings) {
             if (lvl > settings.maxLevel) lvl = settings.maxLevel
+            let byLevel = xpForLevelCache.get(settings)
+            if (!byLevel) {
+                byLevel = new Map()
+                xpForLevelCache.set(settings, byLevel)
+            }
+            if (byLevel.has(lvl)) return byLevel.get(lvl)
             let xpRequired = Object.entries(settings.curve).reduce((total, n) => total + (n[1] * (lvl ** n[0])), 0)
-            return settings.rounding > 1 ? settings.rounding * Math.round(xpRequired / settings.rounding) : Math.round(xpRequired)
+            const out = settings.rounding > 1 ? settings.rounding * Math.round(xpRequired / settings.rounding) : Math.round(xpRequired)
+            byLevel.set(lvl, out)
+            return out
         }
 
         // get expected reward roles for a certain level
@@ -256,6 +267,23 @@ class Tools {
             .filter(x => !list.incorrect.some(r => r.id == x)) // remove incorrect roles
             .concat(list.missing.map(x => x.id)) // add missing roles
             return member.roles.set(newRoles)
+        }
+
+        // asegura el rol de hitos (config.roles.milestones.id) al miembro.
+        // Misma regla que el flujo de mensajes: lo recibe cualquiera activo,
+        // sin esperar a que hable. Devuelve true solo si lo acaba de dar.
+        // Nunca lanza (fallos de permisos/jerarquía se ignoran como antes).
+        this.ensureMilestoneRole = async function(guild, member) {
+            try {
+                const milestoneRoleId = config.roles?.milestones?.id
+                if (!milestoneRoleId || !guild || !member) return false
+                const role = guild.roles?.cache?.get(milestoneRoleId)
+                if (!role || member.roles?.cache?.has(milestoneRoleId)) return false
+                await member.roles.add(role)
+                return true
+            } catch {
+                return false
+            }
         }
 
         // get and calculate xp multiplier (for both channels and roles)
@@ -454,11 +482,13 @@ class Tools {
 
         // retorna datos para adelantar al siguiente usuario con más XP
         // devuelve: { targetUserID, targetXP, belowXP, myXP, xpNeeded }
-        this.getXPToOvertake = async function(memberID, serverID=int.guild.id) {
-            let data = await this.fetchAll(serverID)
-            if (!data?.users) return null
+        // Versión síncrona sobre datos ya leídos (mismo cálculo que
+        // getXPToOvertake pero sin lectura a DB: /rank la usa con el `db`
+        // que ya tiene, ahorrando un fetchAll completo).
+        this.getXPToOvertakeFromData = function(users, settings, memberID) {
+            if (!users) return null
 
-            let usersArray = this.xpObjToArray(data.users)
+            let usersArray = this.xpObjToArray(users)
                 .filter(u => u.xp > 0)
                 .sort((a, b) => (b.xp || 0) - (a.xp || 0))
 
@@ -476,11 +506,20 @@ class Tools {
                 targetUserID: above?.id || null,
                 targetXP: above?.xp || 0,
                 belowXP: below?.xp || 0,
-                targetLevel: this.getLevel(above?.xp || 0, data.settings),
+                targetLevel: this.getLevel(above?.xp || 0, settings),
                 myXP: myXP,
                 xpNeeded: above ? (above.xp || 0) - myXP + 1 : 0,
 
             }
+        }
+
+        // retorna datos para adelantar al siguiente usuario con más XP
+        // devuelve: { targetUserID, targetXP, belowXP, myXP, xpNeeded }
+        this.getXPToOvertake = async function(memberID, serverID=int.guild.id) {
+            let data = await this.fetchAll(serverID)
+            if (!data?.users) return null
+
+            return this.getXPToOvertakeFromData(data.users, data.settings, memberID)
         }
 
         // creates a timed yes/no confirmation (options: secs, buttons, message, timeoutMessage, onClick, onTimeout)

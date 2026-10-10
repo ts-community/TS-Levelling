@@ -793,6 +793,20 @@ client.on("guildMemberAdd", member => {
 client.on("interactionCreate", async int => {
     
     if (!int.guild) return int.reply("¡No puedes usar comandos por MD!")
+
+    // autocompletado de opciones (p. ej. objetos de la tienda en /drop):
+    // cada comando expone command.autocomplete(client, int).
+    if (typeof int.isAutocomplete === "function" && int.isAutocomplete()) {
+        const autoCommand = client.commands.get(int.commandName)
+        if (autoCommand?.autocomplete) {
+            try {
+                await autoCommand.autocomplete(client, int)
+            } catch {
+                try { await int.respond([]) } catch {}
+            }
+        }
+        return
+    }
         
     // for setting changes (solo quien abrió los ajustes puede usar el menú)
     if (int.isStringSelectMenu()) {

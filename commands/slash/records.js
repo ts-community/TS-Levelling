@@ -223,19 +223,29 @@ function formatReward(tier, commafy) {
     return rewards.join(" + ")
 }
 
-function compactProgressLabel(label) {
+function compactProgressLabel(label, decimals = 1) {
     const value = Number(String(label).replace(/\./g, "").replace(",", "."))
     if (!Number.isFinite(value) || Math.abs(value) < 1000) return label
     const divisor = Math.abs(value) >= 1000000 ? 1000000 : 1000
     const suffix = divisor === 1000000 ? "M" : "k"
-    const compact = Math.round((value / divisor) * 10) / 10
+    const factor = 10 ** decimals
+    const compact = Math.round((value / divisor) * factor) / factor
     return `${String(compact).replace(".", ",")}${suffix}`
 }
 
-function formatProgress(record, progress, commafy, unitOverride) {
+function formatProgress(record, progress, commafy, unitOverride, useCompact = false) {
     const target = progress?.target ?? record.tiers[0]?.threshold ?? 0
-    const current = compactProgressLabel(progress?.currentLabel ?? commafy(0))
-    const targetLabel = compactProgressLabel(progress?.targetLabel ?? commafy(target))
+    const rawCurrent = progress?.currentLabel ?? commafy(0)
+    const rawTarget = progress?.targetLabel ?? commafy(target)
+    let current = useCompact ? compactProgressLabel(rawCurrent) : rawCurrent
+    const targetLabel = useCompact ? compactProgressLabel(rawTarget) : rawTarget
+    if (useCompact && current === targetLabel && rawCurrent !== rawTarget) {
+        // Desempate: el compacto a 1 decimal los deja iguales ("2k/2k") sin
+        // estar completo. Un decimal extra en el actual ("1,95k/2k"); si ni
+        // así se distingue, el actual exacto (siempre distinto del objetivo).
+        const fine = compactProgressLabel(rawCurrent, 2)
+        current = fine !== targetLabel ? fine : rawCurrent
+    }
     const unit = unitOverride
         ?? (record.unit === "horas" ? "h"
             : record.unit === "mensajes" ? "mensajes"
@@ -249,25 +259,31 @@ function formatProgress(record, progress, commafy, unitOverride) {
 const PROGRESS_LINE_WIDTH = 37.9
 // El primer bloque va pegado al título dentro de la sección con thumbnail
 // (más estrecha): su línea -# usa este listón. Medido con el caso real del
-// Leyenda ("117,5k/50k msgs" = 31,62 saltaba en la sección): 30 lo deja en
+// Leyenda ("117.500/50.000 msgs" saltaba en la sección): 30 lo deja en
 // sin unidad, que cabe de sobra.
 const FIRST_BLOCK_LINE_WIDTH = 30
 
-// Cascada de la línea -#: completa → corta → sin unidad (como /top con
-// fitLine). En mensajes la corta es "msgs"; el resto no tiene corta y pasa
-// directo a sin unidad. Las menciones de rol se miden como "@rol", igual
-// que en el test.
+// Cascada de la línea -#: número exacto primero (completa → corta → sin
+// unidad, como /top con fitLine). Solo si ni el número exacto sin unidad
+// cabe se recurre al compacto (k/M) como último recurso para no partir la
+// línea en móvil. En mensajes la corta es "msgs"; el resto no tiene corta
+// y pasa directo a sin unidad. Las menciones de rol se miden como "@rol",
+// igual que en el test.
 function fitProgressLine(record, progress, currentTier, commafy, lineWidth = PROGRESS_LINE_WIDTH) {
     const reward = formatReward(currentTier, commafy)
-    const full = `${formatProgress(record, progress, commafy)} - ${reward}`
     const measure = text => estimateVisualWidth(`-# ${text}`.replace(/<@&\d+>/g, "@rol"))
-    if (measure(full) <= lineWidth) return full
+    const lines = [`${formatProgress(record, progress, commafy)} - ${reward}`]
     if (record.unit === "mensajes") {
-        const short = `${formatProgress(record, progress, commafy, "msgs")} - ${reward}`
-        if (measure(short) <= lineWidth) return short
+        lines.push(`${formatProgress(record, progress, commafy, "msgs")} - ${reward}`)
     }
-    // Último recurso: sin unidad (el contexto va en la descripción).
-    return `${formatProgress(record, progress, commafy, "")} - ${reward}`
+    lines.push(`${formatProgress(record, progress, commafy, "")} - ${reward}`)
+    // Último recurso: compacto (k/M) para cifras enormes que ni sin unidad
+    // caben con el número exacto.
+    if (record.unit === "mensajes") {
+        lines.push(`${formatProgress(record, progress, commafy, "msgs", true)} - ${reward}`)
+    }
+    lines.push(`${formatProgress(record, progress, commafy, "", true)} - ${reward}`)
+    return lines.find(text => measure(text) <= lineWidth) ?? lines[lines.length - 1]
 }
 
 // Un bloque por logro con el render compartido del mensaje de desbloqueo:
@@ -481,15 +497,17 @@ function buildInfoTexts(userData, member, unlockedIds, tools, info) {
         `- ${emoji} **${label}:** ${show(value)} ${value === 1 ? "msg" : "msgs"}`,
         `- ${emoji} **${label}:** ${show(value)}`,
     )
+    // Estadísticas: cifras exactas siempre, sin compactar a k/M. La cascada
+    // solo acorta la unidad (mensajes → msgs → nada) para que quepa en móvil.
     const msgLineWithMaximum = (emoji, label, value, maximum) => {
         const currentUnit = value === 1 ? "mensaje" : "mensajes"
         const currentShortUnit = value === 1 ? "msg" : "msgs"
-        const currentLabel = compactProgressLabel(show(value))
-        const maximumLabel = compactProgressLabel(show(maximum))
+        const fullCurrent = show(value)
+        const fullMaximum = show(maximum)
         return fitInfoLine(
-            `- ${emoji} **${label}:** ${currentLabel} ${currentUnit} (máx. ${maximumLabel})`,
-            `- ${emoji} **${label}:** ${currentLabel} ${currentShortUnit} (máx. ${maximumLabel})`,
-            `- ${emoji} **${label}:** ${currentLabel} (máx. ${maximumLabel})`,
+            `- ${emoji} **${label}:** ${fullCurrent} ${currentUnit} (máx. ${fullMaximum})`,
+            `- ${emoji} **${label}:** ${fullCurrent} ${currentShortUnit} (máx. ${fullMaximum})`,
+            `- ${emoji} **${label}:** ${fullCurrent} (máx. ${fullMaximum})`,
         )
     }
     const streakLineWithMaximum = fitInfoLine(

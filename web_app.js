@@ -15,6 +15,7 @@ const Model = require("./classes/DatabaseModel.js");
 const LevelUpEmbed = require('./classes/LevelUpEmbed.js')
 const LevelUpMessage = require("./classes/LevelUpMessage.js")
 const { unlockWebEasterEgg, resolveServerId, DEFAULT_EASTEREGG_GUILD_ID } = require("./classes/WebEasterEgg.js")
+const Drops = require("./classes/Drops.js")
 const recordsConfig = require("./config/records.js")
 const auth = require('./config.json')
 const curvePresets = require('./json/curve_presets.json')
@@ -110,6 +111,19 @@ app.use(function(req, res, next) {
     next()
 })
 
+// Subdominio dedicado a drops (config.json -> dropsHostname, p. ej.
+// drops.tscomunity.es): ahí solo viven las páginas de drops, /discord y
+// /auth; lo demás redirige a la web principal. Requiere apuntar el
+// subdominio al mismo puerto en nginx (ver drops.tscomunity.es.nginx).
+app.use(function(req, res, next) {
+    const dropsHost = Drops.dropsHostname()
+    if (!dropsHost || req.hostname !== dropsHost) return next()
+    if (/^\/(drop|discord|auth)(\/|$)/.test(req.path)) return next()
+    // Ruta corta de drops: /<servidor>/<CODIGO>.
+    if (/^\/\d{10,30}\/[A-Z0-9]{6,10}\/?$/.test(req.path)) return next()
+    return res.redirect(`${siteURL}${req.originalUrl}`)
+})
+
 app.get("/servers", (req, res) => sendPage(res, "servers"))
 app.get("/settings/:id", (req, res) => sendPage(res, "config"))
 app.get(["/leaderboard/:id", "/top/:id", "/rank/:id", "/roles/:id", "/levels/:id", "/records/:id"], (req, res) => sendPage(res, "leaderboard"))
@@ -131,6 +145,9 @@ app.get("/easteregg", async function(req, res) {
     }
 
     function renderPage({ title, message, detailsHtml = "", status = "info", showConfetti = false, actionHref = "/servers", actionLabel = "Volver al dashboard", secondaryHref = null, secondaryLabel = null }) {
+        // showConfetti: false | true (gran celebración al encontrarlo) | "soft" (lluvia suave en bucle si ya estaba reclamado)
+        const celebration = showConfetti === "soft" ? "soft" : showConfetti ? "full" : "none"
+        const highlightCta = status === "success" || status === "login"
         return `
             <!DOCTYPE html>
             <html lang="es">
@@ -165,7 +182,9 @@ app.get("/easteregg", async function(req, res) {
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        overflow: hidden;
+                        overflow-x: hidden;
+                        overflow-y: auto;
+                        padding: 28px 12px;
                         position: relative;
                         background-size: 180% 180%;
                         animation: gradientFlow 16s ease-in-out infinite alternate;
@@ -209,6 +228,7 @@ app.get("/easteregg", async function(req, res) {
                     .card {
                         position: relative;
                         width: min(92vw, 560px);
+                        margin: auto;
                         padding: 1.4rem 1.25rem 1.1rem;
                         background: linear-gradient(180deg, rgba(16, 24, 40, 0.82), rgba(9, 14, 25, 0.88));
                         border: 1px solid rgba(151, 215, 255, 0.2);
@@ -217,29 +237,57 @@ app.get("/easteregg", async function(req, res) {
                         backdrop-filter: blur(14px);
                         text-align: center;
                         z-index: 1;
-                        animation: cardIn 0.75s cubic-bezier(.2,.8,.2,1) both, cardPulse 5s ease-in-out 1s infinite;
+                        /* backwards (no both): al terminar la entrada no pisa el
+                           transform que pone el tilt 3D del cursor */
+                        animation: cardIn 0.75s cubic-bezier(.2,.8,.2,1) backwards, cardPulse 5s ease-in-out 1s infinite;
+                        transition: transform 0.18s ease-out;
                     }
                     @keyframes cardPulse { 0%,100% { box-shadow: 0 30px 80px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08); } 50% { box-shadow: 0 34px 90px rgba(0,0,0,.58), 0 0 34px rgba(135,243,255,.08), inset 0 1px 0 rgba(255,255,255,.1); } }
                     @keyframes cardIn {
                         from { opacity: 0; transform: translateY(18px) scale(0.98); }
                         to { opacity: 1; transform: none; }
                     }
+                    /* Círculo central con anillo giratorio de colores */
+                    .badgeWrap {
+                        width: 92px;
+                        height: 92px;
+                        margin: 0 auto 0.7rem;
+                        padding: 4px;
+                        border-radius: 50%;
+                        background: conic-gradient(from 0deg, #87f3ff, #a78bfa, #7ef0bc, #f5d76e, #f78fb3, #87f3ff);
+                        animation: ringSpin 7s linear infinite;
+                        box-shadow: 0 14px 34px rgba(135, 243, 255, 0.22);
+                    }
+                    .status-success .badgeWrap {
+                        animation: ringSpin 3.2s linear infinite;
+                        box-shadow: 0 14px 40px rgba(126, 240, 188, 0.35), 0 0 46px rgba(135, 243, 255, 0.22);
+                    }
+                    .status-claimed .badgeWrap {
+                        box-shadow: 0 14px 34px rgba(167, 139, 250, 0.32);
+                    }
+                    @keyframes ringSpin { to { transform: rotate(360deg); } }
                     .badge {
-                        display: inline-flex;
+                        display: flex;
                         align-items: center;
                         justify-content: center;
-                        position: relative;
-                        width: 52px;
-                        height: 72px;
-                        border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
-                        font-size: 1.9rem;
-                        background: linear-gradient(135deg, rgba(135,243,255,0.18), rgba(167,139,250,0.22));
-                        border: 1px solid rgba(255,255,255,0.18);
-                        box-shadow: 0 14px 30px rgba(135, 243, 255, 0.18);
-                        margin-bottom: 0.6rem;
+                        width: 100%;
+                        height: 100%;
+                        border-radius: 50%;
+                        font-size: 2.1rem;
+                        background: radial-gradient(circle at 32% 28%, rgba(64, 90, 130, 0.95), rgba(9, 14, 25, 0.96));
+                        border: 1px solid rgba(255,255,255,0.14);
+                        animation: badgeFloat 4s ease-in-out infinite;
                     }
-                    .status-success .badge { box-shadow: 0 14px 30px rgba(126, 240, 188, 0.22); }
-                    .status-info .badge { box-shadow: 0 14px 30px rgba(135, 243, 255, 0.22); }
+                    .status-success .badge { animation: badgePop 0.7s cubic-bezier(.2,1.4,.4,1) both, badgeFloat 4s ease-in-out 0.7s infinite; }
+                    @keyframes badgeFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+                    @keyframes badgePop { from { opacity: 0; transform: scale(0.4) rotate(-18deg); } to { opacity: 1; transform: none; } }
+                    /* Sonar para el estado sin sesión */
+                    .status-login .badgeWrap { animation: ringSpin 7s linear infinite, sonar 2.2s ease-out infinite; }
+                    @keyframes sonar {
+                        0% { box-shadow: 0 14px 34px rgba(135,243,255,.22), 0 0 0 0 rgba(135,243,255,.45); }
+                        70% { box-shadow: 0 14px 34px rgba(135,243,255,.22), 0 0 0 16px rgba(135,243,255,0); }
+                        100% { box-shadow: 0 14px 34px rgba(135,243,255,.22), 0 0 0 0 rgba(135,243,255,0); }
+                    }
                     h1 {
                         margin: 0;
                         font-size: clamp(1.5rem, 3.4vw, 2.2rem);
@@ -310,6 +358,76 @@ app.get("/easteregg", async function(req, res) {
                         border: 1px solid rgba(135, 243, 255, 0.35);
                         box-shadow: none;
                     }
+                    /* Botón principal: gradiente fijo en reposo; la animación
+                       solo aparece al poner el cursor encima. */
+                    a.btn-primary {
+                        background: linear-gradient(135deg, #87f3ff, #a78bfa);
+                        transition: transform 0.18s ease, box-shadow 0.18s ease, background-position 0.35s ease;
+                    }
+                    a.btn-primary:hover {
+                        transform: translateY(-1px);
+                        background: linear-gradient(135deg, #87f3ff, #a78bfa, #7ef0bc, #87f3ff);
+                        background-size: 280% 280%;
+                        animation: btnSlide 2.5s ease infinite;
+                        box-shadow: 0 18px 36px rgba(135, 243, 255, 0.35);
+                    }
+                    @keyframes btnSlide { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+                    /* Título con brillo en la celebración */
+                    .status-success h1 {
+                        background: linear-gradient(100deg, #fff 20%, var(--accent) 40%, #fff 60%);
+                        background-size: 220% auto;
+                        -webkit-background-clip: text;
+                        background-clip: text;
+                        -webkit-text-fill-color: transparent;
+                        animation: titleShine 3.2s linear infinite;
+                    }
+                    @keyframes titleShine { to { background-position: 220% center; } }
+                    /* Cinta "ya lo tienes" */
+                    .ribbon {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 0.4rem;
+                        margin-bottom: 0.7rem;
+                        padding: 0.32rem 0.95rem;
+                        border-radius: 999px;
+                        font-size: 0.74rem;
+                        font-weight: 800;
+                        letter-spacing: 0.14em;
+                        text-transform: uppercase;
+                        color: #0b1526;
+                        background: linear-gradient(135deg, #f5d76e, #ffb86c, #f78fb3, #f5d76e);
+                        background-size: 250% 250%;
+                        animation: btnSlide 4s ease infinite;
+                        box-shadow: 0 8px 22px rgba(245, 215, 110, 0.3);
+                    }
+                    /* Destellos flotantes en celebración */
+                    .spark {
+                        position: absolute;
+                        border-radius: 50%;
+                        filter: blur(1px);
+                        pointer-events: none;
+                        animation: sparkFloat 5s ease-in-out infinite;
+                    }
+                    @keyframes sparkFloat {
+                        0%,100% { transform: translateY(0) scale(1); opacity: .85; }
+                        50% { transform: translateY(-16px) scale(1.25); opacity: .4; }
+                    }
+                    /* Franja superior de la tarjeta según estado */
+                    .card::before {
+                        content: "";
+                        position: absolute;
+                        top: 0; left: 10%; right: 10%;
+                        height: 3px;
+                        border-radius: 999px;
+                        background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent);
+                        opacity: .7;
+                    }
+                    .status-success .card::before {
+                        background: linear-gradient(90deg, transparent, #7ef0bc, #87f3ff, #f5d76e, transparent);
+                        background-size: 250% 100%;
+                        animation: btnSlide 3s linear infinite;
+                        opacity: 1;
+                    }
                     canvas {
                         position: fixed;
                         inset: 0;
@@ -323,10 +441,12 @@ app.get("/easteregg", async function(req, res) {
                     }
                     @media (max-width: 520px) {
                         .card { width: min(94vw, 560px); padding: 1.1rem 0.9rem 0.85rem; }
-                        .badge { width: 44px; height: 60px; font-size: 1.6rem; margin-bottom: 0.5rem; }
+                        .badgeWrap { width: 74px; height: 74px; }
+                        .badge { font-size: 1.7rem; }
                         h1 { font-size: 1.45rem; }
                         p { font-size: .92rem; line-height: 1.5; }
                         .detail { padding: .55rem .7rem; }
+                        .actions { flex-direction: column; align-items: stretch; }
                         .actions a { width: 100%; }
                     }
                 </style>
@@ -337,23 +457,64 @@ app.get("/easteregg", async function(req, res) {
                 <div class="glow three"></div>
 
                 <div class="card">
-                    <div class="badge">${status === "success" ? "✅" : "🔎"}</div>
+                    ${status === "claimed" ? `<div class="ribbon">✨ Ya lo tienes ✨</div>` : ""}
+                    ${celebration !== "none" ? `
+                    <span class="spark" style="width:7px;height:7px;background:#7ef0bc;top:12%;left:9%;"></span>
+                    <span class="spark" style="width:5px;height:5px;background:#f5d76e;top:22%;right:10%;animation-delay:1s;"></span>
+                    <span class="spark" style="width:6px;height:6px;background:#f78fb3;bottom:18%;left:12%;animation-delay:2s;"></span>
+                    <span class="spark" style="width:5px;height:5px;background:#87f3ff;bottom:26%;right:12%;animation-delay:.5s;"></span>
+                    <span class="spark" style="width:8px;height:8px;background:#a78bfa;top:48%;left:5%;animation-delay:1.6s;"></span>
+                    <span class="spark" style="width:6px;height:6px;background:#ffb86c;top:56%;right:6%;animation-delay:2.6s;"></span>
+                    ` : ""}
+                    <div class="badgeWrap"><div class="badge">${status === "success" ? "🏆" : status === "claimed" ? "🥚" : "🔎"}</div></div>
                     <h1>${title}</h1>
                     <p>${message}</p>
                     ${detailsHtml ? `<div class="details">${detailsHtml}</div>` : ""}
                     <div class="actions">
-                        <a href="${actionHref}">${actionLabel}</a>
+                        <a class="${highlightCta ? "btn-primary" : ""}" href="${actionHref}">${actionLabel}</a>
                         ${secondaryHref ? `<a class="secondary" href="${secondaryHref}">${secondaryLabel}</a>` : ""}
                     </div>
                 </div>
 
-                ${showConfetti ? `
+                <script>
+                    // Tilt 3D: el panel se inclina hacia el cursor. Solo con
+                    // ratón (pointer: fine) y sin reduced-motion; en táctil no hace nada.
+                    (function() {
+                        var card = document.querySelector('.card');
+                        if (!card) return;
+                        if (!window.matchMedia('(pointer: fine)').matches) return;
+                        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+                        var raf = null;
+                        function onMove(e) {
+                            var r = card.getBoundingClientRect();
+                            var px = (e.clientX - (r.left + r.width / 2)) / r.width;
+                            var py = (e.clientY - (r.top + r.height / 2)) / r.height;
+                            px = Math.max(-1, Math.min(1, px));
+                            py = Math.max(-1, Math.min(1, py));
+                            if (raf) cancelAnimationFrame(raf);
+                            raf = requestAnimationFrame(function() {
+                                card.style.transform = 'perspective(950px) rotateX(' + (-py * 8).toFixed(2) + 'deg) rotateY(' + (px * 10).toFixed(2) + 'deg)';
+                            });
+                        }
+                        function onLeave() {
+                            if (raf) cancelAnimationFrame(raf);
+                            card.style.transform = '';
+                        }
+                        window.addEventListener('mousemove', onMove, { passive: true });
+                        document.addEventListener('mouseleave', onLeave);
+                        window.addEventListener('blur', onLeave);
+                    })();
+                </script>
+
+                ${celebration !== "none" ? `
                     <canvas id="confetti"></canvas>
                     <script>
                         const canvas = document.getElementById('confetti');
                         const ctx = canvas.getContext('2d');
                         const pieces = [];
                         const colors = ['#7ef0bc', '#87f3ff', '#f5d76e', '#f78fb3', '#a78bfa', '#ffb86c'];
+                        const celebrationMode = '${celebration}';
+                        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
                         function resizeCanvas() {
                             canvas.width = window.innerWidth * window.devicePixelRatio;
@@ -363,11 +524,10 @@ app.get("/easteregg", async function(req, res) {
                             ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
                         }
 
-                        function spawnBurst() {
-                            pieces.length = 0;
-                            for (let i = 0; i < 180; i++) {
+                        function spawnBurst(count, spread) {
+                            for (let i = 0; i < count; i++) {
                                 pieces.push({
-                                    x: window.innerWidth * (0.5 + (Math.random() - 0.5) * 0.18),
+                                    x: window.innerWidth * (0.5 + (Math.random() - 0.5) * (spread || 0.18)),
                                     y: window.innerHeight * 0.18 + Math.random() * 30,
                                     w: 8 + Math.random() * 10,
                                     h: 14 + Math.random() * 16,
@@ -377,6 +537,25 @@ app.get("/easteregg", async function(req, res) {
                                     rot: Math.random() * Math.PI,
                                     spin: (Math.random() - 0.5) * 0.25,
                                     alpha: 1,
+                                    loop: false,
+                                });
+                            }
+                        }
+
+                        function spawnRain(count) {
+                            for (let i = 0; i < count; i++) {
+                                pieces.push({
+                                    x: Math.random() * window.innerWidth,
+                                    y: Math.random() * window.innerHeight,
+                                    w: 5 + Math.random() * 7,
+                                    h: 8 + Math.random() * 10,
+                                    color: colors[Math.floor(Math.random() * colors.length)],
+                                    dx: (Math.random() - 0.5) * 1.4,
+                                    dy: 0.9 + Math.random() * 1.6,
+                                    rot: Math.random() * Math.PI,
+                                    spin: (Math.random() - 0.5) * 0.15,
+                                    alpha: 0.55 + Math.random() * 0.35,
+                                    loop: true,
                                 });
                             }
                         }
@@ -387,8 +566,18 @@ app.get("/easteregg", async function(req, res) {
                                 p.x += p.dx;
                                 p.y += p.dy;
                                 p.rot += p.spin;
-                                p.dy += 0.04;
-                                p.alpha *= 0.996;
+                                if (p.loop) {
+                                    // Lluvia suave en bucle: al salir por abajo, reaparece arriba.
+                                    if (p.y > window.innerHeight + 24) {
+                                        p.y = -24;
+                                        p.x = Math.random() * window.innerWidth;
+                                    }
+                                    if (p.x < -24) p.x = window.innerWidth + 24;
+                                    if (p.x > window.innerWidth + 24) p.x = -24;
+                                } else {
+                                    p.dy += 0.04;
+                                    p.alpha *= 0.996;
+                                }
 
                                 ctx.save();
                                 ctx.translate(p.x, p.y);
@@ -399,14 +588,23 @@ app.get("/easteregg", async function(req, res) {
                                 ctx.restore();
                             }
 
-                            if (pieces.some(p => p.alpha > 0.02)) {
+                            if (pieces.some(p => !p.loop && p.alpha > 0.02) || pieces.some(p => p.loop)) {
                                 requestAnimationFrame(animateConfetti);
                             }
                         }
 
                         resizeCanvas();
-                        spawnBurst();
-                        animateConfetti();
+                        if (!reduceMotion) {
+                            if (celebrationMode === "full") {
+                                spawnBurst(180, 0.18);
+                                // Segunda y tercera oleada para rematar la celebración.
+                                setTimeout(() => spawnBurst(110, 0.55), 550);
+                                setTimeout(() => spawnBurst(80, 0.9), 1100);
+                            } else {
+                                spawnRain(70);
+                            }
+                            animateConfetti();
+                        }
                         window.addEventListener('resize', resizeCanvas);
                     </script>
                 ` : ""}
@@ -416,13 +614,27 @@ app.get("/easteregg", async function(req, res) {
     }
 
     if (!user) {
+        // Sin sesión: celebración completa (confetti + detalles del logro,
+        // que salen del catálogo sin necesitar tus datos), pero los botones
+        // son para iniciar sesión y reclamarlo en vez de ir a la clasificación.
+        const eggFound = recordsConfig.allRecords().find(x => x.record.id === "web_easter")
+        const eggTier = eggFound?.record.tiers[0] || {}
+        const eggXp = `+${Number(eggTier.xp ?? 20000).toLocaleString("es-ES")} XP`
+        const eggName = escapeHtml(eggTier.name || eggFound?.record.label || "Al otro lado")
+        const eggDesc = escapeHtml(eggTier.desc || "Encuentra el secreto escondido en la web.")
+        const eggEmoji = escapeHtml(eggFound?.record.emoji || "🌐")
+        const anonGuild = escapeHtml(client.guilds.cache.get(guildId)?.name || guildId || "el servidor")
         return res.status(401).send(renderPage({
-            title: "Inicia sesión para reclamarlo",
-            message: "Necesitas iniciar sesión con Discord para reclamar este logro.",
-            status: "info",
-            showConfetti: false,
+            title: "¡Easter egg encontrado!",
+            message: `Has descubierto el logro oculto <strong>${eggEmoji} ${eggName}</strong> en <strong>${anonGuild}</strong>. <strong>Inicia sesión con Discord para reclamarlo</strong> y sumar su recompensa a tu XP.`,
+            detailsHtml: `<div class="detail"><span>🏆 Record oculto</span><strong>${eggEmoji} ${eggName}</strong><small>${eggDesc}</small></div>`
+                + `<div class="detail"><span>✨ Recompensa</span><strong><img src="/assets/icons/xp.png" alt="XP">${escapeHtml(eggXp)}</strong><small>Se suma a tu XP y a tu XP mensual al reclamarlo.</small></div>`,
+            status: "success",
+            showConfetti: true,
             actionHref: "/discord",
-            actionLabel: "Iniciar sesión",
+            actionLabel: "Iniciar sesión para reclamar",
+            secondaryHref: guildId ? `/leaderboard/${encodeURIComponent(guildId)}` : null,
+            secondaryLabel: "Ver clasificación",
         }));
     }
 
@@ -486,16 +698,205 @@ app.get("/easteregg", async function(req, res) {
     }
 
     return res.send(renderPage({
-        title: "Este easter egg ya estaba descubierto",
-        message: `Ya habías completado el logro <strong>${recordEmoji} ${recordName}</strong> en <strong>${guildName}</strong>; no se repite ni da más XP. Los <strong>Records</strong> son logros del servidor y este era un <strong>Record oculto</strong> de la categoría ${categoryName}.`,
+        title: "Ya tienes este easter egg",
+        message: `El logro <strong>${recordEmoji} ${recordName}</strong> ya está en tu colección de <strong>${guildName}</strong>; no se repite ni da más XP, pero vuelve siempre que quieras a celebrarlo. Era un <strong>Record oculto</strong> de la categoría ${categoryName}.`,
         detailsHtml: buildDetails({ withProgress: false }),
-        status: "info",
-        showConfetti: false,
+        status: "claimed",
+        showConfetti: "soft",
         actionHref: leaderboardHref,
         actionLabel: "Ver clasificación",
         secondaryHref: recordsHref,
         secondaryLabel: "Ver mis records",
     }));
+})
+
+// Drops de XP: el staff crea un reparto (/drop) y este enlace lo reclama.
+// Abrir el enlace con sesión iniciada reclama directamente (una vez por
+// persona, hasta agotar usos o que caduque).
+async function handleDropClaim(req, res) {
+    const { renderDropPage, escapeHtml: escapeDropHtml } = require("./app/drop-page.js")
+    const Drops = require("./classes/Drops.js")
+
+    const guildId = String(req.params.guild || "")
+    const code = String(req.params.code || "").toUpperCase()
+    const validPath = /^\d{10,30}$/.test(guildId) && /^[A-Z0-9]{6,10}$/.test(code)
+
+    const [user] = await getDiscordInfo(req)
+    const doc = validPath ? await client.db.fetch(guildId, ["drops"]).exec().catch(() => null) : null
+    const drop = validPath ? (doc?.drops || {})[code] : null
+    const guildName = escapeDropHtml(client.guilds.cache.get(guildId)?.name || guildId || "el servidor")
+    const leaderboardHref = `/leaderboard/${encodeURIComponent(guildId)}`
+
+    const dropPrize = d => {
+        if (d.kind === "bundle") {
+            const p = d.prizes || {}
+            const parts = []
+            if (Number(p.xp) > 0) parts.push(`<strong>+${Number(p.xp).toLocaleString("es-ES")} XP</strong>`)
+            if (Number(p.coins) > 0) parts.push(`<strong>+${Number(p.coins).toLocaleString("es-ES")} monedas</strong>`)
+            for (const r of (Array.isArray(p.roles) ? p.roles : [])) parts.push(`el rol <strong>${escapeDropHtml(r.name || "del evento")}</strong>`)
+            for (const it of (Array.isArray(p.items) ? p.items : [])) parts.push(`<strong>${Number(it.qty).toLocaleString("es-ES")}× ${escapeDropHtml(it.name || "objeto")}</strong>`)
+            return parts.join(" + ") || "un pack vacío"
+        }
+        return d.kind === "role"
+        ? `el rol <strong>${escapeDropHtml(d.roleName || "del evento")}</strong>`
+        : d.kind === "item"
+            ? `<strong>${Number(d.amount).toLocaleString("es-ES")}× ${escapeDropHtml(d.itemName || "objeto")}</strong>`
+            : `<strong>+${Number(d.amount).toLocaleString("es-ES")} ${Drops.kindName(d.kind)}</strong>`
+    }
+    const dropWallet = d => d.kind === "coins"
+        ? "Se suman a tu cash de UnbelievaBoat."
+        : d.kind === "role"
+            ? "Se añade a tu cuenta para siempre (aunque el drop termine)."
+            : d.kind === "item"
+                ? "Se añaden a tu inventario de UnbelievaBoat."
+                : d.kind === "bundle"
+                    ? "El XP se suma a tu cuenta; monedas y objetos van a UnbelievaBoat y el rol se queda para siempre."
+                    : "Se suma a tu XP y a tu XP mensual."
+    const dropDetails = (d, left) => {
+        const emoji = Drops.kindEmoji(d.kind)
+        const pct = d.maxClaims > 0 ? Math.min(100, Math.round(((d.maxClaims - left) / d.maxClaims) * 100)) : 100
+        return `<div class="detail"><span>${emoji} Drop</span><strong>${escapeDropHtml(d.name)}</strong><small>${dropPrize(d)} por persona · quedan <strong>${left}</strong> de ${d.maxClaims} usos. ${dropWallet(d)}</small><div class="claimBar"><i style="width:${pct}%"></i></div></div>`
+            + `<div class="detail"><span>⏳ Caduca en</span><strong class="countdown" id="dropCountdown" data-expires="${d.expiresAt}">…</strong><small>Cuando llegue a cero el enlace deja de funcionar.</small></div>`
+    }
+    const actions = (primary, primaryHref, primaryFirst = true) => {
+        const p = `<a class="btn-primary" href="${primaryHref}">${primary}</a>`
+        const s = `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`
+        return primaryFirst ? p + s : s + p
+    }
+
+    if (!validPath || !drop) {
+        return res.status(404).send(renderDropPage({
+            title: "Este drop no existe",
+            message: "Revisa que el enlace esté completo: lo crea el staff con <strong>/drop</strong> y puede haberse borrado.",
+            badge: "🔎",
+            status: "info",
+            celebration: false,
+            actionsHtml: `<a class="secondary" href="/servers">Ir al dashboard</a>`,
+        }))
+    }
+
+    const check = Drops.validateClaim(drop, user?.id || "", Date.now())
+    const left = Drops.claimsLeft(drop)
+
+    if (!user) {
+        return res.status(401).send(renderDropPage({
+            title: drop.name,
+            message: `El staff de <strong>${guildName}</strong> está repartiendo ${dropPrize(drop)}. <strong>Inicia sesión con Discord para reclamarlo</strong> antes de que se agote o caduque.`,
+            badge: "🎁",
+            status: check.ok ? "success" : "info",
+            celebration: check.ok ? "soft" : false,
+            detailsHtml: dropDetails(drop, left),
+            actionsHtml: check.ok
+                ? actions("Iniciar sesión para reclamar", "/discord")
+                : `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+        }))
+    }
+
+    if (check.reason === "expired") {
+        return res.send(renderDropPage({
+            title: "Este drop ya caducó",
+            message: `El drop <strong>${escapeDropHtml(drop.name)}</strong> terminó. Estate atento a los próximos que lance el staff.`,
+            badge: "⌛",
+            status: "info",
+            celebration: false,
+            detailsHtml: dropDetails(drop, 0),
+            actionsHtml: `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+        }))
+    }
+
+    if (check.reason === "soldout") {
+        return res.send(renderDropPage({
+            title: "Drop agotado",
+            message: `El drop <strong>${escapeDropHtml(drop.name)}</strong> ya se lo han quedado otros. ¡Más suerte la próxima vez!`,
+            badge: "🎁",
+            status: "info",
+            celebration: false,
+            detailsHtml: dropDetails(drop, 0),
+            actionsHtml: `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+        }))
+    }
+
+    if (check.reason === "already") {
+        return res.send(renderDropPage({
+            title: "Ya reclamaste este drop",
+            message: `El premio de <strong>${escapeDropHtml(drop.name)}</strong> (${dropPrize(drop)}) ya está en tu cuenta; cada persona solo puede una vez.`,
+            badge: "🥚",
+            status: "claimed",
+            celebration: "soft",
+            detailsHtml: dropDetails(drop, left),
+            actionsHtml: `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+        }))
+    }
+
+    const claimed = await Drops.claimDrop(client, guildId, code, String(user.id))
+    if (!claimed.ok) {
+        if (claimed.reason === "role-hierarchy") {
+            return res.status(403).send(renderDropPage({
+                title: "No te puedo dar ese rol",
+                message: `El rol de este drop está <strong>por encima de tu rol más alto</strong>, así que no se entrega. Si crees que es un error, avisa al staff. <strong>No has perdido tu reclamo.</strong>`,
+                badge: "🎭",
+                status: "info",
+                celebration: false,
+                detailsHtml: dropDetails(claimed.drop || drop, Drops.claimsLeft(claimed.drop || drop)),
+                actionsHtml: `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+            }))
+        }
+        if (claimed.reason === "role-unsafe") {
+            return res.status(403).send(renderDropPage({
+                title: "Este drop ya no es seguro",
+                message: `El rol cambió desde que se creó el drop y ahora tiene <strong>permisos peligrosos</strong>, así que no se entrega. Avisa al staff para que lo revise. <strong>No has perdido tu reclamo.</strong>`,
+                badge: "🎭",
+                status: "info",
+                celebration: false,
+                detailsHtml: dropDetails(claimed.drop || drop, Drops.claimsLeft(claimed.drop || drop)),
+                actionsHtml: `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+            }))
+        }
+        if (claimed.reason === "api-error") {
+            const retryNote = claimed.drop?.kind === "coins"
+                ? "No se pudo conectar con UnbelievaBoat."
+                : "No se pudo entregar el premio (rol sin permisos o economía caída)."
+            return res.status(502).send(renderDropPage({
+                title: "No se pudo entregar el premio",
+                message: `${retryNote} <strong>No has perdido tu reclamo: recarga la página e inténtalo de nuevo.</strong> Si sigue fallando, avisa al staff.`,
+                badge: claimed.drop?.kind === "coins" ? "🪙" : "🎁",
+                status: "info",
+                celebration: false,
+                detailsHtml: dropDetails(claimed.drop || drop, Drops.claimsLeft(claimed.drop || drop)),
+                actionsHtml: `<a class="btn-primary" href="">Reintentar</a>`
+                    + `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+            }))
+        }
+        return res.send(renderDropPage({
+            title: claimed.reason === "expired" ? "Este drop ya caducó" : "Drop agotado",
+            message: "Justo se te han adelantado: ya no quedan usos.",
+            badge: "🎁",
+            status: "info",
+            celebration: false,
+            actionsHtml: `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+        }))
+    }
+
+    const claimedWallet = claimed.drop.kind === "coins" ? "Ya están en tu cash de UnbelievaBoat." : claimed.drop.kind === "role" ? "Ya lo tienes para siempre." : claimed.drop.kind === "item" ? "Ya están en tu inventario de UnbelievaBoat." : claimed.drop.kind === "bundle" ? "Ya están en tu cuenta." : "Ya están sumados a tu XP."
+    return res.send(renderDropPage({
+        title: "¡Drop reclamado!",
+        message: `Has conseguido ${dropPrize(claimed.drop)} del drop <strong>${escapeDropHtml(drop.name)}</strong> en <strong>${guildName}</strong>. ${claimedWallet}`,
+        badge: "🏆",
+        status: "success",
+        celebration: true,
+        detailsHtml: dropDetails(claimed.drop, claimed.claimsLeft),
+        actionsHtml: `<a class="btn-primary" href="${leaderboardHref}">Ver clasificación</a>`
+            + `<a class="secondary" href="/records/${encodeURIComponent(guildId)}">Ver mis records</a>`,
+    }))
+}
+
+app.get("/drop/:guild/:code", handleDropClaim)
+// En el subdominio de drops la ruta es corta: drops.tscomunity.es/<guild>/<CODE>.
+// Fuera de él redirige a la completa para no duplicar URLs.
+app.get("/:guild(\\d{10,30})/:code([A-Z0-9]{6,10})", function(req, res) {
+    const dropsHost = Drops.dropsHostname()
+    if (dropsHost && req.hostname === dropsHost) return handleDropClaim(req, res)
+    return res.redirect(`/drop/${req.params.guild}/${req.params.code}`)
 })
 
 if (auth.supportURL) app.get("/support", (req, res) => res.redirect(auth.supportURL))

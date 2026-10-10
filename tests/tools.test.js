@@ -254,6 +254,50 @@ test("unlockRecord rejects unknown records and tiers", async () => {
     assert.equal(await t.unlockRecord("guild", "user", record.id, -1), false)
 })
 
+test("getXPToOvertakeFromData matches getXPToOvertake exactly", async () => {
+    // Refactor de rendimiento (/rank): el helper síncrono debe devolver lo
+    // mismo que la versión con lectura a DB, para todos los casos.
+    const settings = {
+        maxLevel: 100, curve: { 1: 100, 2: 0, 3: 0 }, rounding: 1,
+        leaderboard: { minLevel: 0 },
+    }
+    const users = {
+        top: { xp: 5000 },
+        hiddenAbove: { xp: 4000, hidden: true }, // overtake SÍ cuenta ocultos
+        mid: { xp: 3000 },
+        zero: { xp: 0 }, // filtrado (xp > 0)
+        bottom: { xp: 100 },
+    }
+    const fake = fakeClient()
+    fake.docs.g = { users, settings }
+    let fetchCalls = 0
+    const origFetch = fake.db.fetch
+    fake.db.fetch = async id => { fetchCalls++; return origFetch(id) }
+    const t = new Tools(fake, {})
+
+    for (const id of ["top", "hiddenAbove", "mid", "bottom", "zero", "missing"]) {
+        assert.deepEqual(
+            t.getXPToOvertakeFromData(users, settings, id),
+            await t.getXPToOvertake(id, "g"),
+            `mismatch for ${id}`,
+        )
+    }
+    // La versión con DB hace exactamente 1 lectura; la FromData, 0 por
+    // construcción (síncrona, sin acceso a client.db).
+    assert.equal(fetchCalls, 6)
+    assert.deepEqual(t.getXPToOvertakeFromData(users, settings, "mid"), {
+        targetUserID: "hiddenAbove",
+        targetXP: 4000,
+        belowXP: 100,
+        targetLevel: t.getLevel(4000, settings),
+        myXP: 3000,
+        xpNeeded: 1001,
+    })
+    assert.equal(t.getXPToOvertakeFromData(users, settings, "missing"), null)
+    assert.equal(t.getXPToOvertakeFromData(null, settings, "mid"), null)
+    assert.equal(t.getXPToOvertakeFromData({}, settings, "mid"), null)
+})
+
 test("getTargetUser resolves the inspected user for bot checks", () => {
     const bot = { id: "1", bot: true }
     const human = { id: "2", bot: false }
@@ -264,4 +308,26 @@ test("getTargetUser resolves the inspected user for bot checks", () => {
     assert.equal(withOptions(null).getTargetUser(), null)
     assert.equal(new Tools(fakeClient(), {}).getTargetUser(), null)
     assert.equal(tools.errors.noBotView.length > 0, true)
+})
+
+test("ensureMilestoneRole gives the milestone once and never throws", async () => {
+    const MILESTONE_ID = require("../config.json").roles.milestones.id
+    assert.ok(/^\d{17,20}$/.test(MILESTONE_ID), "hito configurado")
+    const guildWith = () => ({ roles: { cache: new Map([[MILESTONE_ID, { id: MILESTONE_ID }]]) } })
+    const memberWith = (hasIt, add) => ({
+        roles: { cache: { has: () => hasIt }, add: add || (async () => {}) },
+    })
+
+    let added = 0
+    assert.equal(await tools.ensureMilestoneRole(guildWith(), memberWith(false, async () => { added++ })), true)
+    assert.equal(added, 1)
+    assert.equal(await tools.ensureMilestoneRole(guildWith(), memberWith(true, async () => { added++ })), false, "si ya lo tiene no lo repite")
+    assert.equal(added, 1)
+    assert.equal(await tools.ensureMilestoneRole({ roles: { cache: new Map() } }, memberWith(false)), false, "sin rol en el server no hace nada")
+    assert.equal(await tools.ensureMilestoneRole(null, memberWith(false)), false)
+    assert.equal(await tools.ensureMilestoneRole(guildWith(), null), false)
+    assert.equal(
+        await tools.ensureMilestoneRole(guildWith(), memberWith(false, async () => { throw new Error("no perms") })),
+        false, "fallo de permisos no lanza",
+    )
 })

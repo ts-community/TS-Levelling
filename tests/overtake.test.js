@@ -243,6 +243,7 @@ function makeHarness(users, settings, memberRoles = []) {
         getLevel: (...a) => Tools.global.getLevel(...a),
         checkLevelRoles: () => ({}),
         syncLevelRoles: async () => {},
+        ensureMilestoneRole: (...a) => Tools.global.ensureMilestoneRole(...a),
     }
     const client = { db, monthlyMaintenance: async () => {} }
     return {
@@ -308,6 +309,7 @@ test("overtake: dos mensajes seguidos no repiten el mismo cruce (A B, no A B B)"
             getLevel: (...a) => Tools.global.getLevel(...a),
             checkLevelRoles: () => ({}),
             syncLevelRoles: async () => {},
+            ensureMilestoneRole: (...a) => Tools.global.ensureMilestoneRole(...a),
         }
         const client = { db, monthlyMaintenance: async () => {} }
         await NewMessage.run(client, { ...message, id: "m1" }, tools)
@@ -375,6 +377,7 @@ function makeAddXpHarness(users, settings, xpAmount = 100) {
         commafy: (...a) => Tools.global.commafy(...a),
         checkLevelRoles: () => ({}),
         syncLevelRoles: async () => {},
+        ensureMilestoneRole: (...a) => Tools.global.ensureMilestoneRole(...a),
     }
     const client = {
         db: {

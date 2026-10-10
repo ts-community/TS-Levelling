@@ -152,7 +152,7 @@ test("every rendered line fits on mobile", () => {
     }
     // El primer bloque va pegado al título en la sección con thumbnail (más
     // estrecha) cuando hay avatar: con narrowFirst su línea -# usa el
-    // listón estrecho (incluido el caso real 117,5k/50k mensajes).
+    // listón estrecho (incluido el caso real 117.500/50.000 mensajes).
     const narrowSamples = [...userSamples, { messages: 117500, monthlyMessages: 6000 }]
     const checkNarrow = (block, label) => {
         const strict = block.split("\n").filter(l => !l.startsWith("###") && !l.startsWith(">")).join("\n")
@@ -315,16 +315,16 @@ test("record block shows the current tier and real progress", () => {
     assert.ok(next.startsWith(`### ${record.emoji} **Conversador**`))
     assert.ok(next.includes("**Conversador** - 2/5 fases"))
     assert.ok(!next.includes("~~"), "a medias: sin tachado")
-    assert.ok(next.includes("📊 **150/1k mensajes**"))
+    assert.ok(next.includes("📊 **150/1.000 mensajes**"))
     assert.ok(next.includes("<:XP:1467192533812645939> **+10.000 XP**"))
 
     // Superado todo el catálogo: tachado total, conservando el contador real.
     const done = command.buildRecordBlock(record, new Set(), command.getProgress(record, { messages: 99999 }, null, commafy), commafy)
     assert.ok(done.includes("### ~~"))
     assert.ok(done.includes("**Leyenda**"))
-    assert.ok(done.includes("📊 **100k/50k mensajes**"))
+    assert.ok(done.includes("📊 **99.999/50.000 msgs**"))
     assert.ok(done.includes("> ~~Envía 50.000 mensajes en el servidor.~~"))
-    assert.ok(done.includes("-# ~~📊 **100k/50k mensajes** - <:XP:1467192533812645939> **+75.000 XP**~~"))
+    assert.ok(done.includes("-# ~~📊 **99.999/50.000 msgs** - <:XP:1467192533812645939> **+75.000 XP**~~"))
     assert.ok(!done.includes("✅"))
     assert.ok(!/· \d+%/.test(done))
     assert.ok(!done.includes("<:star_drop"))
@@ -349,17 +349,32 @@ test("long message lines fall back to msgs instead of wrapping", () => {
     assert.ok(short.includes("**7/10 mensajes**"))
 })
 
+test("compact progress never shows x/x when not completed", () => {
+    // El compacto a 1 decimal igualaría ambos lados ("5M/5M") sin estar
+    // completo: se desempata con un decimal extra ("4,95M/5M").
+    const big = {
+        id: "big_test", label: "Grande", emoji: "💬",
+        mechanic: { type: "messages_total" }, unit: "mensajes", unitOne: "mensaje",
+        tiers: [{ threshold: 5000000, xp: 100000, name: "Gigante", desc: "d" }],
+    }
+    const progress = command.getProgress(big, { messages: 4950000 }, null, tools.commafy)
+    assert.equal(progress.full, false)
+    const compact = command.formatProgress(big, progress, tools.commafy, "", true)
+    assert.ok(compact.includes("**4,95M/5M**"), compact)
+    assert.ok(!compact.includes("**5M/5M**"), "nunca x/x sin completar")
+})
+
 test("first block in thumbnail section drops the unit", () => {
     const commafy = tools.commafy
     const { record } = records.allRecords().find(({ record }) => record.id === "messages")
     const progress = command.getProgress(record, { messages: 117500 }, null, commafy)
-    // A ancho completo cabe en "mensajes" (35,45 <= 37,9)...
+    // A ancho completo cabe en "msgs" con número exacto (38,53 → corta)...
     const normal = command.buildRecordBlock(record, new Set(), progress, commafy).split("\n").at(-1)
-    assert.ok(normal.includes("**117,5k/50k mensajes**"), normal)
-    // ...pero en la sección con thumbnail ni en "msgs" cabe (31,62 saltaba):
+    assert.ok(normal.includes("**117.500/50.000 msgs**"), normal)
+    // ...pero en la sección con thumbnail ni en "msgs" cabe:
     // sin unidad, que sí entra en el listón 30.
     const narrow = command.buildRecordBlock(record, new Set(), progress, commafy, command.FIRST_BLOCK_LINE_WIDTH).split("\n").at(-1)
-    assert.ok(narrow.includes("**117,5k/50k**"), narrow)
+    assert.ok(narrow.includes("**117.500/50.000**"), narrow)
     assert.ok(!narrow.includes("mensajes") && !narrow.includes("msgs"))
     assert.ok(estimateVisualWidth(narrow.replace(/<@&\d+>/g, "@rol")) <= command.FIRST_BLOCK_LINE_WIDTH, `salta: ${narrow}`)
     // Las cortas conservan "mensajes" también en estrecho.
@@ -534,6 +549,21 @@ test("info stats use singular and adapt the last word to fit mobile", () => {
     assert.ok(smallStats.includes("**Números en counting:** 0 números"))
 })
 
+test("info monthly stats show exact numbers, never rounded to k", () => {
+    // Caso real: 1988 mensajes este mes se veía como "2k (máx. 2k)".
+    const [groups] = command.buildInfoTexts(
+        { messages: 5000, monthlyMessages: 1988, monthlyMessagesMax: 1988, dailyMessages: 7 },
+        null, new Set(), tools)
+    const stats = groups.join("\n")
+    assert.ok(stats.includes("**Mensajes este mes:** 1.988 (máx. 1.988)"), stats)
+    assert.ok(!stats.includes("2k"), "estadísticas sin compactar")
+    for (const line of stats.split("\n")) {
+        if (!line.trim()) continue
+        const limit = line.startsWith("-#") ? MAX_LINE_WIDTH : command.INFO_LINE_WIDTH
+        assert.ok(estimateVisualWidth(line.replace(/<@&\d+>/g, "@rol")) <= limit, `salta: ${line}`)
+    }
+})
+
 test("resolveRank finds the user rank banner", () => {
     const PRO_ID = require("../consts/ranks.js").find(r => r.rank === "pro").roles[0].id
     const settings = { maxLevel: 100, curve: { 1: 100, 2: 0, 3: 0 }, rounding: 1, rewards: [{ id: PRO_ID, level: 5 }] }
@@ -616,7 +646,7 @@ test("unlocked period tiers stay done when the new period starts at 0", () => {
         command.getProgress(byId.monthly_messages, { monthlyMessages: 0, monthlyMessagesMax: 6000 }, null, commafy), commafy)
     assert.ok(block.includes("- 3/3 fases"), block.split("\n")[0])
     assert.ok(block.includes("~~"), "todo hecho: tachado")
-    assert.ok(block.includes("📊 **6k/5k mensajes**"), "completado: muestra el máximo histórico")
+    assert.ok(block.includes("📊 **6.000/5.000 mensajes**"), "completado: muestra el máximo histórico")
     // Racha: flag histórico de 30 días con racha actual de 2 también cuenta.
     block = command.buildRecordBlock(
         byId.streak, new Set(["streak:3", "streak:7", "streak:30"]),

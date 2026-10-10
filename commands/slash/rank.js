@@ -14,6 +14,10 @@ const ranks = require("../../consts/ranks.js")
 const recordsConfig = require("../../config/records.js")
 const path = require("path")
 
+// El catálogo de récords es estático en tiempo de ejecución: el total se
+// calcula una vez al cargar el módulo en vez de en cada /rank.
+const RECORDS_TOTAL = recordsConfig.countTiers(recordsConfig.allRecords())
+
 module.exports = {
     metadata: {
         name: "rank",
@@ -47,7 +51,7 @@ module.exports = {
         let levelData = tools.getLevel(xp, db.settings, true)
         let totalMsgs = tools.commafy(tools.getMessages(currentXP))
         let monthlyMsgs = tools.commafy(tools.getMonthlyMessages(currentXP, db.info))
-        let recordsTotal = recordsConfig.countTiers(recordsConfig.allRecords())
+        let recordsTotal = RECORDS_TOTAL
         let maxLevel = levelData.level >= db.settings.maxLevel
 
         const levelRoles = tools.getRolesForLevel(levelData.level, db.settings.rewards)
@@ -96,13 +100,17 @@ module.exports = {
         }
         let isMaxRole = !nextRole // no existe siguiente reward role → tiene el más alto
 
-        // traer datos de overtake una sola vez si los necesitamos
+        // traer datos de overtake una sola vez si los necesitamos (sobre el
+        // `db` ya leído: sin segundo fetchAll a la DB, mismo cálculo).
         let overtakeData = null
         if (isMaxRole && !isTopOne) {
-            overtakeData = await tools.getXPToOvertake(member.id, int.guild.id)
+            overtakeData = tools.getXPToOvertakeFromData(db.users, db.settings, member.id)
         }
 
         // ─── Barra de progreso ────────────────────────────────────────────────
+        // El multiplicador solo depende de (member, settings): se calcula una
+        // vez para todo el run en vez de una por rama.
+        const multiplierData = tools.getMultiplier(member, db.settings)
         let progressBar = ""
         let progressPercent = 0
         let messagesToNextRole = 0
@@ -143,7 +151,6 @@ module.exports = {
             progressPercent = rangeXP > 0 ? (progressXP / rangeXP) * 100 : 0
 
             // mensajes estimados
-            const multiplierData = tools.getMultiplier(member, db.settings)
             const avgGain = (db.settings.gain.min + db.settings.gain.max) / 2 * multiplierData.multiplier
             messagesToNextRole = avgGain > 0 ? Math.ceil(overtakeData.xpNeeded / avgGain) : 0
 
@@ -188,7 +195,6 @@ module.exports = {
             const progressXP = rangeXP > 0 ? Math.min(Math.max(xp - startXP, 0), rangeXP) : 0
             progressPercent  = rangeXP > 0 ? (progressXP / rangeXP) * 100 : 0
 
-            const multiplierData = tools.getMultiplier(member, db.settings)
             const avgGain = (db.settings.gain.min + db.settings.gain.max) / 2 * multiplierData.multiplier
             messagesToNextRole = avgGain > 0 ? Math.ceil((rangeXP - progressXP) / avgGain) : 0
 
@@ -292,17 +298,18 @@ module.exports = {
                 .setThumbnailAccessory(new ThumbnailBuilder({ media: { url: memberAvatar } }))
             )
 
-        // Buffies / multiplicadores
+        // Buffies / multiplicadores (reutiliza el multiplierData calculado arriba)
         let hideMult = db.settings.hideMultipliers
-        let multData = tools.getMultiplier(member, db.settings)
+        let multData = multiplierData
         let multRoles = multData.roleList?.reverse()
         let multiplierInfo = []
 
         if ((!hideMult || multData.role === 0) && multRoles.length) {
             let i = 0
             for (const r of multRoles) {
-                const xpStr = tools.getIndividualRoleMultiplier(r.id, db.settings) > 0
-                    ? `${tools.getIndividualRoleMultiplier(r.id, db.settings)}x XP`
+                const roleBoost = tools.getIndividualRoleMultiplier(r.id, db.settings)
+                const xpStr = roleBoost > 0
+                    ? `${roleBoost}x XP`
                     : "No puede ganar XP"
                 const keys = ['<:key_1:1467191504677240949>', '<:key_2:1467191508011581440>', '<:key_3:1467191509064351989>', '<:key_4:1467191992004907211>']
                 const key = keys[i % keys.length]

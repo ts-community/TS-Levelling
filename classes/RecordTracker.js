@@ -417,6 +417,8 @@ async function grantRecordInner(client, guild, resolvedGuildId, userId, found, t
                 const roleCheck = Tools.global.checkLevelRoles(guild.roles.cache, member.roles.cache, newLevel, settings.rewards, null, oldLevel)
                 await Tools.global.syncLevelRoles(member, roleCheck).catch(() => {})
             }
+            // El hito no espera al próximo mensaje: se asegura aquí mismo.
+            await Tools.global.ensureMilestoneRole(guild, member).catch(() => {})
         }
     } catch {}
 

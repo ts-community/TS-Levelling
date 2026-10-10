@@ -24,6 +24,7 @@ function createSlashArg(data, arg) {
             return data.addStringOption(option => {
                 prepareOption(option, arg)
                 if (arg.choices) option.setChoices(...arg.choices)
+                if (arg.autocomplete) option.setAutocomplete(true)
                 return option
             })
         case "integer": case "number":

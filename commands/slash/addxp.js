@@ -63,9 +63,11 @@ async runInner(client, int, tools) {
 
     let syncMode = db.settings.rewardSyncing.sync
     if (syncMode == "xp" || (syncMode == "level" && newLevel != level) || (newLevel > level)) { 
-        let roleCheck = tools.checkLevelRoles(int.guild.roles.cache, member.roles.cache, newLevel, db.settings.rewards)
+        let roleCheck = tools.checkLevelRoles(int.guild.roles.cache, member.roles.cache, newLevel, db.settings.rewards, null, level)
         tools.syncLevelRoles(member, roleCheck).catch(() => {})
     }
+    // El hito no espera al próximo mensaje del usuario.
+    tools.ensureMilestoneRole(int.guild, member).catch(() => {})
     let xpDiff = newXP - xp
 
     client.db.update(int.guild.id, { $set: { [`users.${user.id}.xp`]: newXP } }).then(async () => {

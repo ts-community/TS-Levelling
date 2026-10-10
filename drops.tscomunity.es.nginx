@@ -1,0 +1,33 @@
+# Subdominio de drops: drops.tscomunity.es
+# (corto y con el mismo nombre del comando /drop).
+#
+# Qué es este archivo: la receta copia-pega para el nginx del VPS.
+# - 127.0.0.1 significa "esta misma máquina": nginx y el bot viven en el
+#   mismo VPS, así que nginx se lo pasa a sí mismo. No es tu IP ni la suya,
+#   no hay que averiguar ninguna IP.
+# - 6880 es el puerto donde escucha el bot (config.json -> serverPort).
+#   Solo se toca si el bot usa otro puerto.
+# - Cómo decide el bot entre niveles y drops: nginx NO reparte por rutas,
+#   reparte por DOMINIO (la línea server_name). Todo lo de drops.tscomunity.es
+#   va al bot, y el bot mira con qué dominio le hablaron.
+
+server {
+    server_name drops.tscomunity.es;
+
+    location / {
+        proxy_pass http://127.0.0.1:6880;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    listen 80;
+    listen [::]:80;
+    # certbot añadirá aquí el bloque https y la redirección (igual que hizo
+    # con niveles.tscomunity.es).
+}

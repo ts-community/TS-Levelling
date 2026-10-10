@@ -32,6 +32,10 @@ async run(client, int, tools) {
     let xp = currentXP.xp
     let level = tools.getLevel(xp, db.settings)
 
+    // El hito también se revisa aquí (podía faltar aunque los de nivel
+    // estuvieran bien, si se dieron sin hablar: /addxp, récords...).
+    await tools.ensureMilestoneRole(int.guild, member).catch(() => {})
+
     let currentRoles = member.roles.cache
     let roleCheck = tools.checkLevelRoles(int.guild.roles.cache, currentRoles, level, db.settings.rewards)
     if (!roleCheck.incorrect.length && !roleCheck.missing.length) return int.reply("✅ ¡Tus roles de nivel ya están sincronizados!")

@@ -132,6 +132,7 @@ function makeTools(db, { banRoleId, multiplier } = {}) {
         getLevel: (...args) => Tools.global.getLevel(...args),
         checkLevelRoles: () => ({}),
         syncLevelRoles: async function () { this.calls.push("sync"); },
+        ensureMilestoneRole: (...args) => Tools.global.ensureMilestoneRole(...args),
         calls: []
     }
 }

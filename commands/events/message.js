@@ -255,13 +255,9 @@ async runInner(client, message, tools) {
         } catch {}
     }
 
-    const milestoneRoleId = config.roles?.milestones?.id
-    if (milestoneRoleId) {
-        const role = message.guild.roles.cache.get(milestoneRoleId)
-        if (role && !message.member.roles.cache.has(milestoneRoleId)) {
-            message.member.roles.add(role).catch(() => {})
-        }
-    }
+    // Rol de hitos a todo el que habla (sin esperar: otros caminos como
+    // /addxp o récords lo aseguran al dar roles de rango).
+    tools.ensureMilestoneRole(message.guild, message.member).catch(() => {})
 
     if (userData.cooldown > Date.now()) return // on cooldown, stop here
 

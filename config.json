@@ -8,6 +8,7 @@
   "enableWebServer": true,
   "serverPort": 6880,
   "siteURL": "https://niveles.tscomunity.es",
+  "dropsHostname": "drops.tscomunity.es",
   
   "changelogURL": "",
   "supportURL": "",
