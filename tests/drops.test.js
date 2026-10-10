@@ -940,3 +940,25 @@ test("/drop crear item resuelve por nombre y responde con unidades", async () =>
         Drops.clearBoatStoreCache("g")
     }
 })
+
+test("rate limit frena la enumeración y deja pasar uso normal", () => {
+    const { createDropRateLimiter } = require("../app/drop-page.js")
+    const limit = createDropRateLimiter({ max: 3, windowMs: 60000 })
+    const mkReq = ip => ({ headers: { "x-real-ip": ip }, ip })
+    const run = ip => new Promise(resolve => {
+        let status = 200
+        const res = {
+            status: code => { status = code; return res },
+            set: () => res,
+            send: () => resolve(status),
+        }
+        limit(mkReq(ip), res, () => resolve(status))
+    })
+    return (async () => {
+        assert.equal(await run("1.2.3.4"), 200)
+        assert.equal(await run("1.2.3.4"), 200)
+        assert.equal(await run("1.2.3.4"), 200)
+        assert.equal(await run("1.2.3.4"), 429, "al 4º corta")
+        assert.equal(await run("9.9.9.9"), 200, "otra IP no afectada")
+    })()
+})

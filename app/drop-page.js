@@ -8,6 +8,42 @@ function escapeHtml(s) {
     return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
 }
 
+// Anti-enumeración de códigos: tope de peticiones por IP y ventana.
+// Sin esto, un script podría probar códigos a lo loco hasta dar con un drop
+// abierto (el espacio es de 32^6 ≈ mil millones, pero mejor no regalar
+// intentos infinitos). 120/min sobra para uso humano (carga + recargas) y
+// no sirve para fuerza bruta. Detrás de nginx la IP real viene en
+// X-Real-IP (ver drops.tscomunity.es.nginx); en local cae a req.ip.
+function createDropRateLimiter({ max = 120, windowMs = 60 * 1000 } = {}) {
+    const hits = new Map()
+    return function dropRateLimit(req, res, next) {
+        const now = Date.now()
+        for (const [ip, entry] of hits) {
+            if (entry.resetAt <= now) hits.delete(ip)
+        }
+        const ip = String(req.headers?.["x-real-ip"] || req.ip || "unknown")
+        const entry = hits.get(ip) || { count: 0, resetAt: now + windowMs }
+        if (entry.resetAt <= now) {
+            entry.count = 0
+            entry.resetAt = now + windowMs
+        }
+        entry.count++
+        hits.set(ip, entry)
+        if (entry.count > max) {
+            res.set?.("Retry-After", String(Math.ceil((entry.resetAt - now) / 1000)))
+            return res.status(429).send(renderDropPage({
+                title: "Demasiados intentos",
+                message: "Estás abriendo demasiados enlaces seguidos. Espera un minuto y vuelve a intentarlo.",
+                badge: "🐢",
+                status: "info",
+                celebration: false,
+                actionsHtml: `<a class="secondary" href="/servers">Ir al dashboard</a>`,
+            }))
+        }
+        return next()
+    }
+}
+
 function renderDropPage({ title, message, badge = "🎁", status = "info", celebration = false, detailsHtml = "", actionsHtml = "" }) {
     const mode = celebration === "soft" ? "soft" : celebration ? "full" : "none"
     return `
@@ -440,4 +476,4 @@ function renderDropPage({ title, message, badge = "🎁", status = "info", celeb
     `
 }
 
-module.exports = { renderDropPage, escapeHtml }
+module.exports = { renderDropPage, escapeHtml, createDropRateLimiter }

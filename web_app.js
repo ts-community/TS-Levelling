@@ -16,6 +16,9 @@ const LevelUpEmbed = require('./classes/LevelUpEmbed.js')
 const LevelUpMessage = require("./classes/LevelUpMessage.js")
 const { unlockWebEasterEgg, resolveServerId, DEFAULT_EASTEREGG_GUILD_ID } = require("./classes/WebEasterEgg.js")
 const Drops = require("./classes/Drops.js")
+const { createDropRateLimiter } = require("./app/drop-page.js")
+// Tope anti-fuerza-bruta en páginas de drops (ver createDropRateLimiter).
+const dropRateLimit = createDropRateLimiter()
 const recordsConfig = require("./config/records.js")
 const auth = require('./config.json')
 const curvePresets = require('./json/curve_presets.json')
@@ -890,12 +893,12 @@ async function handleDropClaim(req, res) {
     }))
 }
 
-app.get("/drop/:guild/:code", handleDropClaim)
+app.get("/drop/:guild/:code", dropRateLimit, handleDropClaim)
 // En el subdominio de drops la ruta es corta: drops.tscomunity.es/<guild>/<CODE>.
 // Fuera de él redirige a la completa para no duplicar URLs.
-app.get("/:guild(\\d{10,30})/:code([A-Z0-9]{6,10})", function(req, res) {
+app.get("/:guild(\\d{10,30})/:code([A-Z0-9]{6,10})", function(req, res, next) {
     const dropsHost = Drops.dropsHostname()
-    if (dropsHost && req.hostname === dropsHost) return handleDropClaim(req, res)
+    if (dropsHost && req.hostname === dropsHost) return dropRateLimit(req, res, () => handleDropClaim(req, res))
     return res.redirect(`/drop/${req.params.guild}/${req.params.code}`)
 })
 

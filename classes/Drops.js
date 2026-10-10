@@ -203,11 +203,14 @@ function dropPath(guildId, code) {
     return `/drop/${guildId}/${code}`
 }
 
-function genCode(existing = {}, rand = Math.random) {
+function genCode(existing = {}, rand = null) {
+    // crypto por defecto (impredecible); rand inyectable para tests.
+    const crypto = require("crypto")
+    const pick = typeof rand === "function" ? rand : () => crypto.randomInt(0, CODE_ALPHABET.length) / CODE_ALPHABET.length
     for (let attempt = 0; attempt < 50; attempt++) {
         let code = ""
         for (let i = 0; i < CODE_LENGTH; i++) {
-            code += CODE_ALPHABET[Math.floor(rand() * CODE_ALPHABET.length)]
+            code += CODE_ALPHABET[Math.floor(pick() * CODE_ALPHABET.length)]
         }
         if (!existing[code]) return code
     }
