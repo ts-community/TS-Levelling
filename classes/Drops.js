@@ -11,11 +11,11 @@ const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 
 // Niveles cuadrados con equivalencia en mensajes y nivel desde 0 (XP).
 const AMOUNT_PRESETS = [
-    { xp: 1000, name: "Muy bajo" },
-    { xp: 3000, name: "Bajo" },
-    { xp: 5000, name: "Medio" },
-    { xp: 10000, name: "Alto" },
-    { xp: 25000, name: "Muy alto" },
+    { xp: 3000, name: "Muy bajo" },
+    { xp: 5000, name: "Bajo" },
+    { xp: 10000, name: "Medio" },
+    { xp: 15000, name: "Alto" },
+    { xp: 30000, name: "Muy alto" },
 ]
 
 // Las monedas llevan otra escala (la pone cada economía): 5 niveles como

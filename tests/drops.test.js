@@ -115,9 +115,10 @@ test("validateClaim covers all states", () => {
 
 test("balanceHint guides without thinking", () => {
     assert.ok(Drops.balanceHint(500).includes("muy bajo"))
-    assert.ok(Drops.balanceHint(3000).includes("bajo"))
-    assert.ok(Drops.balanceHint(5000).includes("medio"))
-    assert.ok(Drops.balanceHint(12000).includes("alto"))
+    assert.ok(Drops.balanceHint(3000).includes("muy bajo"))
+    assert.ok(Drops.balanceHint(5000).includes("bajo"))
+    assert.ok(Drops.balanceHint(10000).includes("medio"))
+    assert.ok(Drops.balanceHint(18000).includes("alto"))
     assert.ok(Drops.balanceHint(25000).includes("muy alto"))
     assert.ok(Drops.balanceHint(10000, () => 12).includes("nivel 12"))
 })
@@ -540,7 +541,7 @@ test("duration and amount presets are sane", () => {
     }
     const xps = Drops.AMOUNT_PRESETS.map(p => p.xp)
     assert.deepEqual([...xps].sort((a, b) => a - b), xps, "presets ordenados")
-    assert.deepEqual(xps, [1000, 3000, 5000, 10000, 25000], "cuadrados y de récords")
+    assert.deepEqual(xps, [3000, 5000, 10000, 15000, 30000], "cuadrados y de récords")
     for (const p of Drops.AMOUNT_PRESETS) {
         assert.ok(p.xp >= Drops.LIMITS.amountMin && p.xp <= Drops.LIMITS.amountMax)
         assert.ok(p.name.length > 0)
@@ -786,11 +787,11 @@ test("/drop crear: opciones separadas por premio", () => {
     }
     assert.ok(!names.includes("tipo"), "sin selector de tipo: se rellena lo que se reparte")
     assert.deepEqual(crear.args.find(a => a.name === "xp").choices.map(c => c.name), [
-        "Muy bajo - 1.000 (≈13 min de chat, nivel 3)",
-        "Bajo - 3.000 (≈40 min de chat, nivel 6)",
-        "Medio - 5.000 (≈1,1 h de chat, nivel 8)",
-        "Alto - 10.000 (≈2,2 h de chat, nivel 11)",
-        "Muy alto - 25.000 (≈5,6 h de chat, nivel 18)",
+        "Muy bajo - 3.000 (≈40 min de chat, nivel 6)",
+        "Bajo - 5.000 (≈1,1 h de chat, nivel 8)",
+        "Medio - 10.000 (≈2,2 h de chat, nivel 11)",
+        "Alto - 15.000 (≈3,3 h de chat, nivel 14)",
+        "Muy alto - 30.000 (≈6,7 h de chat, nivel 20)",
         "Personalizada… (usa xp_extra)",
     ])
     assert.deepEqual(crear.args.find(a => a.name === "monedas").choices.map(c => c.value), [
