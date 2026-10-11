@@ -758,7 +758,7 @@ async function handleDropClaim(req, res) {
     const dropDetails = (d, left) => {
         const emoji = Drops.kindEmoji(d.kind)
         const pct = d.maxClaims > 0 ? Math.min(100, Math.round(((d.maxClaims - left) / d.maxClaims) * 100)) : 100
-        return `<div class="detail"><span>${emoji} Drop</span><strong>${escapeDropHtml(d.name)}</strong><small>${dropPrize(d)} por persona · quedan <strong>${left}</strong> de ${d.maxClaims} usos. ${dropWallet(d)}</small><div class="claimBar"><i style="width:${pct}%"></i></div></div>`
+        return `<div class="detail"><span>${emoji} Drop</span><strong>${escapeDropHtml(d.name)}</strong><small>${dropPrize(d)} por persona - quedan <strong>${left}</strong> de ${d.maxClaims} usos. ${dropWallet(d)}</small><div class="claimBar"><i style="width:${pct}%"></i></div></div>`
             + `<div class="detail"><span>⏳ Caduca en</span><strong class="countdown" id="dropCountdown" data-expires="${d.expiresAt}">…</strong><small>Cuando llegue a cero el enlace deja de funcionar.</small></div>`
     }
     const actions = (primary, primaryHref, primaryFirst = true) => {

@@ -111,7 +111,7 @@ function kindEmoji(kind) {
     if (kind === "coins") return "🪙"
     if (kind === "role") return "🎭"
     if (kind === "item") return "📦"
-    return "💰"
+    return "🆙"
 }
 
 // Permisos que un rol de drop NUNCA puede tener (raid): ni al crear el drop

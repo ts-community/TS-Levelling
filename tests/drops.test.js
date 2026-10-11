@@ -349,6 +349,25 @@ test("item claim adds to inventory once; API failure is retryable", async () => 
     assert.equal(retry.ok, true)
 })
 
+test("parseModalAmount y modales de cantidad exacta", () => {
+    const dropCmd = require("../commands/slash/drop.js")
+    assert.deepEqual(dropCmd.parseModalAmount("25", { min: 1, max: 5000 }), { ok: true, value: 25 })
+    assert.deepEqual(dropCmd.parseModalAmount(" 48 ", { min: 1, max: 720 }), { ok: true, value: 48 })
+    for (const bad of ["", "  ", "abc", "1.5", "-3", "+25", "0", "5001", "99999999999999999999", "25 usos"]) {
+        assert.deepEqual(dropCmd.parseModalAmount(bad, { min: 1, max: 5000 }), { ok: false }, bad || "(vacío)")
+    }
+    assert.deepEqual(dropCmd.parseModalAmount("721", { min: 1, max: 720 }), { ok: false }, "horas de más")
+    const usesJson = dropCmd.buildUsesModal("ABC123").toJSON()
+    assert.equal(usesJson.custom_id, "dropm:uses:ABC123")
+    assert.ok(usesJson.title.includes("ABC123"))
+    const usesInput = usesJson.components[0].components[0]
+    assert.equal(usesInput.custom_id, "amount")
+    assert.equal(usesInput.required, true)
+    const timeJson = dropCmd.buildTimeModal("ABC123").toJSON()
+    assert.equal(timeJson.custom_id, "dropm:time:ABC123")
+    assert.deepEqual([dropCmd.BTN_PREFIX, dropCmd.MODAL_PREFIX], ["drop", "dropm"])
+})
+
 test("roleIsDangerous y creatorCanGiveRole cierran la puerta a raids", () => {
     const noPerms = { permissions: { has: () => false } }
     assert.equal(Drops.roleIsDangerous(noPerms), false)
@@ -530,6 +549,8 @@ test("duration and amount presets are sane", () => {
     }
     assert.equal(Drops.presetEquiv(5000), "≈1,1 h de chat, nivel 8")
     assert.equal(Drops.presetEquiv(1000), "≈13 min de chat, nivel 3")
+    assert.equal(Drops.presetEquiv(25000), "≈5,6 h de chat, nivel 18")
+    assert.equal(Drops.kindEmoji("xp"), "🆙")
 })
 
 test("dropsHostname sale de config.json", async () => {
@@ -765,11 +786,11 @@ test("/drop crear: opciones separadas por premio", () => {
     }
     assert.ok(!names.includes("tipo"), "sin selector de tipo: se rellena lo que se reparte")
     assert.deepEqual(crear.args.find(a => a.name === "xp").choices.map(c => c.name), [
-        "Muy bajo · 1.000 (≈13 min de chat, nivel 3)",
-        "Bajo · 3.000 (≈40 min de chat, nivel 6)",
-        "Medio · 5.000 (≈1,1 h de chat, nivel 8)",
-        "Alto · 10.000 (≈2,2 h de chat, nivel 11)",
-        "Muy alto · 25.000 (≈5,6 h de chat, nivel 18)",
+        "Muy bajo - 1.000 (≈13 min de chat, nivel 3)",
+        "Bajo - 3.000 (≈40 min de chat, nivel 6)",
+        "Medio - 5.000 (≈1,1 h de chat, nivel 8)",
+        "Alto - 10.000 (≈2,2 h de chat, nivel 11)",
+        "Muy alto - 25.000 (≈5,6 h de chat, nivel 18)",
         "Personalizada… (usa xp_extra)",
     ])
     assert.deepEqual(crear.args.find(a => a.name === "monedas").choices.map(c => c.value), [
@@ -885,10 +906,75 @@ test("/drop deja pasar a roles de la allowlist y frena al resto", async () => {
         member: { roles: { cache: new Map(roles.map(r => [r, {}])) } },
         options: { get: () => undefined, getSubcommand: () => "lista" },
         reply: async function(msg) { this.sent = msg.content || msg; return msg },
+        fetchReply: async () => null,
     })
     const doc = { _id: "g", users: {}, drops: {}, settings }
     await dropCmd.run(fakeClient(doc), mkInt(["r1"]), tools)
     await assert.rejects(dropCmd.run(fakeClient(doc), mkInt(["r9"]), tools), /notMod/)
+})
+
+test("/drop lista: título, info, links con (x/y) y tachado si agotado", async () => {
+    const Tools = require("../classes/Tools.js")
+    const dropCmd = require("../commands/slash/drop.js")
+    const now = Date.now()
+    const rowsOf = () => [
+        { code: "AAA111", drop: { name: "A", kind: "bundle", prizes: { xp: 1000, coins: 0, roles: [], items: [] }, maxClaims: 3, claims: ["u1"], expiresAt: now + 3600000, createdBy: "s", createdAt: now }, left: 2, expired: false },
+        { code: "BBB222", drop: { name: "B", kind: "bundle", prizes: { xp: 0, coins: 500, roles: [], items: [] }, maxClaims: 2, claims: ["u1", "u2"], expiresAt: now + 3600000, createdBy: "s", createdAt: now }, left: 0, expired: false },
+        { code: "CCC333", drop: { name: "C", kind: "bundle", prizes: { xp: 1000, coins: 0, roles: [], items: [] }, maxClaims: 3, claims: [], expiresAt: now - 1000, createdBy: "s", createdAt: now }, left: 3, expired: true },
+    ]
+    const tools = { commafy: (...a) => Tools.global.commafy(...a), WEBSITE: "https://example.test" }
+    const textsOf = container => container.toJSON().components
+        .filter(c => c.type === 10)
+        .map(c => c.content)
+        .join("\n---\n")
+    await withConfigHost("", async () => {
+        // Vista lista: sin caducados, sin fecha por línea, sin footer.
+        const list = dropCmd.buildDropsListContainer(rowsOf().filter(r => !r.expired), "https://example.test", "g", tools)
+        const texts = textsOf(list)
+        assert.ok(texts.includes("## 🎁 Drops del servidor"), "título")
+        assert.ok(texts.includes("/drop crear"), "info de qué es")
+        assert.ok(texts.includes("[`AAA111`](https://example.test/drop/g/AAA111) (1/3)"), "link con reclamados")
+        assert.ok(!texts.includes("caduca <t:"), "sin caducidad por línea")
+        assert.ok(!texts.includes("vuelan"), "sin footer chill")
+        assert.ok(texts.includes("~~[`BBB222`](https://example.test/drop/g/BBB222)~~ (2/2)"), "agotado tachado")
+        assert.ok(!texts.includes("CCC333"), "caducados fuera")
+        const menuJson = list.toJSON().components.flatMap(c => c.components || []).find(c => c.custom_id === "dropinspect")
+        assert.ok(menuJson, "menú debajo")
+        assert.deepEqual(menuJson.options.map(o => o.value), ["AAA111", "BBB222"])
+
+        // Vista detalle: todo lo del link con unix + botones + volver.
+        const detail = dropCmd.buildDropDetailContainer(rowsOf().filter(r => !r.expired), rowsOf()[0], "https://example.test", "g", tools)
+        const dTexts = textsOf(detail)
+        assert.ok(dTexts.includes("## 🎁 Drop `AAA111`"), "título del detalle")
+        assert.ok(dTexts.includes("1.000 XP"), "premio exacto")
+        assert.ok(dTexts.includes("1/3"), "reclamados")
+        assert.ok(dTexts.includes("<@s>"), "creador")
+        const unix = Math.floor((now + 3600000) / 1000)
+        assert.ok(dTexts.includes(`<t:${unix}:F> (<t:${unix}:R>)`), "caducidad en unix")
+        assert.ok(dTexts.includes("https://example.test/drop/g/AAA111"), "enlace")
+        const detailJson = detail.toJSON().components.flatMap(c => c.components || [])
+        assert.deepEqual(
+            detailJson.filter(c => c.type === 2).map(c => c.custom_id),
+            ["drop:del:AAA111", "drop:uses:AAA111", "drop:time:AAA111"],
+            "botones encima del menú",
+        )
+        assert.deepEqual(
+            detailJson.filter(c => c.type === 2).map(c => c.label),
+            ["Eliminar", "Añadir usos", "Añadir tiempo"],
+        )
+        assert.ok(detailJson.find(c => c.custom_id === "dropinspect").options.some(o => o.value === "__back"), "opción volver")
+
+        // Tope de menú: 26 activos → 25 opciones + aviso.
+        const many = Array.from({ length: 26 }, (_, i) => ({
+            code: `C${String(i).padStart(5, "0")}`,
+            drop: { name: `D${i}`, kind: "xp", amount: 100, maxClaims: 1, claims: [], expiresAt: now + 3600000, createdBy: "s", createdAt: now },
+            left: 1, expired: false,
+        }))
+        const capped = dropCmd.buildDropsListContainer(many, "https://example.test", "g", tools)
+        const cappedJson = capped.toJSON().components.flatMap(c => c.components || [])
+        assert.equal(cappedJson.find(c => c.custom_id === "dropinspect").options.length, 25)
+        assert.ok(textsOf(capped).includes("+1 más"), "aviso del resto")
+    })
 })
 
 test("/drop crear item resuelve por nombre y responde con unidades", async () => {

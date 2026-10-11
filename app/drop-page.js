@@ -52,7 +52,7 @@ function renderDropPage({ title, message, badge = "🎁", status = "info", celeb
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>${title} · Drop de XP</title>
+            <title>${title} - Drop de XP</title>
             <style>
                 :root {
                     --bg1: #070b1f;
