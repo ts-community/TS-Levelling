@@ -6,6 +6,7 @@ const CHANNELS = {
     channelId: "1551570600135229440",
     countingChannelId: "1113502565599019108",
     economyChannelId: "1553080048855289858",
+    minigameChannelId: "1552390158081331419",
     iaChannelId: "1544029379284443146",
     iaBotId: "1250114494081007697",
     starboardChannelId: "1317531432909930639",
@@ -165,6 +166,35 @@ const categories = [
         desc: "Explora el servidor y participa en sus sistemas.",
         records: [
             {
+                id: "economy_earnings",
+                label: "Economía",
+                emoji: "🪙",
+                mechanic: { type: "economy_earnings", stat: "coinsMax" },
+                unit: "monedas",
+                unitOne: "moneda",
+                suffix: "ganadas",
+                tiers: [
+                    {
+                        threshold: 10000,
+                        xp: 3000,
+                        name: "Ahorrador",
+                        desc: `Consigue 10.000 monedas en <#${CHANNELS.economyChannelId}>.`
+                    },
+                    {
+                        threshold: 100000,
+                        xp: 10000,
+                        name: "Acaudalado",
+                        desc: `Consigue 100.000 monedas en <#${CHANNELS.economyChannelId}>.`
+                    },
+                    {
+                        threshold: 1000000,
+                        xp: 30000,
+                        name: "Millonario",
+                        desc: `Consigue 1.000.000 de monedas en <#${CHANNELS.economyChannelId}>.`
+                    },
+                ]
+            },
+            {
                 id: "pokemon",
                 label: "Poketwo",
                 emoji: "💥",
@@ -247,19 +277,22 @@ const categories = [
                 ]
             },
             {
-                id: "economy_participation",
-                label: "Economía",
-                emoji: "💰",
+                id: "minigame_participation",
+                label: "Minijuegos",
+                emoji: "🎲",
                 mechanic: {
-                    type: "economy_participation",
-                    channelId: CHANNELS.economyChannelId
+                    type: "minigame_thread",
+                    channelId: CHANNELS.minigameChannelId
                 },
+                unit: "minijuegos",
+                unitOne: "minijuego",
+                suffix: "",
                 tiers: [
                     {
                         threshold: 1,
-                        xp: 1000,
-                        name: "Estreno",
-                        desc: `Envía un mensaje en el canal <#${CHANNELS.economyChannelId}>.`
+                        xp: 3000,
+                        name: "Concursante",
+                        desc: `Participa en uno de los minijuegos del servidor en <#${CHANNELS.minigameChannelId}>.`
                     },
                 ]
             }

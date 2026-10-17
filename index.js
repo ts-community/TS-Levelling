@@ -461,6 +461,41 @@ async function cleanAllGuilds() {
     }
 }
 
+// Récords/estadísticas de monedas: refresca el saldo de UnbelievaBoat de
+// todos los usuarios con XP cada cierto tiempo. El refresco "al hablar"
+// (message.js) solo cubre a los activos; esto mantiene fresco /top y
+// /records para el resto. Se espacian las llamadas para respetar el rate
+// limit de la API.
+const coinSyncInterval = 30 * 60 * 1000
+const coinSyncSpacing = 500
+let coinSyncRunning = false
+async function syncAllCoins() {
+    if (coinSyncRunning) return
+    coinSyncRunning = true
+    try {
+        const Drops = require("./classes/Drops.js")
+        if (!Drops.boatEnabled()) return
+        for (const guild of client.guilds.cache.values()) {
+            try {
+                const server = await client.db.fetch(guild.id).exec().catch(() => null)
+                const users = server?.users || {}
+                for (const userId of Object.keys(users)) {
+                    if (!(Number(users[userId]?.xp) > 0)) continue
+                    const unlocks = await recordTracker.syncUserCoins({
+                        client, guild, guildId: guild.id, userId, userData: users[userId], force: true,
+                    })
+                    if (unlocks?.length) await announceRecordUnlocks(client, guild, userId, unlocks)
+                    await wait(coinSyncSpacing)
+                }
+            } catch (error) {
+                console.warn(`Could not sync coins for ${guild.id}:`, error.message)
+            }
+        }
+    } finally {
+        coinSyncRunning = false
+    }
+}
+
 // command files
 const dir = "./commands/"
 client.commands = new Discord.Collection()
@@ -507,6 +542,11 @@ client.on("clientReady", () => {
         cleanAllGuilds()
         setInterval(cleanAllGuilds, memberCleanupInterval)
     }, cleanupDelay)
+    const coinSyncDelay = 60_000 + Math.floor(Math.random() * 60_000)
+    setTimeout(() => {
+        syncAllCoins()
+        setInterval(syncAllCoins, coinSyncInterval)
+    }, coinSyncDelay)
     scheduleMadridMonthlyRollover()
     scheduleMadridDailyRollover()
 

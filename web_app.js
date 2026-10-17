@@ -1543,6 +1543,7 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
         userLevel.reactionsReceived = Number(storedUser.reactionsReceived) || 0
         userLevel.countingSent = Number(storedUser.countingSent) || 0
         userLevel.pokemonCaught = Number(storedUser.pokemonCaught) || 0
+        userLevel.coinsMax = Number(storedUser.coinsMax) || 0
         userLevel.voiceMinutes = Number(storedUser.voiceMinutes) || 0
         userLevel.streak = storedUser.streak || 0
     }

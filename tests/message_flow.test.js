@@ -155,7 +155,7 @@ function makeMember({ id = "u1", roles = [] } = {}) {
     }
 }
 
-function makeMessage({ member, guildId = "g1", channelId = "c1" } = {}) {
+function makeMessage({ member, guildId = "g1", channelId = "c1", thread = false, parentId = null } = {}) {
     const guildRoles = [{ id: "r_reward", name: "Reward" }]
     return {
         id: "m1",
@@ -169,7 +169,13 @@ function makeMessage({ member, guildId = "g1", channelId = "c1" } = {}) {
             memberCount: 5
         },
         member,
-        channel: { id: channelId, name: "general", isThread: () => false, parent: null }
+        channel: {
+            id: channelId,
+            name: "general",
+            isThread: () => thread,
+            parentId,
+            parent: parentId ? { id: parentId } : null,
+        }
     }
 }
 
@@ -229,10 +235,16 @@ test("message flow: first message grants xp and bumps counters", async () => {
     assert.equal(user.hidden, false)
 })
 
-test("message flow: economy channel grants participation record", async () => {
-    const h = makeHarness({}, {}, { channelId: "1553080048855289858" })
+test("message flow: minigame thread grants participation record", async () => {
+    const h = makeHarness({}, {}, { channelId: "thread1", thread: true, parentId: "1552390158081331419" })
     await h.run()
-    assert.equal(h.db.doc.users.u1.records["economy_participation:1"], true)
+    assert.equal(h.db.doc.users.u1.records["minigame_participation:1"], true)
+})
+
+test("message flow: messages outside minigame threads do not grant it", async () => {
+    const h = makeHarness({}, {}, { channelId: "thread2", thread: true, parentId: "otro-canal" })
+    await h.run()
+    assert.equal(h.db.doc.users.u1.records?.["minigame_participation:1"], undefined)
 })
 
 test("message flow: maintenance receives the full server document", async () => {

@@ -190,11 +190,13 @@ function getProgress(record, userData, member, commafy, info) {
             phasesTotal: total,
         }
     }
-    if (type === "economy_participation") {
-        // Flag binario: si existe el flag, está completado; si no, es null (sin progreso numérico)
-        const hasFlag = userData?.records?.["economy_participation:1"]
-        if (hasFlag) return makeProgress(1, record.tiers, v => commafy(v))
-        return null
+    if (type === "economy_earnings") {
+        // Progreso real por monedas máximas (máximo histórico del saldo en
+        // UnbelievaBoat). Sin sync todavía no hay dato: null (el bloque cae
+        // al contador de fases).
+        const value = Number(userData?.coinsMax)
+        if (!Number.isFinite(value)) return null
+        return makeProgress(value, record.tiers, v => commafy(v))
     }
     return null
 }
@@ -480,6 +482,7 @@ function buildInfoTexts(userData, member, unlockedIds, tools, info) {
     const receivedNum = num(userData?.reactionsReceived)
     const countingNum = num(userData?.countingSent)
     const pokemonNum = num(userData?.pokemonCaught)
+    const coinsNum = num(userData?.coinsMax)
     const streakRaw = userData?.streak
     const streakDays = typeof streakRaw === "object" ? Number(streakRaw?.current ?? streakRaw?.days) || 0 : Number(streakRaw) || 0
     const streakMax = typeof streakRaw === "object"
@@ -541,6 +544,11 @@ function buildInfoTexts(userData, member, unlockedIds, tools, info) {
         ].join("\n"),
         [
             `### 🧭 Canales`,
+            fitInfoLine(
+                `- 🪙 **Monedas máximas:** ${show(coinsNum)} ${coinsNum === 1 ? "moneda" : "monedas"}`,
+                `- 🪙 **Monedas máximas:** ${show(coinsNum)} ${coinsNum === 1 ? "mon." : "mon."}`,
+                `- 🪙 **Monedas máximas:** ${show(coinsNum)}`,
+            ),
             fitInfoLine(
                 `- 💥 **Pokemons capturados:** ${show(pokemonNum)} ${pokemonNum === 1 ? "pokemon" : "pokemons"}`,
                 `- 💥 **Pokemons capturados:** ${show(pokemonNum)}`,

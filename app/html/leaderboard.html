@@ -795,7 +795,7 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         if (type === "pokemon_caught") return Number(user.pokemonCaught) || 0
         if (type === "voice_minutes") return (Number(user.voiceMinutes) || 0) / 60
         if (type === "streak_days") return typeof user.streak === "object" ? Number(user.streak.current ?? user.streak.days) || 0 : Number(user.streak) || 0
-        if (type === "economy_participation") return user.records?.[`${record.id}:1`] ? 1 : 0
+        if (type === "economy_earnings") return Number(user.coinsMax) || 0
         return 0
     }
 
@@ -823,7 +823,8 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         streak: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
         tenure: '<circle cx="12" cy="8" r="6"/><path d="M15.48 12.89L17 22l-5-3-5 3 1.52-9.11"/>',
         distinct_channels: '<circle cx="12" cy="12" r="10"/><path d="M16.2 7.8l-2.1 6.3-6.3 2.1 2.1-6.3z"/>',
-        economy_participation: '<circle cx="12" cy="12" r="10"/><path d="M15 9.5a3 3 0 0 0-3-1.5c-1.66 0-3 .9-3 2.25S10.34 12 12 12s3 .75 3 2.25S13.66 16.5 12 16.5a3 3 0 0 1-3-1.5M12 6v2M12 16.5V18"/>',
+        economy_earnings: '<circle cx="12" cy="12" r="10"/><path d="M15 9.5a3 3 0 0 0-3-1.5c-1.66 0-3 .9-3 2.25S10.34 12 12 12s3 .75 3 2.25S13.66 16.5 12 16.5a3 3 0 0 1-3-1.5M12 6v2M12 16.5V18"/>',
+        minigame_participation: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><circle cx="15.5" cy="8.5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="8.5" cy="15.5" r="1.5"/><circle cx="15.5" cy="15.5" r="1.5"/>',
         counting: '<path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/>',
         voice_general: '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/>',
         voice_all_fixed: '<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>',

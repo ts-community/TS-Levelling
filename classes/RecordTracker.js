@@ -9,8 +9,14 @@ const Tools = require("./Tools.js")
 const ranks = require("../consts/ranks.js")
 const LevelUpMessage = require("./LevelUpMessage.js")
 const OvertakeMessage = require("./OvertakeMessage.js")
+const Drops = require("./Drops.js")
 
 const XP_EMOJI = "<:XP:1467192533812645939>"
+
+// Cada cuánto se refresca el saldo de monedas de un usuario "al hablar".
+// El job programado recorre a todos igualmente; esto solo evita castigar la
+// API de UnbelievaBoat en cada mensaje.
+const COIN_SYNC_INTERVAL_MS = 10 * 60 * 1000
 
 // IDs canónicos en config/records.js (CHANNELS). Se acepta el antiguo
 // config.json.records como fallback por si alguien no ha migrado.
@@ -125,6 +131,27 @@ function countDistinctChannels(channels) {
     if (Array.isArray(channels)) return channels.length
     if (typeof channels === "object") return Object.keys(channels).length
     return 0
+}
+
+// ¿Toca refrescar el saldo de monedas de este usuario? La primera vez siempre;
+// después, respetando el intervalo para no llamar a la API en cada mensaje.
+function shouldSyncCoins(userData, now = Date.now(), intervalMs = COIN_SYNC_INTERVAL_MS) {
+    const last = Number(userData?.coinsSyncAt) || 0
+    return !last || (now - last) >= intervalMs
+}
+
+// ¿Este mensaje cuenta como participar en un minijuego? Vale cualquier
+// mensaje de un usuario (no bot) en un HILO cuyo canal padre sea el de
+// minijuegos. Los mensajes fuera de esos hilos no cuentan.
+function isMinigameThreadMessage(message, minigameChannelId) {
+    if (!minigameChannelId) return false
+    if (message?.author?.bot) return false
+    const channel = message?.channel
+    if (!channel) return false
+    if (typeof channel.isThread === "function" && !channel.isThread()) return false
+    const parentId = channel.parentId || channel.parent?.id
+    if (!parentId) return false
+    return String(parentId) === String(minigameChannelId)
 }
 
 // ¿Es un número válido de counting? Solo cuenta mensajes de usuarios
@@ -497,7 +524,7 @@ function buildRecordResetUpdate(userId, userData) {
 
 // Campos que solo existen por los récords (progreso). messages y
 // monthlyMessages NO están aquí a propósito: hay que mantenerlos.
-const PROGRESS_FIELDS = ['streak', 'reactionsSent', 'reactionsReceived', 'channels', 'countingSent', 'pokemonCaught', 'voiceMinutes', 'voiceJoined']
+const PROGRESS_FIELDS = ['streak', 'reactionsSent', 'reactionsReceived', 'channels', 'countingSent', 'pokemonCaught', 'voiceMinutes', 'voiceJoined', 'coins', 'coinsMax']
 
 // Versión completa para el reset de terminal: como buildRecordResetUpdate
 // pero además quita el progreso de récords (salvo keepProgress). Lo único
@@ -529,12 +556,51 @@ function planUserReset(userId, userData, keepProgress = false) {
     }
 }
 
-// Concede el logro de participación en economía (evento único, flag en records).
-// Se llama desde los comandos de economía (comprar, vender, apostar, etc.).
-async function grantEconomyParticipation(client, guild, guildId, userId) {
-    const recordId = "economy_participation"
-    const threshold = 1
-    return grantRecord(client, guild, guildId, userId, recordId, threshold)
+// Refresca el saldo de UnbelievaBoat del usuario y concede los tiers de
+// "economy_earnings" (monedas máximas) alcanzados. Guarda el último saldo
+// (coins), el máximo histórico (coinsMax) y el marcador de sync
+// (coinsSyncAt). Devuelve los unlocks nuevos (array, puede ir vacío).
+// Silencioso si la economía no está conectada, si aún no toca refrescar
+// (salvo force) o si la API falla.
+async function syncUserCoins({ client, guild, guildId, userId, userData, force = false, fetchImpl } = {}) {
+    try {
+        if (!Drops.boatEnabled()) return []
+        const resolvedGuildId = String(guild?.id || guildId || "")
+        if (!resolvedGuildId || !userId) return []
+        if (!force && !shouldSyncCoins(userData)) return []
+
+        const snapshot = await client.db.fetch(resolvedGuildId).exec().catch(() => null)
+        const current = snapshot?.users?.[String(userId)] || userData || {}
+        if (!force && !shouldSyncCoins(current)) return []
+
+        const balance = await Drops.getBoatBalance(resolvedGuildId, userId, fetchImpl).catch(() => null)
+        if (!balance) return []
+        const total = Drops.boatBalanceTotal(balance)
+        const nextMax = Math.max(Number(current.coinsMax) || 0, total)
+        await client.db.update(resolvedGuildId, {
+            $set: {
+                [`users.${userId}.coins`]: total,
+                [`users.${userId}.coinsMax`]: nextMax,
+                [`users.${userId}.coinsSyncAt`]: Date.now(),
+            },
+        }).exec().catch(() => null)
+
+        const found = recordsConfig.allRecords().find(x => x.record.id === "economy_earnings")
+        if (!found) return []
+
+        const unlocked = unlockedIdSet(current)
+        const unlocks = []
+        for (const threshold of newlyReachedThresholds(found.record, nextMax, unlocked)) {
+            const unlock = await grantRecord(client, guild, resolvedGuildId, userId, found.record.id, threshold)
+            if (unlock) {
+                unlocks.push(unlock)
+                unlocked.add(`${found.record.id}:${threshold}`)
+            }
+        }
+        return unlocks
+    } catch {
+        return []
+    }
 }
 
 // Envía todos los desbloqueos pendientes de golpe en un solo mensaje.
@@ -658,6 +724,9 @@ module.exports = {
     getStreakCurrent,
     countDistinctChannels,
     isCountingMessage,
+    shouldSyncCoins,
+    isMinigameThreadMessage,
+    COIN_SYNC_INTERVAL_MS,
     parsePoketwoCatch,
     isPoketwoCatchMessage,
     didTalkToIA,
@@ -669,7 +738,7 @@ module.exports = {
     newlyReachedThresholds,
     unlockedIdSet,
     grantRecord,
-    grantEconomyParticipation,
+    syncUserCoins,
     recordXpForKey,
     buildRecordResetUpdate,
     PROGRESS_FIELDS,

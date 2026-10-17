@@ -342,6 +342,30 @@ async function addBoatCoins(guildId, userId, amount, reason = "Drop", fetchImpl 
     return res.json().catch(() => ({}))
 }
 
+// Saldo del usuario en UnbelievaBoat (cash + bank). Lanza si la API falla.
+// Sin dependencias: fetch nativo. Se usa para los récords/estadísticas de
+// monedas (el saldo actual que la API sí conoce).
+async function getBoatBalance(guildId, userId, fetchImpl = fetch) {
+    if (!boatEnabled()) throw new Error("boat-disabled")
+    const res = await fetchImpl(
+        `https://unbelievaboat.com/api/v1/guilds/${encodeURIComponent(guildId)}/users/${encodeURIComponent(userId)}`,
+        { headers: boatHeaders(), signal: AbortSignal.timeout(10000) },
+    )
+    if (!res.ok) throw new Error(`boat-${res.status}`)
+    return res.json().catch(() => ({}))
+}
+
+// Total de monedas de una respuesta de UnbelievaBoat: cash + bank. Si el
+// objeto no trae esos campos se acepta un `total` ya calculado. Nunca
+// negativo.
+function boatBalanceTotal(data) {
+    if (!data || typeof data !== "object") return 0
+    const cash = Number(data.cash) || 0
+    const bank = Number(data.bank) || 0
+    if (cash || bank) return Math.max(0, Math.round(cash + bank))
+    return Math.max(0, Math.round(Number(data.total) || 0))
+}
+
 // Tienda del servidor, cacheada 5 minutos por guild (el autocompletado del
 // comando la pide a cada tecla). Devuelve [{ id, name, price, emoji }].
 const storeCache = new Map()
@@ -767,6 +791,8 @@ module.exports = {
     dropPath,
     boatEnabled,
     addBoatCoins,
+    getBoatBalance,
+    boatBalanceTotal,
     grantDropRole,
     revokeDropRole,
     COIN_PRESETS,

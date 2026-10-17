@@ -244,6 +244,13 @@ const STAT_MODES = {
         tinyUnit: "reaccs", tinyOne: "reaccs",
         get: u => Number(u.reactionsSent) || 0,
     },
+    monedas: {
+        menuEmoji: "🪙", label: "Monedas Máximas", title: "Top de Monedas Máximas",
+        unit: "monedas", abbr: "monedas", emoji: "🪙",
+        one: "moneda", midUnit: "monedas", midOne: "moneda",
+        shortUnit: "máx.", shortOne: "máx.", tinyUnit: "monedas", tinyOne: "moneda",
+        get: u => Number(u.coinsMax) || 0,
+    },
     pokemon: {
         menuEmoji: "💥", label: "Poketwo", title: "Top de Poketwo",
         unit: "pokemons", abbr: "pkm", emoji: "💥",
@@ -275,6 +282,7 @@ const STAT_RECORD_IDS = {
     racha: "streak",
     racha_max: "streak",
     counting: "counting",
+    monedas: "economy_earnings",
     pokemon: "pokemon",
     voz: "voice_time",
 }
@@ -461,7 +469,7 @@ const VIEW_GROUPS = [
     { value: "grupo_xp", label: "XP", menuEmoji: "📊", views: ["xp", "xp_mes", "xp_dia"] },
     { value: "grupo_actividad", label: "Actividad", menuEmoji: "💬", views: ["mensajes", "mensajes_mes", "mensajes_dia", "mensajes_mes_max", "mensajes_dia_max"] },
     { value: "grupo_comunidad", label: "Comunidad", menuEmoji: "🤝", views: ["antiguedad", "racha", "racha_max", "reacciones_recibidas", "reacciones_enviadas"] },
-    { value: "grupo_canales", label: "Canales", menuEmoji: "🧭", views: ["pokemon", "counting"] },
+    { value: "grupo_canales", label: "Canales", menuEmoji: "🧭", views: ["monedas", "pokemon", "counting"] },
     { value: "grupo_voz", label: "Voz", menuEmoji: "🎙️", views: ["voz"] },
 ]
 
@@ -512,6 +520,7 @@ metadata: {
             { name: "💘 Reacciones recibidas", value: "reacciones_recibidas" },
             { name: "❤️ Reacciones enviadas", value: "reacciones_enviadas" },
             { name: "💥 Poketwo", value: "pokemon" },
+            { name: "🪙 Monedas Máximas", value: "monedas" },
             { name: "🔢 Counting", value: "counting" },
             { name: "🎙️ Voz", value: "voz" },
         ]},
@@ -657,11 +666,28 @@ async run(client, int, tools) {
     // En menús de contexto (View on leaderboard) no hay options: se usa targetUser.
     // Igual que la opción member, pero desde el menú de contexto (Ver en el top).
     let userSearch = int.options?.get?.("user") || int.options?.get?.("member") || (int.targetUser ? { user: int.targetUser } : null)
+    // El foco (página + resaltado) sigue al miembro buscado aunque cambie la
+    // vista: al elegir otra estadística hay que recomputar dónde cae en el
+    // nuevo ranking, no quedarse en la página 1.
+    const focusUser = userSearch ? String(userSearch.user.id) : null
+    const focusOnMember = () => {
+        if (!focusUser) {
+            highlight = null
+            return
+        }
+        const foundRanking = rankings.findIndex(x => String(x.id) === focusUser)
+        if (foundRanking < 0) {
+            highlight = null
+            pageNumber = 1
+            return
+        }
+        highlight = focusUser
+        pageNumber = Math.floor(foundRanking / pageSize) + 1
+    }
     if (userSearch) {
-        let foundRanking = rankings.findIndex(x => x.id == userSearch.user.id)
+        const foundRanking = rankings.findIndex(x => x.id == userSearch.user.id)
         if (isNaN(foundRanking) || foundRanking < 0) return tools.warn(int.user.id == userSearch.user.id ? "¡No estás en el top!" : "¡Este miembro no está en el top!")
-        else pageNumber = Math.floor(foundRanking / pageSize) + 1
-        highlight = userSearch.user.id
+        focusOnMember()
     }
 
     const configuredColor = db.settings.leaderboard?.embedColor
@@ -949,8 +975,11 @@ async run(client, int, tools) {
                 if (tenureNeedsLoading) await updateTenureLoading(button)
                 if (viewKey === "antiguedad") await loadTenureMembers()
                 rankings = buildViewRankings(viewKey)
-                pageNumber = 1
                 totalPages = Math.max(1, Math.ceil(rankings.length / pageSize))
+                // Si se buscó un miembro, el foco viaja con la vista (página
+                // donde cae en el nuevo ranking). Si no, se abre en la primera.
+                if (focusUser) focusOnMember()
+                else pageNumber = 1
             }
 
             // Las categorías solo cambian el selector: una sola actualización

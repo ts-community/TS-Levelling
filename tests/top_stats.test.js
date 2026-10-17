@@ -4,9 +4,9 @@ const assert = require("node:assert/strict")
 const top = require("../commands/slash/top.js")
 
 const users = {
-    u1: { xp: 5000, messages: 100, monthlyMessages: 10, monthlyMessagesMax: 120, monthlyXP: 500, dailyMessages: 40, dailyMessagesMax: 80, reactionsSent: 5, reactionsReceived: 50, streak: { current: 3, max: 7 }, channels: { a: 1, b: 1 }, countingSent: 9, pokemonCaught: 12, voiceMinutes: 120, records: { "messages:10": true, "messages:100": true } },
-    u2: { xp: 9000, messages: 20, monthlyMessages: 0, monthlyXP: 0, dailyMessages: 0, reactionsSent: 60, reactionsReceived: 1, streak: 12, channels: 1, countingSent: 0, pokemonCaught: 0, voiceMinutes: 3000, records: {} },
-    u3: { xp: 100, messages: 5, monthlyMessages: 5, monthlyMessagesMax: 50, monthlyXP: 100, dailyMessages: 90, dailyMessagesMax: 100, reactionsSent: 0, reactionsReceived: 0, streak: { current: 0, max: 0 }, channels: [], countingSent: 44, pokemonCaught: 30, voiceMinutes: 0, records: { "night_owl:1": true } },
+    u1: { xp: 5000, messages: 100, monthlyMessages: 10, monthlyMessagesMax: 120, monthlyXP: 500, dailyMessages: 40, dailyMessagesMax: 80, reactionsSent: 5, reactionsReceived: 50, streak: { current: 3, max: 7 }, channels: { a: 1, b: 1 }, countingSent: 9, pokemonCaught: 12, coinsMax: 25000, voiceMinutes: 120, records: { "messages:10": true, "messages:100": true } },
+    u2: { xp: 9000, messages: 20, monthlyMessages: 0, monthlyXP: 0, dailyMessages: 0, reactionsSent: 60, reactionsReceived: 1, streak: 12, channels: 1, countingSent: 0, pokemonCaught: 0, coinsMax: 1500000, voiceMinutes: 3000, records: {} },
+    u3: { xp: 100, messages: 5, monthlyMessages: 5, monthlyMessagesMax: 50, monthlyXP: 100, dailyMessages: 90, dailyMessagesMax: 100, reactionsSent: 0, reactionsReceived: 0, streak: { current: 0, max: 0 }, channels: [], countingSent: 44, pokemonCaught: 30, coinsMax: 0, voiceMinutes: 0, records: { "night_owl:1": true } },
 }
 
 function rank(key) {
@@ -27,6 +27,7 @@ test("stat modes rank each stat, zero values excluded", () => {
     assert.deepEqual(rank("racha"), ["u2", "u1"])
     assert.deepEqual(rank("racha_max"), ["u2", "u1"])
     assert.deepEqual(rank("counting"), ["u3", "u1"])
+    assert.deepEqual(rank("monedas"), ["u2", "u1"])
     assert.deepEqual(rank("pokemon"), ["u3", "u1"])
     assert.deepEqual(rank("voz"), ["u2", "u1"])
 })
@@ -41,7 +42,7 @@ test("stat extractors handle every stored shape", () => {
 
 test("stat modes mirror the stats page order, no Records", () => {
     // Espejo de las stats en orden, sin Records (ya no es una stat visible).
-    assert.deepEqual(Object.keys(top.STAT_MODES), ["mensajes", "mensajes_mes", "mensajes_dia", "mensajes_mes_max", "mensajes_dia_max", "racha", "racha_max", "antiguedad", "reacciones_recibidas", "reacciones_enviadas", "pokemon", "counting", "voz"])
+    assert.deepEqual(Object.keys(top.STAT_MODES), ["mensajes", "mensajes_mes", "mensajes_dia", "mensajes_mes_max", "mensajes_dia_max", "racha", "racha_max", "antiguedad", "reacciones_recibidas", "reacciones_enviadas", "monedas", "pokemon", "counting", "voz"])
 })
 
 test("top command exposes explicit direct view choices", () => {
@@ -50,7 +51,7 @@ test("top command exposes explicit direct view choices", () => {
     assert.deepEqual(view?.choices.map(choice => choice.value), [
         "xp", "xp_mes", "xp_dia", "mensajes", "mensajes_mes", "mensajes_dia",
         "mensajes_mes_max", "mensajes_dia_max",
-        "racha", "racha_max", "antiguedad", "reacciones_recibidas", "reacciones_enviadas", "pokemon", "counting", "voz",
+        "racha", "racha_max", "antiguedad", "reacciones_recibidas", "reacciones_enviadas", "pokemon", "monedas", "counting", "voz",
     ])
     assert.equal(args.some(arg => arg.name === "monthly"), false)
 })
@@ -86,14 +87,14 @@ test("view menu groups metrics and offers a way back", () => {
 
 test("stat lines fit on mobile", () => {
     const { STAT_MODES: m, statLineVariants, estimateVisualWidth } = top
-    const big = { mensajes: 110894, mensajes_mes: 99999, mensajes_dia: 8888, mensajes_mes_max: 99999, mensajes_dia_max: 8888, reacciones_enviadas: 9999, reacciones_recibidas: 9999, racha: 99, racha_max: 99, antiguedad: 10, counting: 9999, pokemon: 999, voz: 60000, records: 39 }
+    const big = { mensajes: 110894, mensajes_mes: 99999, mensajes_dia: 8888, mensajes_mes_max: 99999, mensajes_dia_max: 8888, reacciones_enviadas: 9999, reacciones_recibidas: 9999, racha: 99, racha_max: 99, antiguedad: 10, counting: 9999, monedas: 1000000, pokemon: 999, voz: 60000, records: 39 }
     for (const [key, mode] of Object.entries(m)) {
         const value = String(big[key]).replace(/\B(?=(\d{3})+(?!\d))/g, ".")
         const shortest = statLineVariants(mode.emoji, value, mode.unit, mode.abbr).slice(-1)[0]
         assert.ok(estimateVisualWidth(shortest) <= 37.9, `${key} ni la corta cabe: ${shortest}`)
         assert.ok(mode.label && mode.title && mode.menuEmoji, `${key} sin textos de menú`)
     }
-    assert.equal(Object.keys(m).length, 13, "un modo por stat visible (sin Records, sin XP)")
+    assert.equal(Object.keys(m).length, 14, "un modo por stat visible (sin Records, sin XP)")
 })
 
 test("stat entry lines put the number first and markers last", () => {

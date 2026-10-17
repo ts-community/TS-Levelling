@@ -51,7 +51,7 @@ test("records follow the config order within each category", () => {
     const order = Object.fromEntries(records.categories.map(c => [c.id, c.records.map(r => r.id)]))
     assert.deepEqual(order.actividad, ["messages", "monthly_messages", "daily_messages", "talk_to"])
     assert.deepEqual(order.comunidad, ["tenure", "streak", "reactions_received", "reactions_sent"])
-    assert.deepEqual(order.canales, ["pokemon", "counting", "distinct_channels", "economy_participation"])
+    assert.deepEqual(order.canales, ["economy_earnings", "pokemon", "counting", "distinct_channels", "minigame_participation"])
     assert.deepEqual(order.voz, ["voice_time", "voice_all_fixed", "voice_general"])
 })
 
@@ -69,8 +69,8 @@ test("every record has an emoji for its block header", () => {
     }
 })
 
-test("expected scope: 37 visible tiers, 5 hidden", () => {
-    assert.equal(records.countTiers(records.visibleRecords()), 37)
+test("expected scope: 40 visible tiers, 5 hidden", () => {
+    assert.equal(records.countTiers(records.visibleRecords()), 40)
     assert.equal(records.countTiers(records.hiddenRecords()), 5)
     assert.equal(records.hiddenRecords().every(({ category }) => category.hidden), true)
     assert.equal(records.visibleRecords().every(({ category }) => !category.hidden), true)
@@ -82,18 +82,18 @@ test("total XP stays subtle", () => {
 })
 
 test("title counts hidden in the total from the start", () => {
-    assert.deepEqual(command.titleCounts(new Set()), { done: 0, total: 42 })
-    assert.deepEqual(command.titleCounts(new Set(["starboard:1"])), { done: 1, total: 42 })
+    assert.deepEqual(command.titleCounts(new Set()), { done: 0, total: 45 })
+    assert.deepEqual(command.titleCounts(new Set(["starboard:1"])), { done: 1, total: 45 })
     const all = new Set(records.allRecords().flatMap(({ record }) => record.tiers.map(t => `${record.id}:${t.threshold}`)))
-    assert.deepEqual(command.titleCounts(all), { done: 42, total: 42 })
-    assert.equal(command.buildTitle(new Set()), "# <:records:1549908515399929959> Mis Records (0/42)")
+    assert.deepEqual(command.titleCounts(all), { done: 45, total: 45 })
+    assert.equal(command.buildTitle(new Set()), "# <:records:1549908515399929959> Mis Records (0/45)")
 })
 
 test("category select shows per-category progress", () => {
     const select = command.buildCatSelect("actividad", new Set()).toJSON()
     assert.equal(select.custom_id, "records-cat")
     assert.equal(select.options.length, 6)
-    assert.deepEqual(select.options.map(o => o.label), ["Estadísticas", "Actividad (0/12)", "Comunidad (0/12)", "Canales (0/8)", "Voz (0/5)", "Ocultos (0/5)"])
+    assert.deepEqual(select.options.map(o => o.label), ["Estadísticas", "Actividad (0/12)", "Comunidad (0/12)", "Canales (0/11)", "Voz (0/5)", "Ocultos (0/5)"])
     assert.deepEqual(select.options.map(o => o.value), ["stats", "actividad", "comunidad", "canales", "voz", "hidden"])
     assert.deepEqual(select.options.map(o => o.description), [
         "Tus números de actividad, comunidad y voz.",
@@ -180,6 +180,7 @@ test("every rendered line fits on mobile", () => {
         xp: 1108940, messages: 110894, monthlyMessages: 3240, monthlyXP: 115080,
         reactionsSent: 250, reactionsReceived: 40, streak: { current: 9 },
         channels: { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6 }, countingSent: 120, voiceMinutes: 900,
+        coinsMax: 1234567,
     }
     const checkInfoLines = text => {
         for (const line of text.split("\n")) {
@@ -402,8 +403,9 @@ test("completed records sort first and render struck through", () => {
 })
 
 test("records render in config order when nothing is completed", () => {
-    // El orden visible lo manda config/records.js (p. ej. Poketwo antes que
-    // Counting aunque su umbral final sea menor).
+    // El orden visible lo manda config/records.js: en Canales va por
+    // dificultad (XP total, de más a menos), así que Poketwo (43k) antes
+    // que Counting (21k) y Minijuegos (3k) al final.
     const canales = records.categories.find(c => c.id === "canales")
     const blocks = command.buildCategoryBlocks(canales, {}, null, new Set(), tools.commafy)
     const titles = blocks.slice(1).map(b => b.split("\n")[0])
@@ -580,7 +582,7 @@ test("page composition stays within proven container sizes", () => {
     // + fila del menú(1). El título y el primer record van juntos.
     for (const category of records.categories.filter(c => !c.hidden)) {
         const blocks = command.buildCategoryBlocks(category, { messages: 150, monthlyMessages: 120 }, null, new Set(), tools.commafy)
-        assert.ok(3 + Math.max(0, blocks.length - 2) * 2 <= 10, `${category.id} se pasa de componentes`)
+        assert.ok(3 + Math.max(0, blocks.length - 2) * 2 <= 12, `${category.id} se pasa de componentes`)
     }
     const hidden = command.buildHiddenBlocks(records.categories.find(c => c.id === "hidden"), new Set(), tools.commafy)
     assert.equal(hidden.length, 5, "un bloque por nivel oculto")
@@ -622,6 +624,42 @@ test("pokemon progress comes from pokemonCaught", () => {
     const block = command.buildRecordBlock(byId.pokemon, new Set(), command.getProgress(byId.pokemon, { pokemonCaught: 7 }, null, commafy), commafy)
     assert.ok(block.includes("**Aprendiz** - 0/3 fases"), block.split("\n")[0])
     assert.ok(block.includes("📊 **7/10 pokemons**"), block.split("\n").at(-1))
+})
+
+test("economy progress comes from coinsMax, minigame is a single binary tier", () => {
+    const byId = Object.fromEntries(records.allRecords().map(({ record }) => [record.id, record]))
+    const commafy = tools.commafy
+    assert.deepEqual(byId.economy_earnings.tiers.map(t => t.threshold), [10000, 100000, 1000000])
+    assert.equal(command.getProgress(byId.economy_earnings, {}, null, commafy), null, "sin sync no hay progreso")
+    let p = command.getProgress(byId.economy_earnings, { coinsMax: 25000 }, null, commafy)
+    assert.equal(p.target, 100000)
+    assert.equal(p.completed, 1)
+    p = command.getProgress(byId.economy_earnings, { coinsMax: 1500000 }, null, commafy)
+    assert.equal(p.target, 1000000)
+    assert.equal(p.full, true)
+
+    assert.equal(byId.minigame_participation.tiers.length, 1)
+    assert.equal(byId.minigame_participation.tiers[0].threshold, 1)
+    assert.equal(byId.minigame_participation.mechanic.channelId, records.CHANNELS.minigameChannelId)
+    assert.equal(command.getProgress(byId.minigame_participation, {}, null, commafy), null)
+})
+
+test("minigame participation only counts messages in threads of its channel", () => {
+    const channelId = records.CHANNELS.minigameChannelId
+    const base = { author: { bot: false } }
+    assert.equal(tracker.isMinigameThreadMessage(
+        { ...base, channel: { isThread: () => true, parentId: channelId } }, channelId), true)
+    assert.equal(tracker.isMinigameThreadMessage(
+        { ...base, channel: { isThread: () => true, parent: { id: channelId } } }, channelId), true)
+    // Mensaje normal en el canal padre no vale (no es hilo).
+    assert.equal(tracker.isMinigameThreadMessage(
+        { ...base, channel: { isThread: () => false, parentId: "cat" } }, channelId), false)
+    // Hilo de otro canal no vale.
+    assert.equal(tracker.isMinigameThreadMessage(
+        { ...base, channel: { isThread: () => true, parentId: "otro" } }, channelId), false)
+    // Bots fuera.
+    assert.equal(tracker.isMinigameThreadMessage(
+        { author: { bot: true }, channel: { isThread: () => true, parentId: channelId } }, channelId), false)
 })
 
 test("unlocked period tiers stay done when the new period starts at 0", () => {

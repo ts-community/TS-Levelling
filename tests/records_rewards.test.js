@@ -344,3 +344,31 @@ test("getRecordIds expone los 6 IDs de records", () => {
     }
     assert.deepEqual(ids, recordsConfig.CHANNELS)
 })
+
+test("syncUserCoins guarda el máximo y concede economy_earnings sin bajar nunca", async () => {
+    process.env.UNBELIEVABOAT_TOKEN = "test-token"
+    try {
+        const doc = { _id: "g1", users: { u1: { xp: 0 } }, settings: testSettings() }
+        const client = fakeClient(doc)
+        const boat = (cash, bank) => async () => ({ ok: true, json: async () => ({ cash, bank }) })
+
+        const unlocks = await tracker.syncUserCoins({
+            client, guild: null, guildId: "g1", userId: "u1", userData: { xp: 0 }, force: true, fetchImpl: boat(60000, 60000),
+        })
+        assert.equal(doc.users.u1.coins, 120000)
+        assert.equal(doc.users.u1.coinsMax, 120000)
+        assert.ok(doc.users.u1.records["economy_earnings:10000"], "primer tier concedido")
+        assert.ok(doc.users.u1.records["economy_earnings:100000"], "segundo tier concedido")
+        assert.equal(unlocks.length, 2)
+
+        // Un saldo menor no baja el máximo ni vuelve a conceder.
+        const again = await tracker.syncUserCoins({
+            client, guild: null, guildId: "g1", userId: "u1", userData: doc.users.u1, force: true, fetchImpl: boat(1000, 0),
+        })
+        assert.equal(doc.users.u1.coinsMax, 120000, "coinsMax nunca baja")
+        assert.equal(doc.users.u1.coins, 1000)
+        assert.equal(again.length, 0)
+    } finally {
+        delete process.env.UNBELIEVABOAT_TOKEN
+    }
+})

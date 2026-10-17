@@ -225,21 +225,30 @@ async runInner(client, message, tools) {
             }
         }
 
-        // Economía: cualquier mensaje del canal dedicado cuenta como participación.
-        const economyRecord = byId.economy_participation
-        const economyChannelId = economyRecord?.mechanic?.channelId
-        if (economyRecord && economyChannelId && String(message.channelId) === String(economyChannelId)) {
-            const threshold = economyRecord.tiers[0].threshold
-            const key = `${economyRecord.id}:${threshold}`
-            if (!unlocked.has(key)) {
+        // Minijuegos: participar (escribir) en un hilo del canal de minijuegos.
+        const minigameRecord = byId.minigame_participation
+        if (minigameRecord) {
+            const minigameChannelId = minigameRecord.mechanic?.channelId
+                || tracker.getRecordIds().minigameChannelId
+            const threshold = minigameRecord.tiers[0].threshold
+            const key = `${minigameRecord.id}:${threshold}`
+            if (!unlocked.has(key) && tracker.isMinigameThreadMessage(message, minigameChannelId)) {
                 unlocked.add(key)
                 const unlockInfo = await tracker.grantRecord(
                     client, message.guild, message.guild.id, author,
-                    economyRecord.id, threshold,
+                    minigameRecord.id, threshold,
                 )
                 if (unlockInfo) pendingUnlocks.push(unlockInfo)
             }
         }
+
+        // Economía: refresca el saldo de UnbelievaBoat (con throttle por
+        // usuario) y concede los tiers de monedas alcanzados. Sin economía
+        // conectada no hace nada.
+        const coinUnlocks = await tracker.syncUserCoins({
+            client, guild: message.guild, guildId: message.guild.id, userId: author, userData,
+        })
+        if (coinUnlocks?.length) pendingUnlocks.push(...coinUnlocks)
     } catch {}
 
     // Enviar todos los desbloqueos de golpe (batching)
