@@ -166,7 +166,7 @@ app.get("/easteregg", async function(req, res) {
             status: "login",
             celebration: true,
             detailsHtml: rewardDetail(`${eggDesc}. Se suma a tu XP y a tu XP mensual.`),
-            actionsHtml: `<a class="btn-primary" href="/discord">Iniciar sesión para reclamar</a>`
+            actionsHtml: `<a class="btn-primary" href="/discord?next=${encodeURIComponent(req.originalUrl)}">Iniciar sesión para reclamar</a>`
                 + (guildId ? `<a class="secondary" href="/leaderboard/${encodeURIComponent(guildId)}">Ver clasificación</a>`
                     : `<a class="secondary" href="/servers">Ir al dashboard</a>`),
         }))
@@ -325,7 +325,7 @@ async function handleDropClaim(req, res) {
             status: "login",
             celebration: "soft",
             detailsHtml: dropDetails(drop, left),
-            actionsHtml: `<a class="btn-primary" href="/discord">Iniciar sesión para reclamar</a>`
+            actionsHtml: `<a class="btn-primary" href="/discord?next=${encodeURIComponent(req.path)}">Iniciar sesión para reclamar</a>`
                 + `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
         }))
     }
@@ -1253,7 +1253,32 @@ app.get("/api/xp/:id", cors(), async function(req, res) {
 /* STEP 1
 The client visits this URL, which takes them to a Discord authorization page
 By authorizing, they give permission for us to view basic info and see what servers they're in (identify + guilds) */
-app.get("/discord", function(req, res) { return res.redirect(discord_auth) })
+// Destino tras el login (p. ej. el drop que se iba a reclamar). Solo rutas
+// relativas internas, para que no sea un open redirect.
+function safeNext(value) {
+    value = String(value || "")
+    if (!/^\/(?!\/)[\w\-\/?=&.%]*$/.test(value) || value.length > 200) return ""
+    return value
+}
+
+// Dominio padre compartido entre la web y el subdominio de drops, para que
+// la cookie de sesión valga en ambos.
+function sharedCookieDomain() {
+    const dropsHost = Drops.dropsHostname()
+    if (!dropsHost) return undefined
+    let siteHost
+    try { siteHost = new URL(siteURL).hostname } catch { return undefined }
+    const a = siteHost.split(".").reverse(), b = dropsHost.split(".").reverse()
+    const common = []
+    for (let i = 0; i < Math.min(a.length, b.length) && a[i] === b[i]; i++) common.push(a[i])
+    return common.length >= 2 ? "." + common.reverse().join(".") : undefined
+}
+
+app.get("/discord", function(req, res) {
+    const next = safeNext(req.query.next)
+    if (!next) return res.redirect(discord_auth)
+    return res.redirect(discord_auth + "&state=" + Buffer.from(next).toString("base64url"))
+})
 
 /* STEP 2
 After authorizing, Discord redirects them to /auth over on our end, with a few secret codes that we can use
@@ -1281,7 +1306,7 @@ app.get("/auth", async function(req, res) {
             })
         }).then(x => x.json()).then(data => {
             if (data["error"]) return sendRedirect(res, "/"); // if discord sends an error (fake code, etc)
-            else return storeAuthToken(res, data) // if we reach here, it means the code was valid! on to step 3!
+            else return storeAuthToken(res, data, decodeNext(req.query.state)) // if we reach here, it means the code was valid! on to step 3!
         }).catch(e => { console.error(e); sendRedirect(res, "/?authorized") })
     }
     
@@ -1292,13 +1317,22 @@ app.get("/auth", async function(req, res) {
 /* STEP 3
 Discord gave us the codes we need to get their private information, let's goooo!
 Now it gets stored in the database for a week, and we give the client our own made up token so we know when it's them */ 
-function storeAuthToken(res, tokens) {
+function decodeNext(state) {
+    try { return safeNext(Buffer.from(String(state || ""), "base64url").toString()) } catch { return "" }
+}
+
+function storeAuthToken(res, tokens, next) {
     let randomNumbers = [tools.rng(1e3, 1e4-1), tools.rng(1e4, 1e5-1), tools.rng(1e5, 1e6-1), tools.rng(1e6, 1e7-1), Number(Date.now().toString().slice(-7))]
     let randomID = randomNumbers.map(x => x.toString(16)).join("-") // just combine a bunch of random numbers!!!! pretty much anything goes here
     let expiration = Date.now() + (1000 * tokens.expires_in) // when the token expires (one week)
     authDB.delete({ expires: { $lt: Date.now() } }).then(() => {}) // clear expired tokens
     authDB.create({ _id: randomID, access_token: tokens.access_token, refresh_token: tokens.refresh_token, expires: expiration }).then((data) => {
-        res.cookie("polaris", randomID, { "expires": new Date(expiration) });
+        res.cookie("polaris", randomID, { "expires": new Date(expiration), domain: sharedCookieDomain() });
+        if (next) { // vuelve a donde estaba (p. ej. el drop), en el subdominio de drops si es una ruta de drop
+            const dropsHost = Drops.dropsHostname()
+            const isDrop = /^\/(drop\/)?\d{10,30}\/[A-Z0-9]{6,10}$/.test(next)
+            return sendRedirect(res, isDrop && dropsHost ? `https://${dropsHost}${next}` : next)
+        }
         sendRedirect(res, "/?authorized") // sweet, back to the homepage
     }).catch((e) => { console.error(e); sendRedirect(res, "/") })
 }
