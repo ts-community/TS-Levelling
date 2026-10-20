@@ -58,7 +58,9 @@ class Tools {
             const opt = int?.options?.get?.("user") || int?.options?.get?.("member")
             if (opt?.member) return { member: opt.member, user: opt.user || opt.member.user }
             if (opt?.user && int?.guild) {
-                const fetched = await int.guild.members.fetch(opt.user.id).catch(() => null)
+                // La opción ya suele traer el miembro resuelto: no gastar un
+                // fetch de API (menos latencia en /rank <member>, /addxp...).
+                const fetched = opt.member || await int.guild.members.fetch(opt.user.id).catch(() => null)
                 return { member: fetched, user: opt.user }
             }
             if (int?.targetMember) return { member: int.targetMember, user: int.targetUser || int.targetMember.user }

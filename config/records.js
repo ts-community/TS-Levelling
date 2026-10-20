@@ -183,7 +183,7 @@ const categories = [
                     {
                         threshold: 100000,
                         xp: 10000,
-                        name: "Acaudalado",
+                        name: "Adinerado",
                         desc: `Consigue 100.000 monedas en <#${CHANNELS.economyChannelId}>.`
                     },
                     {
@@ -291,7 +291,7 @@ const categories = [
                     {
                         threshold: 1,
                         xp: 3000,
-                        name: "Concursante",
+                        name: "Debutante",
                         desc: `Participa en uno de los minijuegos del servidor en <#${CHANNELS.minigameChannelId}>.`
                     },
                 ]

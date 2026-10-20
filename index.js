@@ -834,7 +834,7 @@ client.on("interactionCreate", async int => {
     
     if (!int.guild) return int.reply("¡No puedes usar comandos por MD!")
 
-    // autocompletado de opciones (p. ej. objetos de la tienda en /drop):
+    // autocompletado de opciones (p. ej. objetos de la tienda en /drops):
     // cada comando expone command.autocomplete(client, int).
     if (typeof int.isAutocomplete === "function" && int.isAutocomplete()) {
         const autoCommand = client.commands.get(int.commandName)

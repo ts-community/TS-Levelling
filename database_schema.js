@@ -83,8 +83,8 @@ const settings = {
     hideMultipliers: { type: "bool", default: false },
     manualPerms: { type: "bool", default: false },
 
-    // Roles que pueden usar /drop sin gestionar el servidor (los gestores
-    // siempre pueden). Se administra con /drop-admin.
+    // Roles que pueden usar /drops sin gestionar el servidor (los gestores
+    // siempre pueden). Se administra con /drops permiso.
     dropRoles: { type: "collection", values: {
         id: { type: "string", accept: ["discord:role"] },
     }},

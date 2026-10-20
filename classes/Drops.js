@@ -5,7 +5,9 @@
 // Guardado en el doc del servidor: drops { "<CODE>": {
 //   name, amount, maxClaims, claims: [userIds], expiresAt, createdBy, createdAt } }
 
-const CODE_LENGTH = 6
+// 8 caracteres (= ^8 combinaciones criptográficas: inviable adivinarlos por
+// script, y aun así el enlace lleva rate limit anti-fuerza-bruta).
+const CODE_LENGTH = 8
 // Sin caracteres ambiguos (0/O, 1/I/L) para dictarlos sin errores.
 const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 
@@ -65,9 +67,9 @@ const DURATION_PRESETS = [
 ]
 
 const LIMITS = {
-    amountMin: 100,
+    amountMin: 1, // desde 1: drops chiquitos de 1 XP también valen
     amountMax: 100000, // por encima de Leyenda (75.000) no tiene sentido
-    coinMin: 100,
+    coinMin: 1, // desde 1: la libertad de repetirse es del staff
     coinMax: 100000000, // int32 de la API de Boat: no pasar de ~2.100M
     qtyMin: 1,
     qtyMax: 100, // unidades por reclamo en drops de objetos
@@ -78,7 +80,7 @@ const LIMITS = {
     nameMax: 40,
 }
 
-// ¿Puede usar /drop? Gestores siempre; si no, roles de la allowlist
+// ¿Puede usar /drops? Gestores siempre; si no, roles de la allowlist
 // (settings.dropRoles [{ id }]). memberRoles: colección con .has(id).
 function canUseDrops({ isManager, memberRoles, settings }) {
     if (isManager) return true
@@ -201,6 +203,17 @@ function dropsBaseUrl(fallback = "") {
 function dropPath(guildId, code) {
     if (dropsHostname()) return `/${guildId}/${code}`
     return `/drop/${guildId}/${code}`
+}
+
+// Servidor principal de la instalación (Ts Community). Su enlace aún más
+// corto: drops.tscomunity.es/CODE, sin ID de servidor.
+const MAIN_GUILD_ID = "1093864130030612521"
+
+// URL completa y lista para copiar de un drop. base = web fallback.
+function dropUrl(guildId, code, fallback = "") {
+    const base = dropsBaseUrl(fallback)
+    if (dropsHostname() && String(guildId) === MAIN_GUILD_ID) return `${base}/${code}`
+    return `${base}${dropPath(guildId, code)}`
 }
 
 function genCode(existing = {}, rand = null) {
@@ -777,6 +790,7 @@ function listDrops(doc, now = Date.now()) {
 module.exports = {
     CODE_LENGTH,
     CODE_ALPHABET,
+    MAIN_GUILD_ID,
     AMOUNT_PRESETS,
     CUSTOM_AMOUNT,
     DURATION_PRESETS,
@@ -789,6 +803,7 @@ module.exports = {
     dropsHostname,
     dropsBaseUrl,
     dropPath,
+    dropUrl,
     boatEnabled,
     addBoatCoins,
     getBoatBalance,

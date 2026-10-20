@@ -264,9 +264,12 @@ async runInner(client, message, tools) {
         } catch {}
     }
 
-    // Rol de hitos a todo el que habla (sin esperar: otros caminos como
-    // /addxp o récords lo aseguran al dar roles de rango).
-    tools.ensureMilestoneRole(message.guild, message.member).catch(() => {})
+    // Rol de hitos a todo el que habla. AWAITS a propósito: si queda en
+    // paralelo, el roles.set del sync de roles de nivel (más abajo) puede
+    // haberse calculado con el cache anterior y borra el hitos recién
+    // puesto — con eso el recién llegado no veía el hitos hasta su segundo
+    // mensaje. Otros caminos (/addxp, récords) lo dan al dar roles de rango.
+    await tools.ensureMilestoneRole(message.guild, message.member).catch(() => {})
 
     if (userData.cooldown > Date.now()) return // on cooldown, stop here
 

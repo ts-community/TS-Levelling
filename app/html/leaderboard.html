@@ -96,6 +96,12 @@
         .recordBar { flex: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.1); overflow: hidden; }
         .recordBar i { display: block; height: 100%; border-radius: inherit; background: var(--polarisgreen); }
         .recordProgress span { flex: none; font-variant-numeric: tabular-nums; }
+        .recordStats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 14px; margin-bottom: 24px; }
+        .recordStatsCard { min-width: 0; padding: 16px 18px; border: 1px solid rgba(255,255,255,0.09); border-radius: 14px; background: linear-gradient(145deg, rgba(255,255,255,0.07), rgba(255,255,255,0.025)); }
+        .recordStatsTitle { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 15px; font-weight: 700; }
+        .recordStatsTitle svg { width: 20px; height: 20px; color: var(--polarisgreen); flex: none; }
+        .recordStatsCard p { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 7px 0; font-size: 14px; color: rgba(255,255,255,.72); }
+        .recordStatsCard p b { color: #fff; font-variant-numeric: tabular-nums; }
         .recordTier.locked .recordTierName, .recordTier.locked .recordTierDesc { filter: blur(4px); user-select: none; }
         .recordTier.locked .recordTierReward { color: rgba(255,255,255,.42); }
         @keyframes recordRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
@@ -104,47 +110,40 @@
             .recordsGrid { grid-template-columns: 1fr; }
         }
 
-        /* Huevo de pascua: en reposo apenas un borrón de colores; al poner
-           el ratón encima, fiesta total. */
+        /* Huevo de pascua: en reposo es solo un borrón casi invisible en la
+           esquina; al acercar el ratón se enfoca, brilla y se tambalea. */
         #secretEasterTrigger {
             position: fixed;
-            right: 20px;
-            bottom: 18px;
-            width: 18px;
-            height: 24px;
-            /* Huevo de verdad: estrecho arriba, redondo abajo */
-            border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+            right: 54px;
+            bottom: 14px;
+            width: 30px;
+            height: 40px;
+            /* Huevo de verdad: estrecho arriba, redondo abajo, ligeramente
+               torcido como si estuviera escondido */
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
             border: 1px solid rgba(255, 255, 255, 0.08);
-            background: linear-gradient(160deg, rgba(135, 243, 255, 0.16), rgba(167, 139, 250, 0.14) 45%, rgba(126, 240, 188, 0.12));
-            opacity: 0.5;
-            filter: blur(1.2px);
+            background: linear-gradient(160deg, rgba(135, 243, 255, 0.55), rgba(167, 139, 250, 0.5) 45%, rgba(245, 215, 110, 0.45));
+            opacity: 0.45;
+            filter: blur(9px);
+            transform: rotate(-16deg);
             cursor: pointer;
             z-index: 40;
-            transition: opacity 0.3s ease, filter 0.3s ease, transform 0.3s ease;
+            transition: opacity 0.35s ease, filter 0.45s ease, box-shadow 0.45s ease;
         }
         #secretEasterTrigger:hover,
         #secretEasterTrigger:focus-visible,
         #secretEasterTrigger:active {
             opacity: 1;
             filter: blur(0);
-            border-color: rgba(255, 255, 255, 0.35);
-            background: linear-gradient(160deg, #87f3ff, #a78bfa 38%, #f78fb3 62%, #f5d76e);
-            background-size: 220% 220%;
-            animation: eggFiesta 1.1s ease-in-out infinite, eggGradient 2.4s ease infinite;
+            border-color: rgba(255, 255, 255, 0.45);
+            box-shadow: 0 0 18px rgba(135, 243, 255, 0.8), 0 0 42px rgba(167, 139, 250, 0.55);
+            animation: eggReady 0.55s ease-in-out infinite alternate;
         }
-        @keyframes eggFiesta {
-            0%, 100% { transform: translateY(0) rotate(-10deg) scale(1.55); box-shadow: 0 0 14px rgba(135, 243, 255, 0.75), 0 0 34px rgba(167, 139, 250, 0.55); }
-            25% { transform: translateY(-6px) rotate(10deg) scale(1.7); box-shadow: 0 0 20px rgba(247, 143, 179, 0.85), 0 0 44px rgba(135, 243, 255, 0.6); }
-            50% { transform: translateY(0) rotate(-10deg) scale(1.55); box-shadow: 0 0 14px rgba(245, 215, 110, 0.85), 0 0 34px rgba(247, 143, 179, 0.6); }
-            75% { transform: translateY(-6px) rotate(10deg) scale(1.7); box-shadow: 0 0 20px rgba(126, 240, 188, 0.85), 0 0 44px rgba(167, 139, 250, 0.6); }
+        @keyframes eggReady {
+            from { transform: rotate(-16deg) scale(1.12); }
+            to { transform: rotate(-6deg) scale(1.2) translateY(-4px); }
         }
-        @keyframes eggGradient {
-            0%, 100% { background-position: 0% 30%; }
-            50% { background-position: 100% 70%; }
-        }
-        #secretEasterTrigger:active {
-            transform: scale(1.9);
-        }
+        #secretEasterTrigger:active { transform: rotate(-16deg) scale(0.92); }
         #secretEasterTrigger:focus-visible {
             outline: 2px solid rgba(135, 243, 255, 0.6);
             outline-offset: 3px;
@@ -152,7 +151,7 @@
         @media (prefers-reduced-motion: reduce) {
             #secretEasterTrigger:hover,
             #secretEasterTrigger:focus-visible,
-            #secretEasterTrigger:active { animation: none; transform: scale(1.4); }
+            #secretEasterTrigger:active { animation: none; transform: rotate(-16deg) scale(1.1); }
         }
     </style>
 </head>
@@ -193,6 +192,11 @@
                 <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1c0-4.4 3.6-8 8-8s8 3.6 8 8v1H4z"></path></svg>
                 <span>Tu Rango</span>
             </button>
+            <button class="lbNavItem" box="records">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a5 5 0 0 1 5 5v1h2a1 1 0 0 1 1 1c0 2.4-1.6 4.4-3.8 4.9A5.03 5.03 0 0 1 13 16.9V19h3a1 1 0 0 1 0 2H8a1 1 0 0 1 0-2h3v-2.1a5.03 5.03 0 0 1-3.2-3 5.5 5.5 0 0 1-3.8-4.9 1 1 0 0 1 1-1h2V7a5 5 0 0 1 5-5zM5 9c.2 1.1.9 2 1.9 2.5A7 7 0 0 1 6.5 9H5zm12.5 0h-1.4a7 7 0 0 1-.4 2.5C16.6 11 17.3 10.1 17.5 9z"></path></svg>
+                <span>Tus Records</span>
+            </button>
+            <div class="lbSidebarSep" role="separator"></div>
             <button class="lbNavItem" box="roles">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z"></path></svg>
                 <span>Recompensas</span>
@@ -200,10 +204,6 @@
             <button class="lbNavItem" box="levels">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" stroke="none"></path><path d="M2 12l10 5 10-5"></path><path d="M2 17l10 5 10-5"></path></svg>
                 <span>Todos los Niveles</span>
-            </button>
-            <button class="lbNavItem" box="records">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a5 5 0 0 1 5 5v1h2a1 1 0 0 1 1 1c0 2.4-1.6 4.4-3.8 4.9A5.03 5.03 0 0 1 13 16.9V19h3a1 1 0 0 1 0 2H8a1 1 0 0 1 0-2h3v-2.1a5.03 5.03 0 0 1-3.2-3 5.5 5.5 0 0 1-3.8-4.9 1 1 0 0 1 1-1h2V7a5 5 0 0 1 5-5zM5 9c.2 1.1.9 2 1.9 2.5A7 7 0 0 1 6.5 9H5zm12.5 0h-1.4a7 7 0 0 1-.4 2.5C16.6 11 17.3 10.1 17.5 9z"></path></svg>
-                <span>Records</span>
             </button>
         </div>
 
@@ -252,14 +252,24 @@
         <button id="pageUp" onclick="setPage(page + 1)" style="width: 44px; min-width: 44px; height: 44px; padding: 0px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); margin-left: 20px;">-&gt;</button>
     </div>
 
+    <div id="statPickerWrap" style="display: none">
+        <div id="statMenu"></div>
+        <button id="statPicker" type="button">
+            <span id="statPickerEmoji">🏆</span>
+            <span id="statPickerLabel">XP total</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+    </div>
+
     <h2 box="roles" class="lbBox plsLogIn">¡Inicia sesión para ver tu progreso hacia los roles de recompensa!</h2>
-    <div id="roleList" box="roles" class="leaderboardBox lbBox" style="display: none"></div>
+    <div id="roleList" box="roles" class="leaderboardBox lbBox" style="display: none"><div class="lbCardGrid" id="roleGrid"></div></div>
     <h2 id="noRewardRoles" box="roles" style="text-align: center; display: none" class="lbBox">This server doesn't have any reward roles!</h2>
 
     <h2 box="levels" class="lbBox plsLogIn">¡Inicia sesión para ver tu progreso hacia cada nivel!</h2>
-    <div id="progress" box="levels" class="leaderboardBox lbBox" style="display: none"></div>
+    <div id="progress" box="levels" class="leaderboardBox lbBox" style="display: none"><div class="lbCardGrid" id="levelGrid"></div></div>
 
     <div box="records" class="lbBox" style="display: none; min-width: 0; max-width: 100%;">
+        <div id="recordStats"></div>
         <div id="recordsList"></div>
     </div>
 
@@ -400,44 +410,42 @@
         </div>
     </div>
 
-    <!-- role slot template -->
-    <div class="leaderboardSlot" slot="role">
-        <div class="mainInfo" style="width: 54%">
-            <div class="roleTierIcon" lb="icon">
+    <!-- role card template -->
+    <div class="rewardSlot" slot="role">
+        <div class="rewardHead">
+            <div class="rewardIcon" lb="icon">
                 <svg viewBox="0 0 24 24">
                     <path fill="currentColor" d="M12 1.3l7.7 3.08v6.2c0 5.44-3.4 10.06-7.7 11.92C7.7 20.64 4.3 16.02 4.3 10.58v-6.2z"></path>
                     <path fill="white" fill-opacity="0.92" d="M12 6l1.6 3.24 3.58.52-2.59 2.52.61 3.56L12 14.15l-3.2 1.69.61-3.56-2.59-2.52 3.58-.52z"></path>
                 </svg>
             </div>
-            <div style="margin-left: 10px">
+            <div class="rewardTitle">
                 <p lb="role" style="font-weight: bold"></p>
                 <p lb="level"></p>
             </div>
+            <span class="rewardLock" lb="lock" title="Rol sin conseguir" style="display: none">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            </span>
         </div>
-
-        <div class="xpSection" style="width: 60%; margin-right: 20px;">
-            <p lb="percent" class="xpLabel"></p>
+        <p lb="detail" class="rewardDetail" style="display: none"></p>
+        <div class="rewardProgress">
             <div class="progressBar">
                 <div class="progress" lb="progress"></div>
             </div>
+            <p lb="percent" class="rewardPercent"></p>
         </div>
     </div>
 
-    <!-- progress slot template -->
-    <div class="leaderboardSlot" slot="progress">
-        <div class="mainInfo" style="width: 38%">
-            <div style="margin-left: 10px">
-                <p lb="level" style="font-weight: bold"></p>
-                <p lb="xp"></p>
-            </div>
+    <!-- progress card template -->
+    <div class="levelSlot" slot="progress">
+        <div class="levelHead">
+            <p lb="level" style="font-weight: bold"></p>
+            <p lb="xp"></p>
         </div>
-
-        <div class="xpSection" style="width: 60%; margin-right: 20px;">
-            <p lb="percent" class="xpLabel"></p>
-            <div class="progressBar">
-                <div class="progress" lb="progress"></div>
-            </div>
+        <div class="progressBar">
+            <div class="progress" lb="progress"></div>
         </div>
+        <p lb="percent" class="levelPercent"></p>
     </div>
 
     <div style="height: 40px"></div>
@@ -504,7 +512,7 @@ const tabInfo = {
     rank: { slug: "rank", label: "Tu Rango" },
     roles: { slug: "roles", label: "Recompensas" },
     levels: { slug: "levels", label: "Todos los Niveles" },
-    records: { slug: "records", label: "Records" },
+    records: { slug: "records", label: "Tus Records" },
 }
 const slugToBox = Object.fromEntries(Object.entries(tabInfo).map(([box, info]) => [info.slug, box]))
 
@@ -530,14 +538,52 @@ let totalPages = 1
 let setPage;
 
 let leaderboardSlot = $('.leaderboardSlot[slot=leaderboard]').first().clone()
-let roleSlot = $('.leaderboardSlot[slot=role]').first().clone()
-let progressSlot = $('.leaderboardSlot[slot=progress]').first().clone()
+let roleSlot = $('.rewardSlot[slot=role]').first().clone()
+let progressSlot = $('.levelSlot[slot=progress]').first().clone()
 
 let pageCache = {}
+
+// Categorías del top (igual que /top del bot). El backend ordena por estas
+// stats con ?sort=key; "xp" es la de toda la vida y va por defecto.
+const TOP_VIEWS = [
+    { key: "xp", label: "XP total", emoji: "🏆" },
+    { key: "monthly", label: "XP este mes", emoji: "📅" },
+    { key: "daily", label: "XP de hoy", emoji: "☀️" },
+    { key: "messages", label: "Mensajes", emoji: "💬" },
+    { key: "monthlyMessages", label: "Mensajes este mes", emoji: "📅" },
+    { key: "dailyMessages", label: "Mensajes de hoy", emoji: "☀️" },
+    { key: "voiceMinutes", label: "Tiempo en voz", emoji: "🎙️" },
+    { key: "pokemonCaught", label: "Poketwo", emoji: "💥" },
+    { key: "coinsMax", label: "Monedas máximas", emoji: "🪙" },
+    { key: "reactionsSent", label: "Reacciones enviadas", emoji: "💌" },
+    { key: "reactionsReceived", label: "Reacciones recibidas", emoji: "💘" },
+    { key: "countingSent", label: "Counting", emoji: "🔢" },
+    { key: "streak", label: "Racha de actividad", emoji: "🔥" },
+]
+const statView = () => TOP_VIEWS.find(v => v.key == statSort) || TOP_VIEWS[0]
+function statDisplayText(view, value) {
+    value = Number(value) || 0
+    if (view?.key === "voiceMinutes") return value >= 60 ? `${Math.floor(value / 60)}h ${value % 60}m` : `${value}m`
+    if (view?.key === "streak") return `${commafy(value)} ${value == 1 ? "día" : "días"}`
+    if (view?.key === "monthly" || view?.key === "daily") return `${commafy(value)} XP`
+    return commafy(value)
+}
+// ?sort= en la URL comparte el enlace con la categoría ya elegida
+const requestedSort = new URLSearchParams(window.location.search).get("sort")
+let statSort = TOP_VIEWS.some(v => v.key === requestedSort) ? requestedSort : "xp"
+const lbURL = pg => `/api/leaderboard/${guildID}?page=${pg}&sort=${statSort}`
+
+function buildStatPicker() {
+    $('#statMenu').html(TOP_VIEWS.map(v => `<button type="button" class="statMenuBtn ${v.key == statSort ? "activeStat" : ""}" data-sort="${v.key}">${v.emoji} ${v.label}</button>`).join(""))
+    $('#statPickerEmoji').text(statView().emoji)
+    $('#statPickerLabel').text(statView().label)
+}
 
 addUhOh()
 
 $('.leaderboardSlot').remove()
+$('.rewardSlot').remove()
+$('.levelSlot').remove()
 
 if (currentBox !== "leaderboard") {
     $('.selectedlb').removeClass('selectedlb')
@@ -653,20 +699,23 @@ function getTierColor(name) {
     return "#9aa0a6"
 }
 
-Fetch(`/api/leaderboard/${guildID}`).then(data => {
+Fetch(lbURL(1)).then(data => {
 
     console.log(data)
     guildName = data.guild.name
     updateHeaderTitle(currentBox)
     updateRankedCount(data)
 
-    pageCache[data.pageInfo.page] = data
+    pageCache[`${statSort}|${data.pageInfo.page}`] = data
     totalPages = data.pageInfo.pageCount
     if (totalPages <= 1) $('#pageInfo').remove()
     else {
         $('#totalPages').text(totalPages)
         $('#pageNumber').attr("max", totalPages)
     }
+
+    buildStatPicker()
+    $('#statPickerWrap').toggle(currentBox === "leaderboard")
 
     let loggedIn = !data.user.noLogin
 
@@ -734,7 +783,17 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
             userSlot.find("[lb=level]").text(`Nivel ${commafy(userXP.level)}`)
             userSlot.find("[lb=pfp]").attr("src", x.avatar || "/assets/avatar.png")
             userSlot.find("[lb=progress]").css("background-color", x.missing ? "rgba(118, 126, 137, 0.5)" : "").css("width", userXP.percentage + "%")
-            userSlot.find("[lb=xp]").html(`${commafy(x.xp)} / ${commafy(userXP.xpRequired)} XP${data.settings.rankCard.relativeLevel ? ` &nbsp • &nbsp; ${commafy(x.xp - userXP.previousLevel)} / ${commafy(userXP.xpRequired - userXP.previousLevel)}` : ""}`)
+            if (statSort !== "xp") {
+                // vista por estadística: el valor de la stat ocupa la línea de
+                // XP y sobra todo lo que habla del nivel original
+                userSlot.find("[lb=level]").hide()
+                userSlot.find("[lb=multiplier]").hide()
+                userSlot.find("[lb=progress]").hide()
+                userSlot.find("[lb=percent]").hide()
+                userSlot.find("[lb=xp]").text(statDisplayText(statView(), x.statValue))
+            } else {
+                userSlot.find("[lb=xp]").html(`${commafy(x.xp)} / ${commafy(userXP.xpRequired)} XP${data.settings.rankCard.relativeLevel ? ` &nbsp • &nbsp; ${commafy(x.xp - userXP.previousLevel)} / ${commafy(userXP.xpRequired - userXP.previousLevel)}` : ""}`)
+            }
             userSlot.find("[lb=percent]").text(`(${+userXP.percentage.toFixed(2)}%)`)
 
             if (multiplier.roles.length) {
@@ -876,9 +935,45 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         }).join(''))
     }
 
+    // Estadísticas personales primero, como la primera página de /records
+    // en el bot. Los invitados van directos a los logros.
+    function renderUserStats() {
+        const user = data.user || {}
+        if (!loggedIn || !user.id) { $('#recordStats').remove(); return }
+        const streakRaw = user.streak
+        const streakDays = typeof streakRaw === "object" ? Number(streakRaw?.current ?? streakRaw?.days) || 0 : Number(streakRaw) || 0
+        const streakMax = typeof streakRaw === "object" ? Number(streakRaw?.max ?? streakRaw?.maximum ?? streakRaw?.best) || streakDays : streakDays
+        const voiceMinutes = Number(user.voiceMinutes) || 0
+        const voice = voiceMinutes >= 60 ? `${Math.floor(voiceMinutes / 60)}h ${voiceMinutes % 60}m` : `${voiceMinutes}m`
+        const groups = [
+            { icon: "messages", name: "Actividad", rows: [
+                ["Mensajes totales", commafy(user.messages || 0)],
+                ["Mensajes este mes", commafy(user.monthlyMessages || 0)],
+                ["Mensajes hoy", commafy(user.dailyMessages || 0)],
+            ]},
+            { icon: "comunidad", name: "Comunidad", rows: [
+                ["Racha actual", `${commafy(streakDays)} ${streakDays === 1 ? "día" : "días"}`],
+                ["Mejor racha", `${commafy(streakMax)} ${streakMax === 1 ? "día" : "días"}`],
+                ["Reacciones enviadas", commafy(user.reactionsSent || 0)],
+                ["Reacciones recibidas", commafy(user.reactionsReceived || 0)],
+            ]},
+            { icon: "minigame_participation", name: "Minijuegos", rows: [
+                ["Monedas máximas", commafy(user.coinsMax || 0)],
+                ["Pokemons capturados", commafy(user.pokemonCaught || 0)],
+                ["Números en counting", commafy(user.countingSent || 0)],
+            ]},
+            { icon: "voice_general", name: "Voz", rows: [
+                ["Tiempo en voz", voice],
+            ]},
+        ]
+        $('#recordStats').html(groups.map(group => `<div class="recordStatsCard"><div class="recordStatsTitle">${svgIcon(RECORD_ICONS[group.icon] || RECORD_ICONS._trophy)}${group.name}</div>${group.rows.map(([label, value]) => `<p><span>${label}</span><b>${value}</b></p>`).join('')}</div>`).join(''))
+    }
+    renderUserStats()
+
     renderRecords(data.records, data.user.records)
 
-    // reward roles
+    // reward roles (tarjetas, de menor a mayor nivel para que coincida con
+    // el orden de "Todos los Niveles"; el último es el rol final y se ensancha)
     data.settings.rewards.sort((a, b) => a.level - b.level).forEach(r => {
         let rSlot = roleSlot.clone()
         let role = data.roles.find(x => r.id == x.id)
@@ -888,11 +983,17 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         let reachedRole = roleProgress >= 100
         let hasRole = loggedIn && data.user.id && data.user.roles.includes(r.id)
         rSlot.find("[lb=role]").text(role.name).css("color", roleColor)
-        rSlot.find("[lb=level]").text("Nivel " + commafy(r.level)).css("color", reachedRole ? roleColor : "#bbbbbb")
+        rSlot.find("[lb=level]").text("Requiere nivel " + commafy(r.level)).css("color", reachedRole ? roleColor : "#bbbbbb")
         rSlot.find("[lb=icon]").css("color", getTierColor(role.name)).css("opacity", reachedRole ? "100%" : "45%")
-        rSlot.find("[lb=percent]").text(!loggedIn ? `${commafy(roleXP)} XP` : reachedRole ? (hasRole ? "¡Obtenido!" : "¡Conseguido!") : `${+roleProgress.toFixed(2)}% conseguido (${commafy(data.user.xp || 0)} / ${commafy(roleXP)} XP)`)
+        rSlot.find(".rewardLock").css("display", reachedRole ? "none" : "flex")
+        rSlot.find("[lb=percent]").text(!loggedIn || !data.user.id ? "" : reachedRole ? (hasRole ? "¡Obtenido!" : "¡Conseguido!") : `${+roleProgress.toFixed(2)}%`)
         rSlot.find("[lb=progress]").css("width", Math.min(roleProgress, 100) + "%")
-        $('#roleList').append(rSlot)
+        rSlot.find("[lb=detail]").text(
+            reachedRole ? `${commafy(roleXP)} XP`
+            : loggedIn && data.user.id ? `${commafy(data.user.xp || 0)} / ${commafy(roleXP)} XP`
+            : `${commafy(roleXP)} XP`
+        ).show()
+        $('#roleGrid').append(rSlot)
     })
     if (data.settings.rewards.length) $('#noRewardRoles').remove()
     else {
@@ -903,24 +1004,41 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         }
     }
 
-    // all levels
-    for (let i=1; i <= data.settings.maxLevel; i++) {
-        let lvlSlot = progressSlot.clone()
-        let lvlXP = xpForLevel(i, data.settings)
-        let lvlProgress = !loggedIn ? 0 : data.user.xp ? data.user.xp / lvlXP * 100 : 0
-        let reached = userLevel.level >= i
-        let isNext = i == userLevel.level + 1
-        let lvlColor = reached ? "var(--polarisgreen)" : isNext ? "var(--emojiblue)" : "rgba(255, 255, 255, 0.55)"
+    // all levels: ventana inicial por niveles + botón "Mostrar más" (la
+    // lista completa con todos los niveles era kilométrica y nadie la usa)
+    let shownLevels = 0
+    function appendLevels(count) {
+        const to = Math.min(data.settings.maxLevel, shownLevels + count)
+        for (let i = shownLevels + 1; i <= to; i++) {
+            let lvlSlot = progressSlot.clone()
+            let lvlXP = xpForLevel(i, data.settings)
+            let lvlProgress = !loggedIn ? 0 : data.user.xp ? data.user.xp / lvlXP * 100 : 0
+            let reached = userLevel.level >= i
+            let isNext = i == userLevel.level + 1
+            let lvlColor = reached ? "var(--polarisgreen)" : isNext ? "var(--emojiblue)" : "rgba(255, 255, 255, 0.55)"
 
-        if (isNext) lvlSlot.addClass('highlightedSlot')
-        lvlSlot.find("[lb=level]").text("Nivel " + commafy(i)).css("color", lvlColor)
-        lvlSlot.find("[lb=xp]").text(commafy(lvlXP) + " XP").css("color", lvlColor)
-        lvlSlot.find("[lb=percent]").text(`${Number(Math.min(100, lvlProgress).toFixed(2))}% alcanzado${lvlProgress >= 100.5 ? ` (${commafy(Math.round(lvlProgress))}%)` : ""}`)
-        lvlSlot.find("[lb=progress]").css("background-color", reached ? "var(--polarisgreen)" : "var(--emojiblue)").css("width", Math.min(lvlProgress, 100) + "%")
-        $('#progress').append(lvlSlot)
-
-        if (i % 50 == 0 && lvlProgress < 1 && i > 50) break; // stop loop if less than 1% and level is multiple of 50
+            if (isNext) lvlSlot.addClass('highlightedSlot')
+            lvlSlot.find("[lb=level]").text("Nivel " + commafy(i)).css("color", lvlColor)
+            lvlSlot.find("[lb=xp]").text(commafy(lvlXP) + " XP").css("color", lvlColor)
+            lvlSlot.find("[lb=percent]").text(`${Number(Math.min(100, lvlProgress).toFixed(2))}%`)
+            lvlSlot.find("[lb=progress]").css("background-color", reached ? "var(--polarisgreen)" : "var(--emojiblue)").css("width", Math.min(lvlProgress, 100) + "%")
+            $('#levelGrid').append(lvlSlot)
+            shownLevels = i
+        }
+        updateMoreLevels()
     }
+
+    function updateMoreLevels() {
+        const more = $('#moreLevels')
+        if (shownLevels >= data.settings.maxLevel) return more.remove()
+        if (!more.length) {
+            $('<button id="moreLevels" box="levels" type="button">Mostrar más niveles</button>')
+                .on('click', () => appendLevels(40))
+                .insertAfter('#levelGrid')
+        }
+    }
+
+    appendLevels(Math.min(data.settings.maxLevel, loggedIn ? Math.max(20, userLevel.level + 5) : 20))
 
     if (loggedIn && data.user.xp) {
         if (data.user.partial) {
@@ -1002,8 +1120,8 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
         document.activeElement.blur();
         if (!force && page == oldPage) return loadingPage = false
 
-        let res = (!force && pageCache[page]) ? pageCache[page] : await Fetch(`/api/leaderboard/${guildID}?page=${page}`)
-        pageCache[res.pageInfo.page] = { leaderboard: res.leaderboard, pageInfo: res.pageInfo }
+        let res = (!force && pageCache[`${statSort}|${page}`]) ? pageCache[`${statSort}|${page}`] : await Fetch(lbURL(page))
+        pageCache[`${statSort}|${res.pageInfo.page}`] = { leaderboard: res.leaderboard, pageInfo: res.pageInfo }
         $('html').scrollTop(savedScroll)
         appendLeaderboard(res.leaderboard)
 
@@ -1015,7 +1133,7 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
     $(document).on('click', '.leaderboardSlot.canManage', function() {
         if (!data.moderator) return
         $('.popup').hide()
-        let foundUser = pageCache[page].leaderboard.find(x => x.id == $(this).attr('userID'))
+        let foundUser = pageCache[`${statSort}|${page}`].leaderboard.find(x => x.id == $(this).attr('userID'))
         if (!foundUser) return
 
         let defaultAdd = data.settings.gain.max * 10
@@ -1140,9 +1258,37 @@ Fetch(`/api/leaderboard/${guildID}`).then(data => {
     $('#uhoh').show()
 })
 
+// selector flotante de categoría del top (pill fija abajo del viewport)
+function syncStatPicker() {
+    $('#statPickerWrap').toggle(currentBox === "leaderboard")
+}
+$(document).on('click', '#statPicker', function(e) {
+    e.stopPropagation()
+    $('#statPickerWrap').toggleClass('open')
+})
+$(document).on('click', function(e) {
+    if (!$(e.target).closest('#statPickerWrap').length) $('#statPickerWrap').removeClass('open')
+})
+$(document).on('keydown', function(e) {
+    if (e.code == "Escape") $('#statPickerWrap').removeClass('open')
+})
+$(document).on('click', '.statMenuBtn', function() {
+    let key = $(this).attr('data-sort')
+    $(`#statPickerWrap`).removeClass('open')
+    if (!key || key == statSort) return
+    statSort = key
+    buildStatPicker()
+    try {
+        let nextURL = statSort === "xp" ? `/leaderboard/${guildID}` : `/leaderboard/${guildID}?sort=${key}`
+        history.replaceState({}, "", nextURL)
+    } catch {}
+    if (typeof setPage === "function") setPage(1, true)
+})
+
 $('.lbNavItem').click(function() {
     let box = $(this).attr('box')
     currentBox = box
+    syncStatPicker()
     $('.selectedlb').removeClass('selectedlb')
     $(this).addClass('selectedlb')
     $('.lbBox').hide()
@@ -1150,13 +1296,16 @@ $('.lbNavItem').click(function() {
     $('#lbPageHeader').css('display', box == 'rank' ? 'none' : 'flex')
     updateHeaderTitle(box)
 
-    history.pushState({ box }, "", `/${tabInfo[box].slug}/${guildID}`)
+    let navURL = `/${tabInfo[box].slug}/${guildID}`
+    if (box === "leaderboard" && statSort !== "xp") navURL += `?sort=${statSort}`
+    history.pushState({ box }, "", navURL)
 })
 
 window.addEventListener('popstate', function() {
     let pathParts = window.location.pathname.split("/").filter(Boolean)
     let box = (pathParts.length > 1 && slugToBox[pathParts[0]]) ? slugToBox[pathParts[0]] : "leaderboard"
     currentBox = box
+    syncStatPicker()
     $('.selectedlb').removeClass('selectedlb')
     $(`.lbNavItem[box=${box}]`).addClass('selectedlb')
     $('.lbBox').hide()

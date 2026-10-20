@@ -21,6 +21,10 @@ metadata: {    permission: "ManageGuild",
 async run(client, int, tools) {
     const lockUser = int.options.get("member")?.member?.user
     if (!lockUser) return tools.warn("No se ha encontrado a ese miembro.")
+    // Defer antes del lock: si el usuario está hablando ahora mismo, el
+    // withAuthorLock puede esperar al flujo de mensajes (DB + récords +
+    // economía) más de 3s y la respuesta moriría en el limbo.
+    await int.deferReply().catch(() => {})
     return withAuthorLock(int.guild?.id, lockUser.id, () => module.exports.runInner(client, int, tools))
 },
 
@@ -71,7 +75,7 @@ async runInner(client, int, tools) {
     let xpDiff = newXP - xp
 
     client.db.update(int.guild.id, { $set: { [`users.${user.id}.xp`]: newXP } }).then(async () => {
-        int.reply(`${newXP > xp ? "⏫" : "⏬"} ¡${user.displayName} ahora tiene **${tools.commafy(newXP)}** de XP${newLevel != level ? ` y es **nivel ${newLevel}**` : ""}! (antes ${tools.commafy(xp)}, ${xpDiff >= 0 ? "+" : ""}${tools.commafy(xpDiff)})`)
+        int.editReply(`${newXP > xp ? "⏫" : "⏬"} ¡${user.displayName} ahora tiene **${tools.commafy(newXP)}** de XP${newLevel != level ? ` y es **nivel ${newLevel}**` : ""}! (antes ${tools.commafy(xp)}, ${xpDiff >= 0 ? "+" : ""}${tools.commafy(xpDiff)})`)
 
         let pseudoMessage = {
             id: null, content: "",

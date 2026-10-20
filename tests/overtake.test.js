@@ -366,6 +366,8 @@ function makeAddXpHarness(users, settings, xpAmount = 100) {
             },
         },
         reply: async () => {},
+        deferReply: async () => {},
+        editReply: async () => {},
     }
     const tools = {
         fetchSettings: async uid => ({ settings: doc.settings, users: { [uid]: doc.users[uid] } }),

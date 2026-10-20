@@ -41,6 +41,23 @@ async function withConfigHost(host, fn) {
     return task
 }
 
+// Texto plano de una respuesta V2 (o de una normal): junta el contenido de
+// los TextDisplay y el content para poder hacer includes sobre las frases.
+function flatText(msg) {
+    if (msg == null) return ""
+    const chunks = []
+    const walk = node => {
+        if (!node || typeof node !== "object") return
+        if (Array.isArray(node)) return node.forEach(walk)
+        if (typeof node.content === "string") chunks.push(node.content)
+        for (const key of ["components", "contents"]) walk(node[key])
+    }
+    const comps = Array.isArray(msg.components) ? msg.components : []
+    walk(comps.map(c => (typeof c.toJSON === "function" ? c.toJSON() : c)))
+    if (typeof msg.content === "string" && !chunks.includes(msg.content)) chunks.push(msg.content)
+    return chunks.join("\n")
+}
+
 // Fake de DB mínima con los operadores que usa Drops.
 function fakeClient(doc) {
     const getPath = (root, path) => path.split(".").reduce((n, p) => n?.[p], root)
@@ -86,20 +103,20 @@ test("genCode uses unambiguous alphabet and avoids collisions", () => {
     const codes = new Set(Array.from({ length: 500 }, () => Drops.genCode()))
     assert.ok(codes.size > 490, "casi todos únicos")
     for (const code of codes) {
-        assert.equal(code.length, 6)
-        assert.ok(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/.test(code), code)
+        assert.equal(code.length, 8)
+        assert.ok(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$/.test(code), code)
     }
-    // Con rand a 0 sale AAAAAA; si ya existe, el siguiente intento da otro.
-    const seq = [...Array(12).fill(0), ...Array(6).fill(0.999)]
+    // Con rand a 0 sale AAAAAAAA; si ya existe, el siguiente intento da otro.
+    const seq = [...Array(24).fill(0), ...Array(8).fill(0.999)]
     let i = 0
     const fixedRand = () => seq[i++]
-    assert.equal(Drops.genCode({}, fixedRand), "AAAAAA")
-    assert.equal(Drops.genCode({ AAAAAA: {} }, fixedRand), "999999")
+    assert.equal(Drops.genCode({}, fixedRand), "AAAAAAAA")
+    assert.equal(Drops.genCode({ AAAAAAAA: {} }, fixedRand), "99999999")
 })
 
 test("validateDropInput rejects out-of-range values", () => {
     assert.deepEqual(Drops.validateDropInput({ amount: 5000, maxClaims: 10, durationMin: 60 }), [])
-    assert.ok(Drops.validateDropInput({ amount: 50, maxClaims: 10, durationMin: 60 }).length > 0, "muy poco")
+    assert.ok(Drops.validateDropInput({ amount: 0, maxClaims: 10, durationMin: 60 }).length > 0, "muypoco XP")
     assert.ok(Drops.validateDropInput({ amount: 2000000, maxClaims: 10, durationMin: 60 }).length > 0, "demasiado")
     assert.ok(Drops.validateDropInput({ amount: 5000, maxClaims: 0, durationMin: 60 }).length > 0, "sin usos")
     assert.ok(Drops.validateDropInput({ amount: 5000, maxClaims: 10, durationMin: 1 }).length > 0, "caduca ya")
@@ -130,7 +147,7 @@ test("claimDrop grants XP once per user until sold out", async () => {
         amount: 5000, maxClaims: 2, durationMin: 60, name: "Fiesta", createdBy: "staff",
     })
     assert.equal(created.ok, true)
-    assert.equal(created.code.length, 6)
+    assert.equal(created.code.length, 8)
     assert.ok(created.url.endsWith(`/g/${created.code}`), created.url)
 
     const first = await Drops.claimDrop(client, "g", created.code, "u1")
@@ -286,10 +303,14 @@ test("dropPath usa ruta corta con subdominio y completa sin él", async () => {
     await withConfigHost("", () => {
         assert.equal(Drops.dropPath("g", "ABC123"), "/drop/g/ABC123")
         assert.equal(Drops.dropsBaseUrl("https://niveles.tscomunity.es"), "https://niveles.tscomunity.es")
+        assert.equal(Drops.dropUrl("g", "ABC123", "https://niveles.tscomunity.es"), "https://niveles.tscomunity.es/drop/g/ABC123")
     })
     await withConfigHost("drops.tscomunity.es", () => {
         assert.equal(Drops.dropPath("g", "ABC123"), "/g/ABC123")
         assert.equal(Drops.dropsBaseUrl("https://niveles.tscomunity.es"), "https://drops.tscomunity.es")
+        // Servidor principal: enlace ultracorto sin ID; el resto, con ID.
+        assert.equal(Drops.dropUrl(Drops.MAIN_GUILD_ID, "ABC234", "web"), "https://drops.tscomunity.es/ABC234")
+        assert.equal(Drops.dropUrl("g", "ABC234", "web"), "https://drops.tscomunity.es/g/ABC234")
     })
 })
 
@@ -351,7 +372,7 @@ test("item claim adds to inventory once; API failure is retryable", async () => 
 })
 
 test("parseModalAmount y modales de cantidad exacta", () => {
-    const dropCmd = require("../commands/slash/drop.js")
+    const dropCmd = require("../commands/slash/drops.js")
     assert.deepEqual(dropCmd.parseModalAmount("25", { min: 1, max: 5000 }), { ok: true, value: 25 })
     assert.deepEqual(dropCmd.parseModalAmount(" 48 ", { min: 1, max: 720 }), { ok: true, value: 48 })
     for (const bad of ["", "  ", "abc", "1.5", "-3", "+25", "0", "5001", "99999999999999999999", "25 usos"]) {
@@ -495,7 +516,7 @@ test("bundle claim concede todo y compensa fallos parciales", async () => {
 test("deleteDrop and listDrops", async () => {
 
 test("/drop autocomplete suggests store items by name", async () => {
-    const dropCmd = require("../commands/slash/drop.js")
+    const dropCmd = require("../commands/slash/drops.js")
     const storeItems = [{ id: "aaa", name: "Pepino dorado", price: "1", emoji_unicode: "" }]
     const realFetch = globalThis.fetch
     globalThis.fetch = async () => ({ ok: true, json: async () => ({ items: storeItems }) })
@@ -565,9 +586,9 @@ test("dropsHostname sale de config.json", async () => {
     })
 })
 
-test("/drop crear pack multi-premio y validaciones", async () => {
+test("/drops crear pack multi-premio y validaciones", async () => {
     const Tools = require("../classes/Tools.js")
-    const dropCmd = require("../commands/slash/drop.js")
+    const dropCmd = require("../commands/slash/drops.js")
     const settings = { enabled: true, manualPerms: false, maxLevel: 100, curve: { 1: 100, 2: 0, 3: 0 }, rounding: 1 }
     const mkTools = doc => ({
         fetchSettings: async () => doc,
@@ -577,39 +598,37 @@ test("/drop crear pack multi-premio y validaciones", async () => {
         warn: msg => { throw new Error("warn: " + msg) },
         WEBSITE: "https://example.test",
     })
-    const mkInt = (values, extra = {}) => {
+    const mkInt = values => {
         const int = {
             user: { id: "staff1" },
             guild: { id: "g", ownerId: "owner9" },
             member: { roles: { highest: { position: 50 } } },
             options: {
                 get: name => (name in values ? { value: values[name] } : undefined),
-                getRole: name => (name === "rol" ? extra.role : undefined),
                 getSubcommand: () => "crear",
             },
-            reply: async msg => { int.sent = msg; return msg },
+            deferReply: async () => {},
+            editReply: async msg => { int.sent = flatText(msg); return msg },
         }
         return int
     }
-    const mkRole = (over = {}) => ({
-        id: "123456789012345678", name: "Evento", managed: false, editable: true,
-        position: 5, permissions: { has: () => false }, ...over,
-    })
 
-    // Pack completo: XP + monedas + rol (sin token de Boat las monedas fallan).
+    // Pack completo: XP + monedas (sin token de Boat las monedas fallan).
     process.env.UNBELIEVABOAT_TOKEN = "test-token"
     try {
         const doc = { _id: "g", users: {}, drops: {}, settings }
-        const int = mkInt({ xp: 5000, monedas: 1000, usos: 5, duracion: "60", nombre: "Fiesta" }, { role: mkRole() })
+        const int = mkInt({ xp: 5000, monedas: 1000, usos: 5, duracion: "60", nombre: "Fiesta" })
         await dropCmd.run(fakeClient(doc), int, mkTools(doc))
         assert.ok(int.sent.includes("5.000 XP"), int.sent)
         assert.ok(int.sent.includes("1.000 monedas"), int.sent)
-        assert.ok(int.sent.includes("<@&123456789012345678>"), int.sent)
+        assert.ok(!int.sent.includes("<@&"), int.sent)
         const drop = Object.values(doc.drops)[0]
         assert.equal(drop.kind, "bundle")
         assert.deepEqual(drop.prizes.xp, 5000)
         assert.deepEqual(drop.prizes.coins, 1000)
-        assert.deepEqual(drop.prizes.roles.map(r => r.id), ["123456789012345678"])
+        assert.deepEqual(drop.prizes.roles, [], "los drops nuevos no llevan roles")
+        // El contador de nombres automáticos avanza.
+        assert.equal(doc.settings.dropSeq, 1)
     } finally {
         delete process.env.UNBELIEVABOAT_TOKEN
     }
@@ -617,42 +636,22 @@ test("/drop crear pack multi-premio y validaciones", async () => {
     // Sin ningún premio: aviso.
     const docEmpty = { _id: "g", users: {}, drops: {}, settings }
     await assert.rejects(
-        dropCmd.run(fakeClient(docEmpty), mkInt({ usos: 5 }), mkTools(docEmpty)),
+        dropCmd.run(fakeClient(docEmpty), mkInt({ usos: 5, duracion: "60" }), mkTools(docEmpty)),
         /al menos un premio/,
     )
     assert.equal(Object.keys(docEmpty.drops).length, 0)
 
-    // Personalizada sin extra: aviso con el campo exacto.
+    // Personalizada sin su campo: aviso con el campo exacto.
     const docCustom = { _id: "g", users: {}, drops: {}, settings }
     await assert.rejects(
-        dropCmd.run(fakeClient(docCustom), mkInt({ xp: 0 }), mkTools(docCustom)),
-        /xp_extra/,
+        dropCmd.run(fakeClient(docCustom), mkInt({ xp: 0, usos: 5, duracion: "60" }), mkTools(docCustom)),
+        /xp_personalizada/,
     )
-
-    // Rol peligroso (admin): rechazado aunque sea gestionable.
-    const docDanger = { _id: "g", users: {}, drops: {}, settings }
-    await assert.rejects(
-        dropCmd.run(fakeClient(docDanger),
-            mkInt({ usos: 5 }, { role: mkRole({ name: "Admin", permissions: { has: p => p === "Administrator" } }) }),
-            mkTools(docDanger)),
-        /peligrosos/,
-    )
-    assert.equal(Object.keys(docDanger.drops).length, 0)
-
-    // Rol por encima del creador: rechazado (no auto-darse poder).
-    const docHigh = { _id: "g", users: {}, drops: {}, settings }
-    await assert.rejects(
-        dropCmd.run(fakeClient(docHigh),
-            mkInt({ usos: 5 }, { role: mkRole({ name: "Jefazo", position: 60 }) }),
-            mkTools(docHigh)),
-        /por encima/,
-    )
-    assert.equal(Object.keys(docHigh.drops).length, 0)
 })
 
-test("/drop crear XP personalizada y monedas según token", async () => {
+test("/drops crear XP personalizada y monedas según token", async () => {
     const Tools = require("../classes/Tools.js")
-    const dropCmd = require("../commands/slash/drop.js")
+    const dropCmd = require("../commands/slash/drops.js")
     const mkInt = (values) => {
         const int = {
             user: { id: "staff1" },
@@ -663,7 +662,8 @@ test("/drop crear XP personalizada y monedas según token", async () => {
                 getRole: () => undefined,
                 getSubcommand: () => "crear",
             },
-            reply: async msg => { int.sent = msg; return msg },
+            deferReply: async () => {},
+            editReply: async msg => { int.sent = flatText(msg); return msg },
         }
         return int
     }
@@ -677,12 +677,18 @@ test("/drop crear XP personalizada y monedas según token", async () => {
     })
     const settings = { enabled: true, manualPerms: false, maxLevel: 100, curve: { 1: 100, 2: 0, 3: 0 }, rounding: 1 }
 
-    // Personalizada: xp 0 (Personalizada) + xp_extra.
+    // Personalizada: xp 0 (Personalizada) + su cantidad exacta (desde 1).
     const doc1 = { _id: "g", users: {}, drops: {}, settings }
-    const int1 = mkInt({ xp: 0, xp_extra: 7500, usos: 5, duracion: "60", nombre: "X" })
+    const int1 = mkInt({ xp: 0, xp_personalizada: 1, usos: 5, duracion: "60", nombre: "X" })
     await dropCmd.run(fakeClient(doc1), int1, mkTools(doc1))
-    assert.ok(int1.sent.includes("7.500 XP"), int1.sent)
-    assert.equal(Object.values(doc1.drops)[0].prizes.xp, 7500)
+    assert.ok(int1.sent.includes("1 XP"), int1.sent)
+    assert.equal(Object.values(doc1.drops)[0].prizes.xp, 1)
+
+    const doc1b = { _id: "g", users: {}, drops: {}, settings }
+    const int1b = mkInt({ xp: 0, xp_personalizada: 7500, usos: 5, duracion: "60", nombre: "X" })
+    await dropCmd.run(fakeClient(doc1b), int1b, mkTools(doc1b))
+    assert.ok(int1b.sent.includes("7.500 XP"), int1b.sent)
+    assert.equal(Object.values(doc1b.drops)[0].prizes.xp, 7500)
 
     // Monedas sin token: aviso claro, no se crea nada.
     delete process.env.UNBELIEVABOAT_TOKEN
@@ -704,51 +710,53 @@ test("/drop crear XP personalizada y monedas según token", async () => {
     }
 })
 
-test("/drop rol pide rol gestionable y responde con mención", async () => {
+test("/drops crear sin roles: roles vacíos y auto Drop #1", async () => {
     const Tools = require("../classes/Tools.js")
-    const dropCmd = require("../commands/slash/drop.js")
+    const dropCmd = require("../commands/slash/drops.js")
     const settings = { enabled: true, manualPerms: false, maxLevel: 100, curve: { 1: 100, 2: 0, 3: 0 }, rounding: 1 }
+    const mkSettings = () => ({ ...settings })
     const tools = {
-        fetchSettings: async () => ({ settings }),
+        fetchSettings: async () => ({ settings: mkSettings() }),
         canManageServer: () => true,
         getLevel: (...a) => Tools.global.getLevel(...a),
         commafy: (...a) => Tools.global.commafy(...a),
         warn: msg => { throw new Error("warn: " + msg) },
         WEBSITE: "https://example.test",
     }
-    const mkInt = (role) => ({
+    const mkInt = () => ({
         user: { id: "staff1" },
         guild: { id: "g", ownerId: "owner9" },
         member: { roles: { highest: { position: 50 } } },
         options: {
-            get: name => ({ usos: { value: 10 }, duracion: { value: "60" }, nombre: { value: "Noche" } }[name]),
-            getRole: () => role,
+            get: name => ({ xp: { value: 5000 }, usos: { value: 10 }, duracion: { value: "60" }, nombre: { value: "Noche" } }[name]),
             getSubcommand: () => "crear",
         },
-        reply: async function(msg) { this.sent = msg; return msg },
+        deferReply: async () => {},
+        editReply: async function(msg) { this.sent = flatText(msg); return msg },
     })
 
-    // Rol no gestionable: aviso, no se crea.
-    const doc1 = { _id: "g", users: {}, drops: {}, settings }
-    await assert.rejects(
-        dropCmd.run(fakeClient(doc1), mkInt({ id: "123456789012345678", name: "Alto", managed: false, editable: false, position: 5, permissions: { has: () => false } }), tools),
-        /por debajo de mi rol/,
-    )
-    assert.equal(Object.keys(doc1.drops).length, 0)
-
-    // Rol válido: se crea y la respuesta lo menciona.
-    const doc2 = { _id: "g", users: {}, drops: {}, settings }
-    const int2 = mkInt({ id: "123456789012345678", name: "Evento", managed: false, editable: true, position: 5, permissions: { has: () => false } })
+    // Se crea sin roles: la respuesta no menciona roles y prizes.roles va vacío.
+    const doc2 = { _id: "g", users: {}, drops: {}, settings: mkSettings() }
+    const int2 = mkInt()
     await dropCmd.run(fakeClient(doc2), int2, tools)
-    assert.ok(int2.sent.includes("<@&123456789012345678>"), int2.sent)
+    assert.ok(!int2.sent.includes("<@&"), int2.sent)
     const drop = Object.values(doc2.drops)[0]
     assert.equal(drop.kind, "bundle")
-    assert.deepEqual(drop.prizes.roles.map(r => r.id), ["123456789012345678"])
+    assert.deepEqual(drop.prizes.roles, [])
+
+    // Sin nombre, "Drop #1" automático con el contador del servidor.
+    const doc3 = { _id: "g", users: {}, drops: {}, settings: mkSettings() }
+    const int3 = mkInt()
+    int3.options.get = name => ({ xp: { value: 5000 }, usos: { value: 10 }, duracion: { value: "60" } }[name])
+    await dropCmd.run(fakeClient(doc3), int3, tools)
+    const auto = Object.values(doc3.drops)[0]
+    assert.equal(auto.name, "Drop #1")
+    assert.equal(doc3.settings.dropSeq, 1)
 })
 
-test("/drop crear responde con enlace y guía de balance", async () => {
+test("/drops crear responde con enlace y guía de balance", async () => {
     const Tools = require("../classes/Tools.js")
-    const dropCmd = require("../commands/slash/drop.js")
+    const dropCmd = require("../commands/slash/drops.js")
     const doc = { _id: "g", users: {}, drops: {}, settings: { enabled: true, manualPerms: false, maxLevel: 100, curve: { 1: 100, 2: 0, 3: 0 }, rounding: 1 } }
     const client = fakeClient(doc)
     const values = { xp: 10000, usos: 5, duracion: "60", nombre: "Fiesta" }
@@ -756,7 +764,8 @@ test("/drop crear responde con enlace y guía de balance", async () => {
         user: { id: "staff1" },
         guild: { id: "g" },
         options: { get: name => (name in values ? { value: values[name] } : undefined), getRole: () => undefined, getSubcommand: () => "crear" },
-        reply: async msg => { int.sent = msg; return msg },
+        deferReply: async () => {},
+        editReply: async msg => { int.sent = flatText(msg); return msg },
     }
     const tools = {
         fetchSettings: async () => doc,
@@ -771,33 +780,43 @@ test("/drop crear responde con enlace y guía de balance", async () => {
         assert.ok(int.sent.includes("https://example.test/drop/g/"), int.sent)
     })
     assert.ok(int.sent.includes("10.000 XP"), int.sent)
-    assert.ok(int.sent.includes("5 usos"), int.sent)
+    assert.ok(int.sent.includes("Usos:** 5"), int.sent)
     assert.ok(int.sent.includes("nivel"), "guía de balance con nivel aprox")
     const code = Object.keys(doc.drops)[0]
-    assert.equal(code.length, 6)
+    assert.equal(code.length, 8, "código criptográfico largo")
 })
 
-test("/drop crear: opciones separadas por premio", () => {
-    const dropCmd = require("../commands/slash/drop.js")
-    assert.deepEqual(dropCmd.metadata.args.map(a => a.name), ["crear", "lista", "borrar", "permiso"])
+test("/drops crear: opciones separadas por premio", () => {
+    const dropCmd = require("../commands/slash/drops.js")
+    assert.deepEqual(dropCmd.metadata.args.map(a => a.name), ["crear", "mostrar", "eliminar", "permiso"])
     const crear = dropCmd.metadata.args[0]
     const names = crear.args.map(a => a.name)
-    for (const expected of ["xp", "xp_extra", "monedas", "monedas_extra", "objeto", "objeto2", "objeto3", "cantidad", "rol", "usos", "duracion", "nombre"]) {
+    for (const expected of ["xp", "xp_personalizada", "monedas", "monedas_personalizada", "objeto1", "objeto2", "objeto3", "cantidad1", "cantidad2", "cantidad3", "usos", "duracion", "nombre"]) {
         assert.ok(names.includes(expected), `falta opción ${expected}`)
     }
+    for (const gone of ["rol1", "rol2", "rol3"]) {
+        assert.ok(!names.includes(gone), `${gone} ya no se ofrece: dar roles es peligroso`)
+    }
     assert.ok(!names.includes("tipo"), "sin selector de tipo: se rellena lo que se reparte")
+    // usos y duración siempre; el nombre es lo único opcional.
+    for (const key of ["usos", "duracion"]) assert.ok(crear.args.find(a => a.name === key).required, `${key} obligatoria`)
+    assert.ok(!crear.args.find(a => a.name === "nombre").required, "nombre opcional (Drop #N automático)")
+    // Los campos personalizados empiezan en 1.
+    for (const key of ["xp_personalizada", "monedas_personalizada"]) {
+        assert.equal(crear.args.find(a => a.name === key).min, 1, `${key} desde 1`)
+    }
     assert.deepEqual(crear.args.find(a => a.name === "xp").choices.map(c => c.name), [
         "Muy bajo - 3.000 (≈40 min de chat, nivel 6)",
         "Bajo - 5.000 (≈1,1 h de chat, nivel 8)",
         "Medio - 10.000 (≈2,2 h de chat, nivel 11)",
         "Alto - 15.000 (≈3,3 h de chat, nivel 14)",
         "Muy alto - 30.000 (≈6,7 h de chat, nivel 20)",
-        "Personalizada… (usa xp_extra)",
+        "Personalizada… (usa xp_personalizada)",
     ])
     assert.deepEqual(crear.args.find(a => a.name === "monedas").choices.map(c => c.value), [
         5000, 10000, 25000, 50000, 100000, 0,
     ])
-    for (const key of ["objeto", "objeto2", "objeto3"]) {
+    for (const key of ["objeto1", "objeto2", "objeto3"]) {
         assert.equal(crear.args.find(a => a.name === key).autocomplete, true)
     }
     for (const arg of crear.args) {
@@ -814,7 +833,8 @@ test("/drop crear: opciones separadas por premio", () => {
 test("COIN_PRESETS suben la escala y validan rangos propios", () => {
     assert.deepEqual(Drops.COIN_PRESETS.map(p => p.coins), [5000, 10000, 25000, 50000, 100000])
     assert.equal(Drops.validateDropInput({ amount: 500000, maxClaims: 5, durationMin: 60, kind: "coins", boatAvailable: true }).length, 0)
-    assert.ok(Drops.validateDropInput({ amount: 50, maxClaims: 5, durationMin: 60, kind: "coins", boatAvailable: true }).length > 0, "pocas monedas")
+    assert.ok(Drops.validateDropInput({ amount: 0, maxClaims: 5, durationMin: 60, kind: "coins", boatAvailable: true }).length > 0, "tas de monedas mínimo")
+    assert.ok(Drops.validateDropInput({ amount: 1, maxClaims: 5, durationMin: 60, kind: "coins", boatAvailable: true }).length === 0, "ya 1 moneda vale")
     assert.ok(Drops.validateDropInput({ amount: 200000000, maxClaims: 5, durationMin: 60, kind: "coins", boatAvailable: true }).length > 0, "por encima del tope")
     assert.ok(Drops.validateDropInput({ maxClaims: 5, durationMin: 60, kind: "bundle", prizes: { coins: 200000000 }, boatAvailable: true }).some(e => e.includes("monedas")))
     assert.ok(Drops.validateDropInput({ maxClaims: 5, durationMin: 60, kind: "bundle", prizes: {}, boatAvailable: true }).some(e => e.includes("al menos un premio")))
@@ -830,9 +850,9 @@ test("canUseDrops: gestores siempre, si no roles de la allowlist", () => {
     assert.equal(Drops.canUseDrops({ isManager: false, memberRoles: null, settings }), false)
 })
 
-test("/drop permiso añade, lista y quita roles (solo gestores)", async () => {
-    const dropCmd = require("../commands/slash/drop.js")
-    assert.deepEqual(dropCmd.metadata.args.map(a => a.name), ["crear", "lista", "borrar", "permiso"])
+test("/drops permiso añade, lista y quita roles (solo gestores)", async () => {
+    const dropCmd = require("../commands/slash/drops.js")
+    assert.deepEqual(dropCmd.metadata.args.map(a => a.name), ["crear", "mostrar", "eliminar", "permiso"])
     const mkTools = (manager) => ({
         fetchSettings: async () => doc,
         canManageServer: () => manager,
@@ -848,14 +868,16 @@ test("/drop permiso añade, lista y quita roles (solo gestores)", async () => {
             getRole: () => getRole,
             getSubcommand: () => "permiso",
         },
-        reply: async function(msg) { this.sent = msg.content || msg; return msg },
+        deferReply: async () => {},
+        editReply: async function(msg) { this.sent = flatText(msg); return msg },
     })
     // Sin rol: lista vacía.
     let sent = ""
     await dropCmd.run(client, {
         user: { id: "staff1" }, guild: { id: "g" },
         options: { get: () => undefined, getRole: () => undefined, getSubcommand: () => "permiso" },
-        reply: async msg => { sent = msg.content || msg },
+        deferReply: async () => {},
+        editReply: async msg => { sent = flatText(msg) },
     }, mkTools(true))
     assert.ok(sent.includes("Nadie extra"), sent)
     // Con rol de drops pero sin gestionar: denegado igual.
@@ -880,7 +902,8 @@ test("/drop permiso añade, lista y quita roles (solo gestores)", async () => {
     await dropCmd.run(client, {
         user: { id: "staff1" }, guild: { id: "g" },
         options: { get: () => undefined, getRole: () => undefined, getSubcommand: () => "permiso" },
-        reply: async msg => { sent = msg.content || msg },
+        deferReply: async () => {},
+        editReply: async msg => { sent = flatText(msg) },
     }, mkTools(true))
     assert.ok(sent.includes("<@&r1>"), sent)
     // Quitar.
@@ -889,9 +912,9 @@ test("/drop permiso añade, lista y quita roles (solo gestores)", async () => {
     assert.deepEqual(doc.settings.dropRoles, [])
 })
 
-test("/drop deja pasar a roles de la allowlist y frena al resto", async () => {
+test("/drops deja pasar a roles de la allowlist y frena al resto", async () => {
     const Tools = require("../classes/Tools.js")
-    const dropCmd = require("../commands/slash/drop.js")
+    const dropCmd = require("../commands/slash/drops.js")
     const settings = { enabled: true, manualPerms: false, maxLevel: 100, curve: { 1: 100, 2: 0, 3: 0 }, rounding: 1, dropRoles: [{ id: "r1" }] }
     const tools = {
         fetchSettings: async () => ({ settings }),
@@ -905,8 +928,9 @@ test("/drop deja pasar a roles de la allowlist y frena al resto", async () => {
         user: { id: "u1" },
         guild: { id: "g" },
         member: { roles: { cache: new Map(roles.map(r => [r, {}])) } },
-        options: { get: () => undefined, getSubcommand: () => "lista" },
-        reply: async function(msg) { this.sent = msg.content || msg; return msg },
+        options: { get: () => undefined, getSubcommand: () => "mostrar" },
+        deferReply: async () => {},
+        editReply: async function(msg) { this.sent = flatText(msg); return msg },
         fetchReply: async () => null,
     })
     const doc = { _id: "g", users: {}, drops: {}, settings }
@@ -914,9 +938,9 @@ test("/drop deja pasar a roles de la allowlist y frena al resto", async () => {
     await assert.rejects(dropCmd.run(fakeClient(doc), mkInt(["r9"]), tools), /notMod/)
 })
 
-test("/drop lista: título, info, links con (x/y) y tachado si agotado", async () => {
+test("/drops mostrar: título, links con (x/y), tachado si agotado y volver atrás primero", async () => {
     const Tools = require("../classes/Tools.js")
-    const dropCmd = require("../commands/slash/drop.js")
+    const dropCmd = require("../commands/slash/drops.js")
     const now = Date.now()
     const rowsOf = () => [
         { code: "AAA111", drop: { name: "A", kind: "bundle", prizes: { xp: 1000, coins: 0, roles: [], items: [] }, maxClaims: 3, claims: ["u1"], expiresAt: now + 3600000, createdBy: "s", createdAt: now }, left: 2, expired: false },
@@ -929,29 +953,28 @@ test("/drop lista: título, info, links con (x/y) y tachado si agotado", async (
         .map(c => c.content)
         .join("\n---\n")
     await withConfigHost("", async () => {
-        // Vista lista: sin caducados, sin fecha por línea, sin footer.
+        // Vista lista: sin caducados, sin fecha por línea, sin párrafo largo.
         const list = dropCmd.buildDropsListContainer(rowsOf().filter(r => !r.expired), "https://example.test", "g", tools)
         const texts = textsOf(list)
         assert.ok(texts.includes("## 🎁 Drops del servidor"), "título")
-        assert.ok(texts.includes("/drop crear"), "info de qué es")
+        assert.ok(!texts.includes("Cada persona reclama"), "sin párrafo explicativo largo")
         assert.ok(texts.includes("[`AAA111`](https://example.test/drop/g/AAA111) (1/3)"), "link con reclamados")
         assert.ok(!texts.includes("caduca <t:"), "sin caducidad por línea")
-        assert.ok(!texts.includes("vuelan"), "sin footer chill")
         assert.ok(texts.includes("~~[`BBB222`](https://example.test/drop/g/BBB222)~~ (2/2)"), "agotado tachado")
         assert.ok(!texts.includes("CCC333"), "caducados fuera")
         const menuJson = list.toJSON().components.flatMap(c => c.components || []).find(c => c.custom_id === "dropinspect")
         assert.ok(menuJson, "menú debajo")
         assert.deepEqual(menuJson.options.map(o => o.value), ["AAA111", "BBB222"])
 
-        // Vista detalle: todo lo del link con unix + botones + volver.
+        // Vista detalle: unix corto, botones y vuelva atrás PRIMERO.
         const detail = dropCmd.buildDropDetailContainer(rowsOf().filter(r => !r.expired), rowsOf()[0], "https://example.test", "g", tools)
         const dTexts = textsOf(detail)
-        assert.ok(dTexts.includes("## 🎁 Drop `AAA111`"), "título del detalle")
         assert.ok(dTexts.includes("1.000 XP"), "premio exacto")
         assert.ok(dTexts.includes("1/3"), "reclamados")
-        assert.ok(dTexts.includes("<@s>"), "creador")
         const unix = Math.floor((now + 3600000) / 1000)
-        assert.ok(dTexts.includes(`<t:${unix}:F> (<t:${unix}:R>)`), "caducidad en unix")
+        assert.ok(dTexts.includes(`<t:${unix}:R>`), "caducidad corta")
+        assert.ok(!dTexts.includes(`<t:${unix}:F>`), "sin fecha completa")
+        assert.ok(!dTexts.includes("<@s>"), "sin creador (menos info)")
         assert.ok(dTexts.includes("https://example.test/drop/g/AAA111"), "enlace")
         const detailJson = detail.toJSON().components.flatMap(c => c.components || [])
         assert.deepEqual(
@@ -959,11 +982,10 @@ test("/drop lista: título, info, links con (x/y) y tachado si agotado", async (
             ["drop:del:AAA111", "drop:uses:AAA111", "drop:time:AAA111"],
             "botones encima del menú",
         )
-        assert.deepEqual(
-            detailJson.filter(c => c.type === 2).map(c => c.label),
-            ["Eliminar", "Añadir usos", "Añadir tiempo"],
-        )
-        assert.ok(detailJson.find(c => c.custom_id === "dropinspect").options.some(o => o.value === "__back"), "opción volver")
+        const detailMenu = detailJson.find(c => c.custom_id === "dropinspect")
+        assert.deepEqual(detailMenu.options.map(o => o.value), ["__back", "BBB222"], "volver atrás primero")
+        assert.equal(detailMenu.options[0].label, "⬅️ Volver atrás")
+        assert.equal(detailMenu.options[0].description, "Ver todos los drops")
 
         // Tope de menú: 26 activos → 25 opciones + aviso.
         const many = Array.from({ length: 26 }, (_, i) => ({
@@ -975,12 +997,29 @@ test("/drop lista: título, info, links con (x/y) y tachado si agotado", async (
         const cappedJson = capped.toJSON().components.flatMap(c => c.components || [])
         assert.equal(cappedJson.find(c => c.custom_id === "dropinspect").options.length, 25)
         assert.ok(textsOf(capped).includes("+1 más"), "aviso del resto")
+
+        // Sin drops: nota y nada más (sin separador suelto ni menú vacío).
+        const empty = dropCmd.buildDropsListContainer([], "https://example.test", "g", tools)
+        const emptyTexts = textsOf(empty)
+        assert.ok(emptyTexts.includes("No hay ningún drop"), "mensaje de vacío")
+        assert.ok(emptyTexts.includes("/drops crear"), "dónde crearlo")
+        assert.ok(!emptyJsonHasMenu(empty), "sin menú sin opciones")
+        function emptyJsonHasMenu(cont) {
+            return cont.toJSON().components.flatMap(c => c.components || []).some(c => c.custom_id === "dropinspect")
+        }
+
+        // Modo eliminar: cabecera propia y menú de eleminares.
+        const delList = dropCmd.buildDropsListContainer(rowsOf().filter(r => !r.expired), "https://example.test", "g", tools, { deleteMode: true })
+        const delTexts = textsOf(delList)
+        assert.ok(delTexts.includes("## 🗑️ Eliminar un drop"), "cabecera de eliminar")
+        const emptyDel = dropCmd.buildDropsListContainer([], "https://example.test", "g", tools, { deleteMode: true })
+        assert.ok(textsOf(emptyDel).includes("no queda ninguno activo"), "vacío en modo eliminar")
     })
 })
 
-test("/drop crear item resuelve por nombre y responde con unidades", async () => {
+test("/drops crear item resuelve por nombre y responde con unidades", async () => {
     const Tools = require("../classes/Tools.js")
-    const dropCmd = require("../commands/slash/drop.js")
+    const dropCmd = require("../commands/slash/drops.js")
     const settings = { enabled: true, manualPerms: false, maxLevel: 100, curve: { 1: 100, 2: 0, 3: 0 }, rounding: 1 }
     const storeItems = [{ id: "aaa", name: "Pepino dorado", price: "1", emoji_unicode: "🥒" }]
     const realFetch = globalThis.fetch
@@ -989,12 +1028,13 @@ test("/drop crear item resuelve por nombre y responde con unidades", async () =>
     try {
         Drops.clearBoatStoreCache("g")
         const doc = { _id: "g", users: {}, drops: {}, settings }
-        const values = { objeto: "PEPINO DORADO", cantidad: 3, usos: 5, duracion: "60", nombre: "R" }
+        const values = { objeto1: "PEPINO DORADO", cantidad1: 3, usos: 5, duracion: "60", nombre: "R" }
         const int = {
             user: { id: "staff1" },
             guild: { id: "g" },
             options: { get: name => (name in values ? { value: values[name] } : undefined), getRole: () => undefined, getSubcommand: () => "crear" },
-            reply: async function(msg) { this.sent = msg; return msg },
+            deferReply: async () => {},
+            editReply: async function(msg) { this.sent = flatText(msg); return msg },
         }
         const tools = {
             fetchSettings: async () => doc,
@@ -1009,15 +1049,34 @@ test("/drop crear item resuelve por nombre y responde con unidades", async () =>
         const drop = Object.values(doc.drops)[0]
         assert.equal(drop.kind, "bundle")
         assert.deepEqual(drop.prizes.items.map(i => [i.id, i.qty]), [["aaa", 3]])
+        assert.equal(drop.prizes.items[0].qty, 3, "cantidad1 solo para objeto1")
+
+        // Dos objetos con cantidades distintas.
+        const docQty = { _id: "g", users: {}, drops: {}, settings }
+        const valuesQty = { objeto1: "PEPINO DORADO", cantidad1: 2, objeto2: "PEPINO DORADO", cantidad2: 5, usos: 1, duracion: "60", nombre: "Q" }
+        const intQty = {
+            user: { id: "staff1" },
+            guild: { id: "g" },
+            options: { get: name => (name in valuesQty ? { value: valuesQty[name] } : undefined), getRole: () => undefined, getSubcommand: () => "crear" },
+            deferReply: async () => {},
+            editReply: async msg => { intQty.sent = flatText(msg); return msg },
+        }
+        await dropCmd.run(fakeClient(docQty), intQty, tools)
+        assert.deepEqual(
+            Object.values(docQty.drops)[0].prizes.items.map(i => i.qty),
+            [2, 5],
+            "cada objeto con su cantidad",
+        )
 
         // Nombre inexistente: aviso, no se crea.
         const doc2 = { _id: "g", users: {}, drops: {}, settings }
-        const values2 = { ...values, objeto: "no existe" }
+        const values2 = { ...values, objeto1: "no existe" }
         const int2 = {
             user: { id: "staff1" },
             guild: { id: "g" },
             options: { get: name => (name in values2 ? { value: values2[name] } : undefined), getRole: () => undefined, getSubcommand: () => "crear" },
-            reply: async function(msg) { this.sent = msg; return msg },
+            deferReply: async () => {},
+            editReply: async function(msg) { this.sent = flatText(msg); return msg },
         }
         await assert.rejects(dropCmd.run(fakeClient(doc2), int2, tools), /no está en la tienda/)
         assert.equal(Object.keys(doc2.drops).length, 0)
@@ -1029,7 +1088,7 @@ test("/drop crear item resuelve por nombre y responde con unidades", async () =>
 })
 
 test("rate limit frena la enumeración y deja pasar uso normal", () => {
-    const { createDropRateLimiter } = require("../app/drop-page.js")
+    const { createDropRateLimiter } = require("../app/celebration-page.js")
     const limit = createDropRateLimiter({ max: 3, windowMs: 60000 })
     const mkReq = ip => ({ headers: { "x-real-ip": ip }, ip })
     const run = ip => new Promise(resolve => {

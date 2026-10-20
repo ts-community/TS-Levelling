@@ -10,11 +10,19 @@ metadata: {
 
 async run(client, int, tools) {
 
+    // Miembro por opción: puede venir sin cachear (miembro reciente). El
+    // fetch de Discord tarda más que un golpe de ratón: defer antes.
     let foundUser = int.options?.get?.("member")
-    let member = foundUser ? foundUser.member : int.member
+    let fetchedUser = null
+    if (foundUser && !foundUser.member && foundUser.user) {
+        fetchedUser = await int.guild.members.fetch(foundUser.user.id).catch(() => null)
+    }
+    let member = foundUser ? (foundUser.member || fetchedUser) : int.member
     // El miembro puede ser null si salió del servidor: sin esto revienta member.id.
     if (!member) return tools.warn("No se ha encontrado a ese miembro en el servidor.")
     if (!int.guild.members.me.permissions.has(Discord.PermissionFlagsBits.ManageRoles)) return tools.warn("*cantManageRoles")
+
+    await int.deferReply().catch(() => {})
 
     let db = await tools.fetchSettings(member.id)
     if (!db) return tools.warn("*noData")
@@ -38,13 +46,13 @@ async run(client, int, tools) {
 
     let currentRoles = member.roles.cache
     let roleCheck = tools.checkLevelRoles(int.guild.roles.cache, currentRoles, level, db.settings.rewards)
-    if (!roleCheck.incorrect.length && !roleCheck.missing.length) return int.reply("✅ ¡Tus roles de nivel ya están sincronizados!")
+    if (!roleCheck.incorrect.length && !roleCheck.missing.length) return int.editReply("✅ ¡Tus roles de nivel ya están sincronizados!")
 
     tools.syncLevelRoles(member, roleCheck).then(() => {
         let replyStr = ["🔄 **¡Roles de nivel sincronizados!**"]
         if (roleCheck.missing.length) replyStr.push(`Añadidos: ${roleCheck.missing.map(x => `<@&${x.id}>`).join(" ")}`)
         if (roleCheck.incorrect.length) replyStr.push(`Quitados: ${roleCheck.incorrect.map(x => `<@&${x.id}>`).join(" ")}`)
-        return int.reply(replyStr.join("\n"))
-    }).catch(() => int.reply("¡Error al sincronizar los roles!"))
+        return int.editReply(replyStr.join("\n"))
+    }).catch(() => int.editReply("¡Error al sincronizar los roles!"))
 
 }}

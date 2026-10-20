@@ -16,7 +16,7 @@ const LevelUpEmbed = require('./classes/LevelUpEmbed.js')
 const LevelUpMessage = require("./classes/LevelUpMessage.js")
 const { unlockWebEasterEgg, resolveServerId, DEFAULT_EASTEREGG_GUILD_ID } = require("./classes/WebEasterEgg.js")
 const Drops = require("./classes/Drops.js")
-const { createDropRateLimiter } = require("./app/drop-page.js")
+const { createDropRateLimiter } = require("./app/celebration-page.js")
 // Tope anti-fuerza-bruta en páginas de drops (ver createDropRateLimiter).
 const dropRateLimit = createDropRateLimiter()
 const recordsConfig = require("./config/records.js")
@@ -140,514 +140,47 @@ app.get(["/rank", "/roles", "/levels", "/records"], (req, res) => {
 app.get(["/settings", "/servers"], (req, res) => sendRedirect(res, "/servers"))
 
 app.get("/easteregg", async function(req, res) {
+    const { renderCelebrationPage, escapeHtml } = require("./app/celebration-page.js")
     const [user, guilds] = await getDiscordInfo(req)
     const guildId = resolveServerId({ guildId: req.query.guild || req.query.server || req.query.guildId, guilds, defaultGuildId: DEFAULT_EASTEREGG_GUILD_ID })
 
-    function escapeHtml(s) {
-        return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
-    }
-
-    function renderPage({ title, message, detailsHtml = "", status = "info", showConfetti = false, actionHref = "/servers", actionLabel = "Volver al dashboard", secondaryHref = null, secondaryLabel = null }) {
-        // showConfetti: false | true (gran celebración al encontrarlo) | "soft" (lluvia suave en bucle si ya estaba reclamado)
-        const celebration = showConfetti === "soft" ? "soft" : showConfetti ? "full" : "none"
-        const highlightCta = status === "success" || status === "login"
-        return `
-            <!DOCTYPE html>
-            <html lang="es">
-            <head>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>${title}</title>
-                <style>
-                    :root {
-                        --bg1: #070b1f;
-                        --bg2: #111b3b;
-                        --bg3: #1b0f2f;
-                        --panel: rgba(12, 20, 36, 0.76);
-                        --panel-border: rgba(149, 233, 255, 0.28);
-                        --text: #edf9ff;
-                        --muted: #bfd7f5;
-                        --accent: #87f3ff;
-                        --accent-2: #a78bfa;
-                        --success: #7ef0bc;
-                        --warning: #ffd166;
-                    }
-                    * { box-sizing: border-box; }
-                    html, body {
-                        margin: 0;
-                        min-height: 100%;
-                        font-family: Inter, "Segoe UI", sans-serif;
-                        background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 35%, var(--bg3) 100%);
-                        color: var(--text);
-                    }
-                    body {
-                        min-height: 100vh;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        overflow-x: hidden;
-                        overflow-y: auto;
-                        padding: 28px 12px;
-                        position: relative;
-                        background-size: 180% 180%;
-                        animation: gradientFlow 16s ease-in-out infinite alternate;
-                    }
-                    body::before, body::after {
-                        content: "";
-                        position: fixed;
-                        width: 5px;
-                        height: 5px;
-                        border-radius: 50%;
-                        background: var(--accent);
-                        box-shadow: 12vw 18vh var(--accent-2), 28vw 72vh var(--success), 72vw 22vh var(--warning), 86vw 78vh var(--accent), 54vw 88vh var(--accent-2);
-                        opacity: .55;
-                        animation: particles 9s linear infinite;
-                        pointer-events: none;
-                    }
-                    body::after { animation-delay: -4s; transform: scale(.65); opacity: .35; }
-                    @keyframes particles { from { translate: 0 18px; scale: .8; } 50% { translate: 0 -24px; scale: 1.15; } to { translate: 0 18px; scale: .8; } }
-                    @keyframes gradientFlow {
-                        0% { background-position: 0% 50%; }
-                        50% { background-position: 100% 50%; }
-                        100% { background-position: 0% 50%; }
-                    }
-                    .glow {
-                        position: absolute;
-                        width: min(32rem, 58vw);
-                        height: min(32rem, 58vw);
-                        border-radius: 999px;
-                        filter: blur(90px);
-                        opacity: 0.48;
-                        animation: floatGlow 10s ease-in-out infinite alternate;
-                        pointer-events: none;
-                    }
-                    .glow.one { background: radial-gradient(circle, rgba(103, 233, 255, 0.42), rgba(103, 233, 255, 0)); top: 8%; left: 8%; }
-                    .glow.two { background: radial-gradient(circle, rgba(167, 139, 250, 0.42), rgba(167, 139, 250, 0)); bottom: 10%; right: 10%; animation-delay: 2s; }
-                    .glow.three { background: radial-gradient(circle, rgba(126, 240, 188, 0.25), rgba(126, 240, 188, 0)); left: 42%; top: 10%; animation-delay: 4s; }
-                    @keyframes floatGlow {
-                        from { transform: translateY(0px) scale(1); }
-                        to { transform: translateY(-26px) scale(1.09); }
-                    }
-                    .card {
-                        position: relative;
-                        width: min(92vw, 560px);
-                        margin: auto;
-                        padding: 1.4rem 1.25rem 1.1rem;
-                        background: linear-gradient(180deg, rgba(16, 24, 40, 0.82), rgba(9, 14, 25, 0.88));
-                        border: 1px solid rgba(151, 215, 255, 0.2);
-                        border-radius: 24px;
-                        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.08);
-                        backdrop-filter: blur(14px);
-                        text-align: center;
-                        z-index: 1;
-                        /* backwards (no both): al terminar la entrada no pisa el
-                           transform que pone el tilt 3D del cursor */
-                        animation: cardIn 0.75s cubic-bezier(.2,.8,.2,1) backwards, cardPulse 5s ease-in-out 1s infinite;
-                        transition: transform 0.18s ease-out;
-                    }
-                    @keyframes cardPulse { 0%,100% { box-shadow: 0 30px 80px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08); } 50% { box-shadow: 0 34px 90px rgba(0,0,0,.58), 0 0 34px rgba(135,243,255,.08), inset 0 1px 0 rgba(255,255,255,.1); } }
-                    @keyframes cardIn {
-                        from { opacity: 0; transform: translateY(18px) scale(0.98); }
-                        to { opacity: 1; transform: none; }
-                    }
-                    /* Círculo central con anillo giratorio de colores */
-                    .badgeWrap {
-                        width: 92px;
-                        height: 92px;
-                        margin: 0 auto 0.7rem;
-                        padding: 4px;
-                        border-radius: 50%;
-                        background: conic-gradient(from 0deg, #87f3ff, #a78bfa, #7ef0bc, #f5d76e, #f78fb3, #87f3ff);
-                        animation: ringSpin 7s linear infinite;
-                        box-shadow: 0 14px 34px rgba(135, 243, 255, 0.22);
-                    }
-                    .status-success .badgeWrap {
-                        animation: ringSpin 3.2s linear infinite;
-                        box-shadow: 0 14px 40px rgba(126, 240, 188, 0.35), 0 0 46px rgba(135, 243, 255, 0.22);
-                    }
-                    .status-claimed .badgeWrap {
-                        box-shadow: 0 14px 34px rgba(167, 139, 250, 0.32);
-                    }
-                    @keyframes ringSpin { to { transform: rotate(360deg); } }
-                    .badge {
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        width: 100%;
-                        height: 100%;
-                        border-radius: 50%;
-                        font-size: 2.1rem;
-                        background: radial-gradient(circle at 32% 28%, rgba(64, 90, 130, 0.95), rgba(9, 14, 25, 0.96));
-                        border: 1px solid rgba(255,255,255,0.14);
-                        animation: badgeFloat 4s ease-in-out infinite;
-                    }
-                    .status-success .badge { animation: badgePop 0.7s cubic-bezier(.2,1.4,.4,1) both, badgeFloat 4s ease-in-out 0.7s infinite; }
-                    @keyframes badgeFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-                    @keyframes badgePop { from { opacity: 0; transform: scale(0.4) rotate(-18deg); } to { opacity: 1; transform: none; } }
-                    /* Sonar para el estado sin sesión */
-                    .status-login .badgeWrap { animation: ringSpin 7s linear infinite, sonar 2.2s ease-out infinite; }
-                    @keyframes sonar {
-                        0% { box-shadow: 0 14px 34px rgba(135,243,255,.22), 0 0 0 0 rgba(135,243,255,.45); }
-                        70% { box-shadow: 0 14px 34px rgba(135,243,255,.22), 0 0 0 16px rgba(135,243,255,0); }
-                        100% { box-shadow: 0 14px 34px rgba(135,243,255,.22), 0 0 0 0 rgba(135,243,255,0); }
-                    }
-                    h1 {
-                        margin: 0;
-                        font-size: clamp(1.5rem, 3.4vw, 2.2rem);
-                        line-height: 1.1;
-                        letter-spacing: -0.04em;
-                    }
-                    p {
-                        margin: 0.7rem auto 0;
-                        max-width: 52ch;
-                        color: var(--muted);
-                        font-size: 0.98rem;
-                        line-height: 1.55;
-                    }
-                    strong {
-                        color: var(--success);
-                    }
-                    .details {
-                        margin: 1rem auto 0;
-                        max-width: 560px;
-                        display: grid;
-                        gap: 0.5rem;
-                        text-align: left;
-                    }
-                    .detail {
-                        display: grid;
-                        gap: 0.15rem;
-                        padding: 0.6rem 0.85rem;
-                        border-radius: 16px;
-                        background: rgba(135, 243, 255, 0.07);
-                        border: 1px solid rgba(135, 243, 255, 0.14);
-                        animation: detailIn .55s both;
-                    }
-                    .detail:nth-child(2) { animation-delay: .12s; }
-                    .detail:nth-child(3) { animation-delay: .24s; }
-                    @keyframes detailIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
-                    .detail > span { font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.7; }
-                    .detail > strong { font-size: 1.02rem; color: var(--text); }
-                    .detail > strong img { height: 1.3em; width: auto; vertical-align: -0.25em; margin-right: 0.15em; }
-                    .detail > small { color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
-                    .actions {
-                        margin-top: 1.1rem;
-                        display: flex;
-                        justify-content: center;
-                        gap: 0.6rem;
-                        flex-wrap: wrap;
-                    }
-                    a {
-                        display: inline-flex;
-                        align-items: center;
-                        justify-content: center;
-                        gap: 0.5rem;
-                        padding: 0.7rem 1.2rem;
-                        border-radius: 999px;
-                        text-decoration: none;
-                        color: #081521;
-                        font-weight: 700;
-                        background: linear-gradient(135deg, var(--accent), #d5fbff);
-                        box-shadow: 0 12px 28px rgba(135, 243, 255, 0.28);
-                        transition: transform 0.18s ease, box-shadow 0.18s ease;
-                    }
-                    a:hover {
-                        transform: translateY(-1px);
-                        box-shadow: 0 18px 36px rgba(135, 243, 255, 0.32);
-                    }
-                    a.secondary {
-                        background: transparent;
-                        color: var(--text);
-                        border: 1px solid rgba(135, 243, 255, 0.35);
-                        box-shadow: none;
-                    }
-                    /* Botón principal: gradiente fijo en reposo; la animación
-                       solo aparece al poner el cursor encima. */
-                    a.btn-primary {
-                        background: linear-gradient(135deg, #87f3ff, #a78bfa);
-                        transition: transform 0.18s ease, box-shadow 0.18s ease, background-position 0.35s ease;
-                    }
-                    a.btn-primary:hover {
-                        transform: translateY(-1px);
-                        background: linear-gradient(135deg, #87f3ff, #a78bfa, #7ef0bc, #87f3ff);
-                        background-size: 280% 280%;
-                        animation: btnSlide 2.5s ease infinite;
-                        box-shadow: 0 18px 36px rgba(135, 243, 255, 0.35);
-                    }
-                    @keyframes btnSlide { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
-                    /* Título con brillo en la celebración */
-                    .status-success h1 {
-                        background: linear-gradient(100deg, #fff 20%, var(--accent) 40%, #fff 60%);
-                        background-size: 220% auto;
-                        -webkit-background-clip: text;
-                        background-clip: text;
-                        -webkit-text-fill-color: transparent;
-                        animation: titleShine 3.2s linear infinite;
-                    }
-                    @keyframes titleShine { to { background-position: 220% center; } }
-                    /* Cinta "ya lo tienes" */
-                    .ribbon {
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 0.4rem;
-                        margin-bottom: 0.7rem;
-                        padding: 0.32rem 0.95rem;
-                        border-radius: 999px;
-                        font-size: 0.74rem;
-                        font-weight: 800;
-                        letter-spacing: 0.14em;
-                        text-transform: uppercase;
-                        color: #0b1526;
-                        background: linear-gradient(135deg, #f5d76e, #ffb86c, #f78fb3, #f5d76e);
-                        background-size: 250% 250%;
-                        animation: btnSlide 4s ease infinite;
-                        box-shadow: 0 8px 22px rgba(245, 215, 110, 0.3);
-                    }
-                    /* Destellos flotantes en celebración */
-                    .spark {
-                        position: absolute;
-                        border-radius: 50%;
-                        filter: blur(1px);
-                        pointer-events: none;
-                        animation: sparkFloat 5s ease-in-out infinite;
-                    }
-                    @keyframes sparkFloat {
-                        0%,100% { transform: translateY(0) scale(1); opacity: .85; }
-                        50% { transform: translateY(-16px) scale(1.25); opacity: .4; }
-                    }
-                    /* Franja superior de la tarjeta según estado */
-                    .card::before {
-                        content: "";
-                        position: absolute;
-                        top: 0; left: 10%; right: 10%;
-                        height: 3px;
-                        border-radius: 999px;
-                        background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent);
-                        opacity: .7;
-                    }
-                    .status-success .card::before {
-                        background: linear-gradient(90deg, transparent, #7ef0bc, #87f3ff, #f5d76e, transparent);
-                        background-size: 250% 100%;
-                        animation: btnSlide 3s linear infinite;
-                        opacity: 1;
-                    }
-                    canvas {
-                        position: fixed;
-                        inset: 0;
-                        width: 100%;
-                        height: 100%;
-                        pointer-events: none;
-                        z-index: 3;
-                    }
-                    @media (prefers-reduced-motion: reduce) {
-                        *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
-                    }
-                    @media (max-width: 520px) {
-                        .card { width: min(94vw, 560px); padding: 1.1rem 0.9rem 0.85rem; }
-                        .badgeWrap { width: 74px; height: 74px; }
-                        .badge { font-size: 1.7rem; }
-                        h1 { font-size: 1.45rem; }
-                        p { font-size: .92rem; line-height: 1.5; }
-                        .detail { padding: .55rem .7rem; }
-                        .actions { flex-direction: column; align-items: stretch; }
-                        .actions a { width: 100%; }
-                    }
-                </style>
-            </head>
-            <body class="status-${status}">
-                <div class="glow one"></div>
-                <div class="glow two"></div>
-                <div class="glow three"></div>
-
-                <div class="card">
-                    ${status === "claimed" ? `<div class="ribbon">✨ Ya lo tienes ✨</div>` : ""}
-                    ${celebration !== "none" ? `
-                    <span class="spark" style="width:7px;height:7px;background:#7ef0bc;top:12%;left:9%;"></span>
-                    <span class="spark" style="width:5px;height:5px;background:#f5d76e;top:22%;right:10%;animation-delay:1s;"></span>
-                    <span class="spark" style="width:6px;height:6px;background:#f78fb3;bottom:18%;left:12%;animation-delay:2s;"></span>
-                    <span class="spark" style="width:5px;height:5px;background:#87f3ff;bottom:26%;right:12%;animation-delay:.5s;"></span>
-                    <span class="spark" style="width:8px;height:8px;background:#a78bfa;top:48%;left:5%;animation-delay:1.6s;"></span>
-                    <span class="spark" style="width:6px;height:6px;background:#ffb86c;top:56%;right:6%;animation-delay:2.6s;"></span>
-                    ` : ""}
-                    <div class="badgeWrap"><div class="badge">${status === "success" ? "🏆" : status === "claimed" ? "🥚" : "🔎"}</div></div>
-                    <h1>${title}</h1>
-                    <p>${message}</p>
-                    ${detailsHtml ? `<div class="details">${detailsHtml}</div>` : ""}
-                    <div class="actions">
-                        <a class="${highlightCta ? "btn-primary" : ""}" href="${actionHref}">${actionLabel}</a>
-                        ${secondaryHref ? `<a class="secondary" href="${secondaryHref}">${secondaryLabel}</a>` : ""}
-                    </div>
-                </div>
-
-                <script>
-                    // Tilt 3D: el panel se inclina hacia el cursor. Solo con
-                    // ratón (pointer: fine) y sin reduced-motion; en táctil no hace nada.
-                    (function() {
-                        var card = document.querySelector('.card');
-                        if (!card) return;
-                        if (!window.matchMedia('(pointer: fine)').matches) return;
-                        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-                        var raf = null;
-                        function onMove(e) {
-                            var r = card.getBoundingClientRect();
-                            var px = (e.clientX - (r.left + r.width / 2)) / r.width;
-                            var py = (e.clientY - (r.top + r.height / 2)) / r.height;
-                            px = Math.max(-1, Math.min(1, px));
-                            py = Math.max(-1, Math.min(1, py));
-                            if (raf) cancelAnimationFrame(raf);
-                            raf = requestAnimationFrame(function() {
-                                card.style.transform = 'perspective(950px) rotateX(' + (-py * 8).toFixed(2) + 'deg) rotateY(' + (px * 10).toFixed(2) + 'deg)';
-                            });
-                        }
-                        function onLeave() {
-                            if (raf) cancelAnimationFrame(raf);
-                            card.style.transform = '';
-                        }
-                        window.addEventListener('mousemove', onMove, { passive: true });
-                        document.addEventListener('mouseleave', onLeave);
-                        window.addEventListener('blur', onLeave);
-                    })();
-                </script>
-
-                ${celebration !== "none" ? `
-                    <canvas id="confetti"></canvas>
-                    <script>
-                        const canvas = document.getElementById('confetti');
-                        const ctx = canvas.getContext('2d');
-                        const pieces = [];
-                        const colors = ['#7ef0bc', '#87f3ff', '#f5d76e', '#f78fb3', '#a78bfa', '#ffb86c'];
-                        const celebrationMode = '${celebration}';
-                        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-                        function resizeCanvas() {
-                            canvas.width = window.innerWidth * window.devicePixelRatio;
-                            canvas.height = window.innerHeight * window.devicePixelRatio;
-                            canvas.style.width = window.innerWidth + 'px';
-                            canvas.style.height = window.innerHeight + 'px';
-                            ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
-                        }
-
-                        function spawnBurst(count, spread) {
-                            for (let i = 0; i < count; i++) {
-                                pieces.push({
-                                    x: window.innerWidth * (0.5 + (Math.random() - 0.5) * (spread || 0.18)),
-                                    y: window.innerHeight * 0.18 + Math.random() * 30,
-                                    w: 8 + Math.random() * 10,
-                                    h: 14 + Math.random() * 16,
-                                    color: colors[Math.floor(Math.random() * colors.length)],
-                                    dx: (Math.random() - 0.5) * 7,
-                                    dy: 1.8 + Math.random() * 3.2,
-                                    rot: Math.random() * Math.PI,
-                                    spin: (Math.random() - 0.5) * 0.25,
-                                    alpha: 1,
-                                    loop: false,
-                                });
-                            }
-                        }
-
-                        function spawnRain(count) {
-                            for (let i = 0; i < count; i++) {
-                                pieces.push({
-                                    x: Math.random() * window.innerWidth,
-                                    y: Math.random() * window.innerHeight,
-                                    w: 5 + Math.random() * 7,
-                                    h: 8 + Math.random() * 10,
-                                    color: colors[Math.floor(Math.random() * colors.length)],
-                                    dx: (Math.random() - 0.5) * 1.4,
-                                    dy: 0.9 + Math.random() * 1.6,
-                                    rot: Math.random() * Math.PI,
-                                    spin: (Math.random() - 0.5) * 0.15,
-                                    alpha: 0.55 + Math.random() * 0.35,
-                                    loop: true,
-                                });
-                            }
-                        }
-
-                        function animateConfetti() {
-                            ctx.clearRect(0, 0, canvas.width, canvas.height);
-                            for (const p of pieces) {
-                                p.x += p.dx;
-                                p.y += p.dy;
-                                p.rot += p.spin;
-                                if (p.loop) {
-                                    // Lluvia suave en bucle: al salir por abajo, reaparece arriba.
-                                    if (p.y > window.innerHeight + 24) {
-                                        p.y = -24;
-                                        p.x = Math.random() * window.innerWidth;
-                                    }
-                                    if (p.x < -24) p.x = window.innerWidth + 24;
-                                    if (p.x > window.innerWidth + 24) p.x = -24;
-                                } else {
-                                    p.dy += 0.04;
-                                    p.alpha *= 0.996;
-                                }
-
-                                ctx.save();
-                                ctx.translate(p.x, p.y);
-                                ctx.rotate(p.rot);
-                                ctx.globalAlpha = p.alpha;
-                                ctx.fillStyle = p.color;
-                                ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-                                ctx.restore();
-                            }
-
-                            if (pieces.some(p => !p.loop && p.alpha > 0.02) || pieces.some(p => p.loop)) {
-                                requestAnimationFrame(animateConfetti);
-                            }
-                        }
-
-                        resizeCanvas();
-                        if (!reduceMotion) {
-                            if (celebrationMode === "full") {
-                                spawnBurst(180, 0.18);
-                                // Segunda y tercera oleada para rematar la celebración.
-                                setTimeout(() => spawnBurst(110, 0.55), 550);
-                                setTimeout(() => spawnBurst(80, 0.9), 1100);
-                            } else {
-                                spawnRain(70);
-                            }
-                            animateConfetti();
-                        }
-                        window.addEventListener('resize', resizeCanvas);
-                    </script>
-                ` : ""}
-            </body>
-            </html>
-        `;
-    }
+    const meta = getWebEasterMeta()
+    // El módulo ya escapa el título: aquí va el valor crudo.
+    const eggNameRaw = meta?.tier?.name || meta?.record?.label || "Al otro lado"
+    const eggName = escapeHtml(eggNameRaw)
+    const eggDesc = escapeHtml(meta?.tier?.desc || "Encuentra el secreto escondido en la web.")
+    const eggXp = Number(meta?.tier?.xp ?? 20000)
+    const xpStr = `+${eggXp.toLocaleString("es-ES")} XP`
+    // Textos cortos: el título lleva el nombre del reto y el párrafo no lo
+    // repite. Tras reclamar, dos CTA: rango (primario) y records (secundario).
+    const rewardDetail = (note) => `<div class="detail"><span>Recompensa</span><strong><img src="/assets/icons/xp.png" alt="XP">${escapeHtml(xpStr)}</strong><small>${note}</small></div>`
 
     if (!user) {
-        // Sin sesión: celebración completa (confetti + detalles del logro,
-        // que salen del catálogo sin necesitar tus datos), pero los botones
-        // son para iniciar sesión y reclamarlo en vez de ir a la clasificación.
-        const eggFound = recordsConfig.allRecords().find(x => x.record.id === "web_easter")
-        const eggTier = eggFound?.record.tiers[0] || {}
-        const eggXp = `+${Number(eggTier.xp ?? 20000).toLocaleString("es-ES")} XP`
-        const eggName = escapeHtml(eggTier.name || eggFound?.record.label || "Al otro lado")
-        const eggDesc = escapeHtml(eggTier.desc || "Encuentra el secreto escondido en la web.")
-        const eggEmoji = escapeHtml(eggFound?.record.emoji || "🌐")
-        const anonGuild = escapeHtml(client.guilds.cache.get(guildId)?.name || guildId || "el servidor")
-        return res.status(401).send(renderPage({
+        // Sin sesión: celebra el hallazgo, pero el CTA es iniciar sesión.
+        const anonGuild = escapeHtml((guildId && client.guilds.cache.get(guildId)?.name) || guildId || "el servidor")
+        return res.status(401).send(renderCelebrationPage({
             title: "¡Easter egg encontrado!",
-            message: `Has descubierto el logro oculto <strong>${eggEmoji} ${eggName}</strong> en <strong>${anonGuild}</strong>. <strong>Inicia sesión con Discord para reclamarlo</strong> y sumar su recompensa a tu XP.`,
-            detailsHtml: `<div class="detail"><span>🏆 Record oculto</span><strong>${eggEmoji} ${eggName}</strong><small>${eggDesc}</small></div>`
-                + `<div class="detail"><span>✨ Recompensa</span><strong><img src="/assets/icons/xp.png" alt="XP">${escapeHtml(eggXp)}</strong><small>Se suma a tu XP y a tu XP mensual al reclamarlo.</small></div>`,
-            status: "success",
-            showConfetti: true,
-            actionHref: "/discord",
-            actionLabel: "Iniciar sesión para reclamar",
-            secondaryHref: guildId ? `/leaderboard/${encodeURIComponent(guildId)}` : null,
-            secondaryLabel: "Ver clasificación",
-        }));
+            message: `Has descubierto el logro oculto <strong>${eggName}</strong> en <strong>${anonGuild}</strong>. Inicia sesión con Discord para reclamarlo.`,
+            badge: "egg",
+            kicker: "Logro oculto",
+            status: "login",
+            celebration: true,
+            detailsHtml: rewardDetail(`${eggDesc}. Se suma a tu XP y a tu XP mensual.`),
+            actionsHtml: `<a class="btn-primary" href="/discord">Iniciar sesión para reclamar</a>`
+                + (guildId ? `<a class="secondary" href="/leaderboard/${encodeURIComponent(guildId)}">Ver clasificación</a>`
+                    : `<a class="secondary" href="/servers">Ir al dashboard</a>`),
+        }))
     }
 
     if (!guildId) {
-        return res.status(400).send(renderPage({
+        return res.status(400).send(renderCelebrationPage({
             title: "Easter egg",
-            message: "No pude detectar el servidor. Usa ?guild=TU_GUILD_ID o entra desde tu dashboard.",
+            message: "No pude detectar el servidor. Abre el secreto desde la web o añade ?guild=TU_ID.",
+            badge: "egg",
             status: "info",
-            showConfetti: false,
-        }));
+            celebration: false,
+            actionsHtml: `<a class="btn-primary" href="/servers">Ir al dashboard</a>`,
+        }))
     }
 
     const avatarUrl = user.avatar ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${String(user.avatar).startsWith("a_") ? "gif" : "png"}?size=128` : ""
@@ -659,65 +192,45 @@ app.get("/easteregg", async function(req, res) {
         guilds,
         avatarUrl,
     })
-
-    const guildName = escapeHtml(client.guilds.cache.get(guildId)?.name || (Array.isArray(guilds) ? guilds.find(g => String(g.id) === String(guildId))?.name : null) || guildId)
-    const meta = result.meta || result.result && { record: result.result.record, category: result.result.category, tier: result.result.tier } || null
-    const tierXp = Number(meta?.tier?.xp ?? result.result?.tier?.xp ?? 20000)
-    const recordEmoji = escapeHtml(meta?.record?.emoji || "🌐")
-    const recordName = escapeHtml(meta?.tier?.name || meta?.record?.label || "Al otro lado")
-    const recordDesc = escapeHtml(meta?.tier?.desc || "Encuentra el secreto escondido en la web.")
-    const categoryName = escapeHtml(meta?.category?.name || "Ocultos")
-    const xpStr = `+${tierXp.toLocaleString("es-ES")} XP`
-
-    function buildDetails({ withProgress }) {
-        const rows = []
-        rows.push(`<div class="detail"><span>🏆 Record conseguido</span><strong>${recordEmoji} ${recordName}</strong><small>${recordDesc}</small></div>`)
-        rows.push(`<div class="detail"><span>✨ Recompensa</span><strong><img src="/assets/icons/xp.png" alt="XP">${escapeHtml(xpStr)}</strong><small>${result.unlocked ? "Ya sumada a tu XP y a tu XP mensual." : "Ya la recibiste la primera vez; no se suma de nuevo."}</small></div>`)
-        if (withProgress && result.result) {
-            const done = result.result.done ?? 1
-            const total = result.result.total ?? 1
-            const completed = result.result.totalCompleted ?? done
-            const visible = result.result.totalVisible ?? total
-            rows.push(`<div class="detail"><span>📊 Tu progreso</span><strong><img src="/assets/icons/records.png" alt="Records">${completed}/${visible} Records</strong><small>Este logro: ${done}/${total} fases. Míralos con /records en Discord.</small></div>`)
-        }
-        return rows.join("")
-    }
-
-    const leaderboardHref = `/leaderboard/${encodeURIComponent(guildId)}`
-    const recordsHref = `/records/${encodeURIComponent(guildId)}`
+    const name = escapeHtml(client.guilds.cache.get(guildId)?.name || (Array.isArray(guilds) ? guilds.find(g => String(g.id) === String(guildId))?.name : null) || guildId)
+    const progress = result.result
+        ? `${result.result.totalCompleted ?? result.result.done ?? 1}/${result.result.totalVisible ?? result.result.total ?? 1} Records`
+        : null
+    const progressDetail = progress ? `<div class="detail"><span>Tu progreso</span><strong><img src="/assets/icons/records.png" alt="Records">${escapeHtml(progress)}</strong><small>Sigue con /records en Discord o en la web.</small></div>` : ""
 
     if (result.unlocked) {
-        return res.send(renderPage({
-            title: "¡Easter egg encontrado!",
-            message: `Has desbloqueado el logro <strong>${recordEmoji} ${recordName}</strong> en <strong>${guildName}</strong>. Los <strong>Records</strong> son logros del servidor con recompensa de XP: este era un <strong>Record oculto</strong>, por eso no aparecía en la lista hasta descubrirlo.`,
-            detailsHtml: buildDetails({ withProgress: true }),
+        return res.send(renderCelebrationPage({
+            title: eggNameRaw,
+            message: `Logro oculto conseguido en <strong>${name}</strong>: la recompensa ya está sumada a tu XP y a tu XP mensual.`,
+            badge: "trophy",
+            kicker: "Desbloqueado",
             status: "success",
-            showConfetti: true,
-            actionHref: leaderboardHref,
-            actionLabel: "Ver clasificación",
-            secondaryHref: recordsHref,
-            secondaryLabel: "Ver mis records",
-        }));
+            celebration: true,
+            detailsHtml: rewardDetail(eggDesc) + progressDetail,
+            actionsHtml: `<a class="btn-primary" href="/rank/${encodeURIComponent(guildId)}">Ver mi rango</a>`
+                + `<a class="secondary" href="/records/${encodeURIComponent(guildId)}">Ver records</a>`,
+        }))
     }
 
-    return res.send(renderPage({
-        title: "Ya tienes este easter egg",
-        message: `El logro <strong>${recordEmoji} ${recordName}</strong> ya está en tu colección de <strong>${guildName}</strong>; no se repite ni da más XP, pero vuelve siempre que quieras a celebrarlo. Era un <strong>Record oculto</strong> de la categoría ${categoryName}.`,
-        detailsHtml: buildDetails({ withProgress: false }),
+    return res.send(renderCelebrationPage({
+        title: eggNameRaw,
+        message: `Ya reclamaste este secreto en <strong>${name}</strong>: la recompensa no se repite, pero puedes volver a celebrarlo cuando quieras.`,
+        badge: "check",
+        kicker: "Ya lo tienes",
         status: "claimed",
-        showConfetti: "soft",
-        actionHref: leaderboardHref,
-        actionLabel: "Ver clasificación",
-        secondaryHref: recordsHref,
-        secondaryLabel: "Ver mis records",
-    }));
+        celebration: "soft",
+        detailsHtml: rewardDetail(`${eggDesc} — ya la recibiste la primera vez.`) + progressDetail,
+        actionsHtml: `<a class="btn-primary" href="/rank/${encodeURIComponent(guildId)}">Ver mi rango</a>`
+            + `<a class="secondary" href="/records/${encodeURIComponent(guildId)}">Ver records</a>`,
+    }))
 })
+
 
 // Drops de XP: el staff crea un reparto (/drop) y este enlace lo reclama.
 // Abrir el enlace con sesión iniciada reclama directamente (una vez por
 // persona, hasta agotar usos o que caduque).
 async function handleDropClaim(req, res) {
-    const { renderDropPage, escapeHtml: escapeDropHtml } = require("./app/drop-page.js")
+    const { renderCelebrationPage, escapeHtml: escapeDropHtml } = require("./app/celebration-page.js")
     const Drops = require("./classes/Drops.js")
 
     const guildId = String(req.params.guild || "")
@@ -730,48 +243,70 @@ async function handleDropClaim(req, res) {
     const guildName = escapeDropHtml(client.guilds.cache.get(guildId)?.name || guildId || "el servidor")
     const leaderboardHref = `/leaderboard/${encodeURIComponent(guildId)}`
 
+    // Premio resumido en una frase (para mensajes de estado).
     const dropPrize = d => {
         if (d.kind === "bundle") {
             const p = d.prizes || {}
             const parts = []
-            if (Number(p.xp) > 0) parts.push(`<strong>+${Number(p.xp).toLocaleString("es-ES")} XP</strong>`)
-            if (Number(p.coins) > 0) parts.push(`<strong>+${Number(p.coins).toLocaleString("es-ES")} monedas</strong>`)
-            for (const r of (Array.isArray(p.roles) ? p.roles : [])) parts.push(`el rol <strong>${escapeDropHtml(r.name || "del evento")}</strong>`)
-            for (const it of (Array.isArray(p.items) ? p.items : [])) parts.push(`<strong>${Number(it.qty).toLocaleString("es-ES")}× ${escapeDropHtml(it.name || "objeto")}</strong>`)
+            if (Number(p.xp) > 0) parts.push(`${Number(p.xp).toLocaleString("es-ES")} XP`)
+            if (Number(p.coins) > 0) parts.push(`${Number(p.coins).toLocaleString("es-ES")} monedas`)
+            for (const r of (Array.isArray(p.roles) ? p.roles : [])) parts.push(`rol ${escapeDropHtml(r.name || "del evento")}`)
+            for (const it of (Array.isArray(p.items) ? p.items : [])) parts.push(`${Number(it.qty).toLocaleString("es-ES")}x ${escapeDropHtml(it.name || "objeto")}`)
             return parts.join(" + ") || "un pack vacío"
         }
-        return d.kind === "role"
-        ? `el rol <strong>${escapeDropHtml(d.roleName || "del evento")}</strong>`
-        : d.kind === "item"
-            ? `<strong>${Number(d.amount).toLocaleString("es-ES")}× ${escapeDropHtml(d.itemName || "objeto")}</strong>`
-            : `<strong>+${Number(d.amount).toLocaleString("es-ES")} ${Drops.kindName(d.kind)}</strong>`
-    }
-    const dropWallet = d => d.kind === "coins"
-        ? "Se suman a tu cash de UnbelievaBoat."
-        : d.kind === "role"
-            ? "Se añade a tu cuenta para siempre (aunque el drop termine)."
-            : d.kind === "item"
-                ? "Se añaden a tu inventario de UnbelievaBoat."
-                : d.kind === "bundle"
-                    ? "El XP se suma a tu cuenta; monedas y objetos van a UnbelievaBoat y el rol se queda para siempre."
-                    : "Se suma a tu XP y a tu XP mensual."
-    const dropDetails = (d, left) => {
-        const emoji = Drops.kindEmoji(d.kind)
-        const pct = d.maxClaims > 0 ? Math.min(100, Math.round(((d.maxClaims - left) / d.maxClaims) * 100)) : 100
-        return `<div class="detail"><span>${emoji} Drop</span><strong>${escapeDropHtml(d.name)}</strong><small>${dropPrize(d)} por persona - quedan <strong>${left}</strong> de ${d.maxClaims} usos. ${dropWallet(d)}</small><div class="claimBar"><i style="width:${pct}%"></i></div></div>`
-            + `<div class="detail"><span>⏳ Caduca en</span><strong class="countdown" id="dropCountdown" data-expires="${d.expiresAt}">…</strong><small>Cuando llegue a cero el enlace deja de funcionar.</small></div>`
-    }
-    const actions = (primary, primaryHref, primaryFirst = true) => {
-        const p = `<a class="btn-primary" href="${primaryHref}">${primary}</a>`
-        const s = `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`
-        return primaryFirst ? p + s : s + p
+        if (d.kind === "role") return `rol ${escapeDropHtml(d.roleName || "del evento")}`
+        if (d.kind === "item") return `${Number(d.amount).toLocaleString("es-ES")}x ${escapeDropHtml(d.itemName || "objeto")}`
+        return `+${Number(d.amount).toLocaleString("es-ES")} ${Drops.kindName(d.kind)}`
     }
 
+    // Apartado 1: lista de recompensas personalizada, una fila por premio.
+    const rewardRows = d => {
+        const rows = []
+        if (d.kind === "bundle") {
+            const p = d.prizes || {}
+            if (Number(p.xp) > 0) rows.push([`+${Number(p.xp).toLocaleString("es-ES")} XP`, "se suma a tu XP y a tu XP mensual"])
+            if (Number(p.coins) > 0) rows.push([`+${Number(p.coins).toLocaleString("es-ES")} monedas`, "van a tu cash de UnbelievaBoat"])
+            for (const r of (Array.isArray(p.roles) ? p.roles : [])) rows.push([`Rol ${escapeDropHtml(r.name || "del evento")}`, "tuyo para siempre"])
+            for (const it of (Array.isArray(p.items) ? p.items : [])) rows.push([`${Number(it.qty).toLocaleString("es-ES")}x ${escapeDropHtml(it.name || "objeto")}`, "a tu inventario de UnbelievaBoat"])
+        } else if (d.kind === "coins") {
+            rows.push([`+${Number(d.amount).toLocaleString("es-ES")} monedas`, "van a tu cash de UnbelievaBoat"])
+        } else if (d.kind === "role") {
+            rows.push([`Rol ${escapeDropHtml(d.roleName || "del evento")}`, "tuyo para siempre"])
+        } else if (d.kind === "item") {
+            rows.push([`${Number(d.amount).toLocaleString("es-ES")}x ${escapeDropHtml(d.itemName || "objeto")}`, "a tu inventario de UnbelievaBoat"])
+        } else {
+            rows.push([`+${Number(d.amount).toLocaleString("es-ES")} XP`, "se suma a tu XP y a tu XP mensual"])
+        }
+        return rows.map(([value, note]) => `<div class="rewardRow"><b>${value}</b><small>${note}</small></div>`).join("")
+    }
+    const rewardsDetail = d => `<div class="detail"><span>Recompensas</span>${rewardRows(d)}</div>`
+
+    // Apartado 2: cuántos han reclamado, con barra de progreso.
+    const claimsDetail = (d, left) => {
+        const claimed = Math.max(0, (d.maxClaims || 0) - Math.max(0, left))
+        const pct = d.maxClaims > 0 ? Math.min(100, Math.round((claimed / d.maxClaims) * 100)) : 100
+        return `<div class="detail"><span>Reclamados</span><strong>${claimed} de ${d.maxClaims}</strong><div class="claimBar"><i style="width:${pct}%"></i></div><small>${left > 0 ? `Quedan ${left} usos.` : "No quedan usos."}</small></div>`
+    }
+
+    // Apartado 3: cuenta atrás viva si sigue abierto; fecha de cierre si no.
+    const expiryDetail = (d, ended) => {
+        if (ended) {
+            const closed = new Date(d.expiresAt).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+            return `<div class="detail"><span>Cerró el</span><strong class="countdownPast">${escapeDropHtml(closed)}</strong><small>El enlace ya no reparte premios.</small></div>`
+        }
+        return `<div class="detail"><span>Caduca en</span><strong class="countdown" id="dropCountdown" data-expires="${Number(d.expiresAt) || 0}">…</strong><small>Después el enlace deja de funcionar.</small></div>`
+    }
+    const expiredDrop = d => Number(d.expiresAt) <= Date.now()
+
+    // CTA fija: rango primero (donde se ve el resultado) y records después.
+    const serverButtons = `<a class="btn-primary" href="/rank/${encodeURIComponent(guildId)}">Ver mi rango</a>`
+        + `<a class="secondary" href="/records/${encodeURIComponent(guildId)}">Ver records</a>`
+
     if (!validPath || !drop) {
-        return res.status(404).send(renderDropPage({
+        return res.status(404).send(renderCelebrationPage({
             title: "Este drop no existe",
-            message: "Revisa que el enlace esté completo: lo crea el staff con <strong>/drop</strong> y puede haberse borrado.",
-            badge: "🔎",
+            message: "Revisa que el enlace esté completo: lo crea el staff con <strong>/drops</strong> y puede haberse borrado.",
+            badge: "search",
             status: "info",
             celebration: false,
             actionsHtml: `<a class="secondary" href="/servers">Ir al dashboard</a>`,
@@ -780,118 +315,148 @@ async function handleDropClaim(req, res) {
 
     const check = Drops.validateClaim(drop, user?.id || "", Date.now())
     const left = Drops.claimsLeft(drop)
+    const dropDetails = (d, l, ended = expiredDrop(d)) => rewardsDetail(d) + claimsDetail(d, l) + expiryDetail(d, ended)
 
     if (!user) {
-        return res.status(401).send(renderDropPage({
+        return res.status(401).send(renderCelebrationPage({
             title: drop.name,
-            message: `El staff de <strong>${guildName}</strong> está repartiendo ${dropPrize(drop)}. <strong>Inicia sesión con Discord para reclamarlo</strong> antes de que se agote o caduque.`,
-            badge: "🎁",
-            status: check.ok ? "success" : "info",
-            celebration: check.ok ? "soft" : false,
+            message: `El staff de <strong>${guildName}</strong> está repartiendo <strong>${dropPrize(drop)}</strong>. <strong>Inicia sesión con Discord</strong> para reclamar el tuyo antes de que se agote o caduque.`,
+            badge: "gift",
+            status: "login",
+            celebration: "soft",
             detailsHtml: dropDetails(drop, left),
-            actionsHtml: check.ok
-                ? actions("Iniciar sesión para reclamar", "/discord")
-                : `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+            actionsHtml: `<a class="btn-primary" href="/discord">Iniciar sesión para reclamar</a>`
+                + `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+        }))
+    }
+
+    if (expiredDrop(drop)) {
+        return res.send(renderCelebrationPage({
+            title: drop.name,
+            message: `Cerró el ${new Date(drop.expiresAt).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}. El enlace ya no reparte premios.`,
+            badge: "hourglass",
+            kicker: "Terminado",
+            status: "expired",
+            celebration: false,
+            detailsHtml: rewardsDetail(drop) + claimsDetail(drop, left) + expiryDetail(drop, true),
+            actionsHtml: serverButtons,
         }))
     }
 
     if (check.reason === "expired") {
-        return res.send(renderDropPage({
-            title: "Este drop ya caducó",
-            message: `El drop <strong>${escapeDropHtml(drop.name)}</strong> terminó. Estate atento a los próximos que lance el staff.`,
-            badge: "⌛",
-            status: "info",
+        return res.send(renderCelebrationPage({
+            title: drop.name,
+            message: "Este drop terminó hace un momento. Estate atento a los próximos que lance el staff.",
+            badge: "hourglass",
+            kicker: "Terminado",
+            status: "expired",
             celebration: false,
-            detailsHtml: dropDetails(drop, 0),
-            actionsHtml: `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+            detailsHtml: rewardsDetail(drop) + claimsDetail(drop, 0) + expiryDetail(drop, true),
+            actionsHtml: serverButtons,
         }))
     }
 
     if (check.reason === "soldout") {
-        return res.send(renderDropPage({
-            title: "Drop agotado",
-            message: `El drop <strong>${escapeDropHtml(drop.name)}</strong> ya se lo han quedado otros. ¡Más suerte la próxima vez!`,
-            badge: "🎁",
+        return res.send(renderCelebrationPage({
+            title: drop.name,
+            message: "Todos los usos ya están repartidos. ¡Más suerte la próxima vez!",
+            badge: "gift",
+            kicker: "Agotado",
             status: "info",
             celebration: false,
-            detailsHtml: dropDetails(drop, 0),
-            actionsHtml: `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+            detailsHtml: rewardsDetail(drop) + claimsDetail(drop, 0),
+            actionsHtml: serverButtons,
         }))
     }
 
     if (check.reason === "already") {
-        return res.send(renderDropPage({
-            title: "Ya reclamaste este drop",
-            message: `El premio de <strong>${escapeDropHtml(drop.name)}</strong> (${dropPrize(drop)}) ya está en tu cuenta; cada persona solo puede una vez.`,
-            badge: "🥚",
+        return res.send(renderCelebrationPage({
+            title: drop.name,
+            message: "Ya pediste este drop antes. Cada persona solo puede reclamarlo una vez.",
+            badge: "check",
+            kicker: "Ya lo tienes",
             status: "claimed",
             celebration: "soft",
             detailsHtml: dropDetails(drop, left),
-            actionsHtml: `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+            actionsHtml: serverButtons,
         }))
     }
 
     const claimed = await Drops.claimDrop(client, guildId, code, String(user.id))
     if (!claimed.ok) {
         if (claimed.reason === "role-hierarchy") {
-            return res.status(403).send(renderDropPage({
-                title: "No te puedo dar ese rol",
-                message: `El rol de este drop está <strong>por encima de tu rol más alto</strong>, así que no se entrega. Si crees que es un error, avisa al staff. <strong>No has perdido tu reclamo.</strong>`,
-                badge: "🎭",
+            return res.status(403).send(renderCelebrationPage({
+                title: drop.name,
+                message: `El rol de este drop está <strong>por encima de tu rol más alto</strong>, así que no se entrega. Avisa al staff. <strong>No has perdido tu reclamo.</strong>`,
+                badge: "alert",
+                kicker: "Rol no entregado",
                 status: "info",
                 celebration: false,
                 detailsHtml: dropDetails(claimed.drop || drop, Drops.claimsLeft(claimed.drop || drop)),
-                actionsHtml: `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+                actionsHtml: serverButtons,
             }))
         }
         if (claimed.reason === "role-unsafe") {
-            return res.status(403).send(renderDropPage({
-                title: "Este drop ya no es seguro",
+            return res.status(403).send(renderCelebrationPage({
+                title: drop.name,
                 message: `El rol cambió desde que se creó el drop y ahora tiene <strong>permisos peligrosos</strong>, así que no se entrega. Avisa al staff para que lo revise. <strong>No has perdido tu reclamo.</strong>`,
-                badge: "🎭",
+                badge: "alert",
+                kicker: "Rol no entregado",
                 status: "info",
                 celebration: false,
                 detailsHtml: dropDetails(claimed.drop || drop, Drops.claimsLeft(claimed.drop || drop)),
-                actionsHtml: `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+                actionsHtml: serverButtons,
             }))
         }
         if (claimed.reason === "api-error") {
             const retryNote = claimed.drop?.kind === "coins"
                 ? "No se pudo conectar con UnbelievaBoat."
                 : "No se pudo entregar el premio (rol sin permisos o economía caída)."
-            return res.status(502).send(renderDropPage({
-                title: "No se pudo entregar el premio",
+            return res.status(502).send(renderCelebrationPage({
+                title: drop.name,
                 message: `${retryNote} <strong>No has perdido tu reclamo: recarga la página e inténtalo de nuevo.</strong> Si sigue fallando, avisa al staff.`,
-                badge: claimed.drop?.kind === "coins" ? "🪙" : "🎁",
+                badge: "alert",
+                kicker: "Error",
                 status: "info",
                 celebration: false,
                 detailsHtml: dropDetails(claimed.drop || drop, Drops.claimsLeft(claimed.drop || drop)),
-                actionsHtml: `<a class="btn-primary" href="">Reintentar</a>`
-                    + `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+                actionsHtml: `<a class="btn-primary" href="">Reintentar</a>` + serverButtons,
             }))
         }
-        return res.send(renderDropPage({
-            title: claimed.reason === "expired" ? "Este drop ya caducó" : "Drop agotado",
+        if (claimed.reason === "missing") {
+            return res.status(404).send(renderCelebrationPage({
+                title: "Este drop no existe",
+                message: "Justo se ha borrado: revisa el enlace si quieres los próximos.",
+                badge: "search",
+                status: "info",
+                celebration: false,
+                actionsHtml: `<a class="secondary" href="/servers">Ir al dashboard</a>`,
+            }))
+        }
+        return res.send(renderCelebrationPage({
+            title: drop.name,
             message: "Justo se te han adelantado: ya no quedan usos.",
-            badge: "🎁",
+            badge: "gift",
+            kicker: "Agotado",
             status: "info",
             celebration: false,
-            actionsHtml: `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+            detailsHtml: rewardsDetail(drop) + claimsDetail(drop, 0),
+            actionsHtml: serverButtons,
         }))
     }
 
-    const claimedWallet = claimed.drop.kind === "coins" ? "Ya están en tu cash de UnbelievaBoat." : claimed.drop.kind === "role" ? "Ya lo tienes para siempre." : claimed.drop.kind === "item" ? "Ya están en tu inventario de UnbelievaBoat." : claimed.drop.kind === "bundle" ? "Ya están en tu cuenta." : "Ya están sumados a tu XP."
-    return res.send(renderDropPage({
-        title: "¡Drop reclamado!",
-        message: `Has conseguido ${dropPrize(claimed.drop)} del drop <strong>${escapeDropHtml(drop.name)}</strong> en <strong>${guildName}</strong>. ${claimedWallet}`,
-        badge: "🏆",
+    return res.send(renderCelebrationPage({
+        title: drop.name,
+        message: `Has reclamado tu parte del drop. ${walletNote(claimed.drop)}`,
+        badge: "trophy",
+        kicker: "Reclamado",
         status: "success",
         celebration: true,
         detailsHtml: dropDetails(claimed.drop, claimed.claimsLeft),
-        actionsHtml: `<a class="btn-primary" href="${leaderboardHref}">Ver clasificación</a>`
-            + `<a class="secondary" href="/records/${encodeURIComponent(guildId)}">Ver mis records</a>`,
+        actionsHtml: serverButtons,
     }))
 }
+
 
 app.get("/drop/:guild/:code", dropRateLimit, handleDropClaim)
 // En el subdominio de drops la ruta es corta: drops.tscomunity.es/<guild>/<CODE>.
@@ -1341,6 +906,62 @@ app.post("/api/importfrombot", async function(req, res) {
 
 })
 
+// Vistas de la clasificación al estilo de /top en el bot: cada clave ordena
+// por un dato que ya vive en la DB. Mensuales/diarios usan el "reset lógico"
+// (marcador por usuario manda, fallback el marcador global del server).
+const TOP_VIEWS = {
+    xp: { label: "XP total", get: user => Number(user?.xp) || 0 },
+    monthly: { label: "XP este mes", get: user => Number(user?.monthlyXP) || 0 },
+    daily: { label: "XP de hoy", get: user => Number(user?.dailyXP) || 0 },
+    messages: { label: "Mensajes", get: user => Number(user?.messages) || 0 },
+    monthlyMessages: { label: "Mensajes este mes", get: (user, ctx) => effectiveMessages(user, "monthly", ctx) },
+    dailyMessages: { label: "Mensajes de hoy", get: (user, ctx) => effectiveMessages(user, "daily", ctx) },
+    voiceMinutes: { label: "Tiempo en voz", unit: "min en voz", get: user => Number(user?.voiceMinutes) || 0 },
+    pokemonCaught: { label: "Poketwo", unit: "poketwo", get: user => Number(user?.pokemonCaught) || 0 },
+    coinsMax: { label: "Monedas máximas", unit: "monedas", get: user => Number(user?.coinsMax) || 0 },
+    reactionsSent: { label: "Reacciones enviadas", unit: "reacciones", get: user => Number(user?.reactionsSent) || 0 },
+    reactionsReceived: { label: "Reacciones recibidas", unit: "reacciones", get: user => Number(user?.reactionsReceived) || 0 },
+    countingSent: { label: "Números en counting", unit: "números", get: user => Number(user?.countingSent) || 0 },
+    streak: { label: "Racha", unit: "días", get: user => typeof user?.streak === "object" ? Number(user?.streak?.current ?? user?.streak?.days) || 0 : Number(user?.streak) || 0 },
+}
+
+function periodContext() {
+    const now = new Date()
+    const today = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Europe/Madrid",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).format(now)
+    const parts = new Intl.DateTimeFormat("en", {
+        timeZone: "Europe/Madrid", year: "numeric", month: "2-digit",
+    }).formatToParts(now)
+    const v = Object.fromEntries(parts.map(p => [p.type, p.value]))
+    return { today, month: `${v.year}-${v.month}` }
+}
+
+// Mensajes del mes/día "en vigor": 0 si el periodo del usuario ya pasó o si
+// el server aún no marcó el suyo. Idéntico a la closure effective() del
+// endpoint, pero con las fechas precalculadas para no pagar Intl en orden.
+function effectiveMessages(userData, kind, ctx) {
+    try {
+        if (kind === "daily") {
+            if (userData?.dailyPeriod) {
+                if (String(userData.dailyPeriod) !== ctx.today) return 0
+            } else if (ctx.info?.dailyMessagesPeriod || ctx.info) {
+                return 0
+            }
+            return Number(userData?.dailyMessages) || 0
+        }
+        if (userData?.monthlyPeriod) {
+            if (String(userData.monthlyPeriod) !== ctx.month) return 0
+        } else if (ctx.info?.monthlyMessagesPeriod || ctx.info) {
+            return 0
+        }
+        return Number(userData?.monthlyMessages) || 0
+    } catch { return 0 }
+}
+
 app.get("/api/leaderboard/:id", cors(), async function(req, res) {
     let guildID = req.params.id
 
@@ -1369,19 +990,27 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
     let rewardList = settings.leaderboard.hideRoles ? [] : settings.rewards.filter(x => x.level <= settings.maxLevel)
     let importantRoles = settings.multipliers.roles.concat(rewardList).map(x => x.id)
     
-    // convert xp object to array (+ remove useless info like cooldowns)
-    let xpArray = []
+    // convert xp object to array (+ remove useless info like cooldowns).
+    // ?sort= elige la categoría (como las vistas de /top del bot); por
+    // defecto XP total. Todas las categorías salen del mismo pool de
+    // "clasificados" (XP > 0, sin ocultos) para que los rangos cuadren.
+    let sortKey = Object.prototype.hasOwnProperty.call(TOP_VIEWS, req.query.sort) ? req.query.sort : "xp"
+    let sortView = TOP_VIEWS[sortKey]
+    let pkCtx = { ...periodContext(), info: data.info }
+    let statOf = user => Number(sortView.get(user, pkCtx)) || 0
+
+    let xpCandidates = []
     let hiddenMembers = []
 
     Object.entries(data.users || {}).forEach(x => {
         if (!x || !x[0] || !x[1].xp || x[1].xp <= 0) return
         let isHidden = x[1].hidden
-        if (!isHidden) xpArray.push(x)
+        if (!isHidden) xpCandidates.push(x)
         else if (isMod || isDev) hiddenMembers.push({ id: x[0], xp: x[1].xp })
     })
 
-    xpArray = xpArray.sort((a, b) => b[1].xp - a[1].xp)
-    .map((x, y) => ({ id: x[0], xp: x[1].xp, rank: y+1 })) 
+    xpCandidates.sort((a, b) => (statOf(b[1]) - statOf(a[1])) || (b[1].xp - a[1].xp))
+    let xpArray = xpCandidates.map((x, y) => ({ id: x[0], xp: x[1].xp, rank: y + 1, statValue: statOf(x[1]) }))
 
     if (hiddenMembers.length) hiddenMembers = hiddenMembers.sort((a, b) => b.xp - a.xp)
 
@@ -1500,45 +1129,11 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
         const storedUser = data.users?.[userInfo.id] || {}
         // Reset lógico: marcador por usuario manda, de fallback el global.
         // Así se muestra 0 aunque el scheduler/lazy aún no haya flipeado.
-        const effective = (kind) => {
-            try {
-                if (kind === "daily") {
-                    const today = new Intl.DateTimeFormat("en-CA", {
-                        timeZone: "Europe/Madrid",
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                    }).format(new Date())
-                    if (storedUser.dailyPeriod) {
-                        if (String(storedUser.dailyPeriod) !== today) return 0
-                    } else if (data.info?.dailyMessagesPeriod) {
-                        if (String(data.info.dailyMessagesPeriod) !== today) return 0
-                        return 0
-                    } else if (data.info) {
-                        return 0
-                    }
-                    return Number(storedUser.dailyMessages) || 0
-                }
-                const parts = new Intl.DateTimeFormat("en", {
-                    timeZone: "Europe/Madrid", year: "numeric", month: "2-digit",
-                }).formatToParts(new Date())
-                const v = Object.fromEntries(parts.map(p => [p.type, p.value]))
-                const month = `${v.year}-${v.month}`
-                if (storedUser.monthlyPeriod) {
-                    if (String(storedUser.monthlyPeriod) !== month) return 0
-                } else if (data.info?.monthlyMessagesPeriod) {
-                    if (String(data.info.monthlyMessagesPeriod) !== month) return 0
-                    return 0
-                } else if (data.info) {
-                    return 0
-                }
-                return Number(storedUser.monthlyMessages) || 0
-            } catch { return 0 }
-        }
+        // Misma lógica que effectiveMessages() de las vistas del top.
         userLevel.records = storedUser.records || {}
         userLevel.messages = Number(storedUser.messages) || 0
-        userLevel.monthlyMessages = effective("monthly")
-        userLevel.dailyMessages = effective("daily")
+        userLevel.monthlyMessages = effectiveMessages(storedUser, "monthly", pkCtx)
+        userLevel.dailyMessages = effectiveMessages(storedUser, "daily", pkCtx)
         userLevel.reactionsSent = Number(storedUser.reactionsSent) || 0
         userLevel.reactionsReceived = Number(storedUser.reactionsReceived) || 0
         userLevel.countingSent = Number(storedUser.countingSent) || 0
@@ -1558,6 +1153,7 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
         moderator: isMod,
         hiddenMembers,
         pageInfo: { page, pageCount, pageSize },
+        sort: { key: sortKey, label: sortView.label, unit: sortView.unit || "" },
     })
 })
 
@@ -1783,6 +1379,17 @@ app.get("/logout", async function(req, res) {
 // ========================================================================= \\
 
 app.get("/api", function(req, res) { res.send("ඞ") })
+
+// Un /CODE suelto (6-10 alfanuméricos): solo es un drop del servidor
+// principal. Va al final para pisar ninguna ruta fija (/rank, /logout…).
+app.get("/:code([A-Z0-9]{6,10})", function(req, res, next) {
+    const dropsHost = Drops.dropsHostname()
+    if (dropsHost && req.hostname === dropsHost) {
+        req.params.guild = Drops.MAIN_GUILD_ID
+        return dropRateLimit(req, res, () => handleDropClaim(req, res))
+    }
+    return next()
+})
 
 app.get("*", function(req, res) { res.status(404); sendPage(res, "404") })
 
