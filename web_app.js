@@ -298,6 +298,16 @@ async function handleDropClaim(req, res) {
     }
     const expiredDrop = d => Number(d.expiresAt) <= Date.now()
 
+    // Apartado 4 (solo drops reservados): quiénes pueden reclamar. Con los
+    // nombres guardados al crear no hace falta preguntar a la API de Discord.
+    const allowNames = d => (Array.isArray(d?.allow) ? d.allow : []).map(u => escapeDropHtml(String(u?.name || "").trim() || `usuario ${String(u?.id || "?").slice(-4)}`))
+    const reserveDetail = d => {
+        const names = allowNames(d)
+        if (!names.length) return ""
+        const shown = names.slice(0, 12).join(", ") + (names.length > 12 ? ` y ${names.length - 12} más` : "")
+        return `<div class="detail"><span>Reservado a</span><strong>${shown}</strong><small>Solo estas personas pueden reclamarlo.</small></div>`
+    }
+
     // CTA fija: rango primero (donde se ve el resultado) y records después.
     const serverButtons = `<a class="btn-primary" href="/rank/${encodeURIComponent(guildId)}">Ver mi rango</a>`
         + `<a class="secondary" href="/records/${encodeURIComponent(guildId)}">Ver records</a>`
@@ -315,12 +325,16 @@ async function handleDropClaim(req, res) {
 
     const check = Drops.validateClaim(drop, user?.id || "", Date.now())
     const left = Drops.claimsLeft(drop)
-    const dropDetails = (d, l, ended = expiredDrop(d)) => rewardsDetail(d) + claimsDetail(d, l) + expiryDetail(d, ended)
+    const dropDetails = (d, l, ended = expiredDrop(d)) => rewardsDetail(d) + reserveDetail(d) + claimsDetail(d, l) + expiryDetail(d, ended)
 
     if (!user) {
+        const reserved = allowNames(drop)
+        const reservedNote = reserved.length
+            ? ` Está <strong>reservado</strong>: solo lo pueden reclamar <strong>${reserved.slice(0, 12).join(", ")}${reserved.length > 12 ? ` y ${reserved.length - 12} más` : ""}</strong>.`
+            : ""
         return res.status(401).send(renderCelebrationPage({
             title: drop.name,
-            message: `El staff de <strong>${guildName}</strong> está repartiendo <strong>${dropPrize(drop)}</strong>. <strong>Inicia sesión con Discord</strong> para reclamar el tuyo antes de que se agote o caduque.`,
+            message: `El staff de <strong>${guildName}</strong> está repartiendo <strong>${dropPrize(drop)}</strong>.${reservedNote} <strong>Inicia sesión con Discord</strong> para reclamar el tuyo antes de que se agote o caduque.`,
             badge: "gift",
             status: "login",
             celebration: "soft",
@@ -338,7 +352,7 @@ async function handleDropClaim(req, res) {
             kicker: "Terminado",
             status: "expired",
             celebration: false,
-            detailsHtml: rewardsDetail(drop) + claimsDetail(drop, left) + expiryDetail(drop, true),
+            detailsHtml: rewardsDetail(drop) + reserveDetail(drop) + claimsDetail(drop, left) + expiryDetail(drop, true),
             actionsHtml: serverButtons,
         }))
     }
@@ -351,7 +365,7 @@ async function handleDropClaim(req, res) {
             kicker: "Terminado",
             status: "expired",
             celebration: false,
-            detailsHtml: rewardsDetail(drop) + claimsDetail(drop, 0) + expiryDetail(drop, true),
+            detailsHtml: rewardsDetail(drop) + reserveDetail(drop) + claimsDetail(drop, 0) + expiryDetail(drop, true),
             actionsHtml: serverButtons,
         }))
     }
@@ -364,7 +378,20 @@ async function handleDropClaim(req, res) {
             kicker: "Agotado",
             status: "info",
             celebration: false,
-            detailsHtml: rewardsDetail(drop) + claimsDetail(drop, 0),
+            detailsHtml: rewardsDetail(drop) + reserveDetail(drop) + claimsDetail(drop, 0),
+            actionsHtml: serverButtons,
+        }))
+    }
+
+    if (check.reason === "not-allowed") {
+        return res.status(403).send(renderCelebrationPage({
+            title: drop.name,
+            message: "Este drop está <strong>reservado</strong>: solo lo pueden reclamar las personas de la lista. Si te toca, pide al staff que te añada.",
+            badge: "lock",
+            kicker: "Reservado",
+            status: "info",
+            celebration: false,
+            detailsHtml: dropDetails(drop, left),
             actionsHtml: serverButtons,
         }))
     }
@@ -384,6 +411,18 @@ async function handleDropClaim(req, res) {
 
     const claimed = await Drops.claimDrop(client, guildId, code, String(user.id))
     if (!claimed.ok) {
+        if (claimed.reason === "not-allowed") {
+            return res.status(403).send(renderCelebrationPage({
+                title: drop.name,
+                message: "Alguien ha reservado el drop mientras abrías la página: ahora solo lo pueden reclamar las personas de la lista.",
+                badge: "lock",
+                kicker: "Reservado",
+                status: "info",
+                celebration: false,
+                detailsHtml: dropDetails(claimed.drop || drop, Drops.claimsLeft(claimed.drop || drop)),
+                actionsHtml: serverButtons,
+            }))
+        }
         if (claimed.reason === "role-hierarchy") {
             return res.status(403).send(renderCelebrationPage({
                 title: drop.name,
@@ -440,7 +479,7 @@ async function handleDropClaim(req, res) {
             kicker: "Agotado",
             status: "info",
             celebration: false,
-            detailsHtml: rewardsDetail(drop) + claimsDetail(drop, 0),
+            detailsHtml: rewardsDetail(drop) + reserveDetail(drop) + claimsDetail(drop, 0),
             actionsHtml: serverButtons,
         }))
     }

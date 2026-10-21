@@ -137,7 +137,7 @@ Object.entries(settings).forEach(x => {
 const schema = { 
     _id: String,
     users: { type: Object }, // xp, monthlyXP, dailyXP, cooldown, hidden, records { "<recordId>:<threshold>": true }, + progreso: streak {current,max,lastDay}, reactionsSent, reactionsReceived, channels, countingSent, pokemonCaught, voiceJoined, voiceMinutes, coins, coinsMax + contadores: messages, monthlyMessages, dailyMessages, monthlyMessagesMax, dailyMessagesMax
-    drops: { type: Object, default: {} }, // drops de XP reclamables por web: { "<CODE>": { name, amount, maxClaims, claims: [userIds], expiresAt, createdBy, createdAt } }
+    drops: { type: Object, default: {} }, // drops de XP reclamables por web: { "<CODE>": { name, amount, maxClaims, claims: [userIds], allow: [{id, name}] (reservas: si tiene gente, solo ellos reclaman), expiresAt, createdBy, createdAt } }
     settings: settingsObj,
     info: {
         lastUpdate: { type: Number, default: 0 },

@@ -18,6 +18,7 @@ const ICONS = {
     check: '<path d="M20 6 9 17l-5-5"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
     hourglass: '<path d="M19 2H5"/><path d="M19 22H5"/><path d="M17 2v3.5a3.5 3.5 0 0 1-1.4 2.8L12 11l-3.6-2.7A3.5 3.5 0 0 1 7 5.5V2"/><path d="M7 22v-3.5a3.5 3.5 0 0 1 1.4-2.8L12 13l3.6 2.7a3.5 3.5 0 0 1 1.4 2.8V22"/>',
+    lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><path d="M12 15v1"/>',
     alert: '<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z"/>',
 }
 

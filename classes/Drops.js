@@ -3,7 +3,9 @@
 // cupo total de reclamaciones y caduca pasado un tiempo.
 //
 // Guardado en el doc del servidor: drops { "<CODE>": {
-//   name, amount, maxClaims, claims: [userIds], expiresAt, createdBy, createdAt } }
+//   name, amount, maxClaims, claims: [userIds], allow: [{id, name}],
+//   expiresAt, createdBy, createdAt } }. allow = reservas: si tiene gente,
+// solo ellos pueden reclamar (para premios de minijuegos y eventos).
 
 // 8 caracteres (= ^8 combinaciones criptográficas: inviable adivinarlos por
 // script, y aun así el enlace lleva rate limit anti-fuerza-bruta).
@@ -75,6 +77,7 @@ const LIMITS = {
     qtyMax: 100, // unidades por reclamo en drops de objetos
     usesMin: 1,
     usesMax: 5000,
+    allowedMax: 100, // reservas por drop (límite extremo de emergencia)
     durationMin: 5, // minutos
     durationMax: 30 * 24 * 60, // 30 días
     nameMax: 40,
@@ -235,6 +238,26 @@ function sanitizeName(name) {
     return String(name || "").trim().slice(0, LIMITS.nameMax)
 }
 
+// Reservas del drop: [{"id","name"}]. Solo IDs numéricos; sin duplicados;
+// nombre recortado (el web lo enseña tal cual). Sin lista → drop público.
+function normalizeAllowedUsers(list) {
+    const out = []
+    const seen = new Set()
+    for (const raw of Array.isArray(list) ? list : []) {
+        const id = String(raw?.id || "").replace(/\D/g, "")
+        if (!id || id.length > 25 || seen.has(id)) continue
+        seen.add(id)
+        out.push({ id, name: String(raw?.name || "").slice(0, 100) })
+        if (out.length >= LIMITS.allowedMax) break
+    }
+    return out
+}
+
+// IDs de las reservas, planos y listos para comparar.
+function allowedIds(drop) {
+    return (Array.isArray(drop?.allow) ? drop.allow : []).map(u => String(u?.id || "")).filter(Boolean)
+}
+
 function normalizePrizes(p) {
     const roles = (Array.isArray(p?.roles) ? p.roles : [])
         .map(r => ({ id: String(r?.id || ""), name: String(r?.name || "").slice(0, 100) }))
@@ -259,13 +282,14 @@ function prizesCount(prizes) {
     return (p.xp > 0 ? 1 : 0) + (p.coins > 0 ? 1 : 0) + p.roles.length + p.items.length
 }
 
-function buildDrop({ code, name, amount, maxClaims, claims, expiresAt, createdBy, createdAt, kind, roleId, roleName, itemId, itemName, prizes }) {
+function buildDrop({ code, name, amount, maxClaims, claims, expiresAt, createdBy, createdAt, kind, roleId, roleName, itemId, itemName, prizes, allowedUsers }) {
     const cleanKind = kind === "coins" ? "coins" : kind === "role" ? "role" : kind === "item" ? "item" : kind === "bundle" ? "bundle" : "xp"
     return {
         name: sanitizeName(name) || "Drop de XP",
         amount: Math.round(Number(amount) || 0),
         maxClaims: Math.round(Number(maxClaims) || 0),
         claims: Array.isArray(claims) ? claims.map(String) : [],
+        allow: normalizeAllowedUsers(allowedUsers),
         expiresAt: Number(expiresAt) || 0,
         createdBy: String(createdBy || ""),
         createdAt: Number(createdAt) || Date.now(),
@@ -536,12 +560,15 @@ async function revokeDropRole(client, guildId, userId, roleId) {
     return setDropRole(client, guildId, userId, roleId, true)
 }
 
-// Estado de un reclamo sin tocar la DB. now inyectable (tests).
+// Estado de un reclamo sin tocar la DB. now inyectable (tests). "not-allowed"
+// cuando el drop está reservado y quien llama no está en la lista.
 function validateClaim(drop, userId, now = Date.now()) {
     if (!drop) return { ok: false, reason: "missing" }
     if (Number(drop.expiresAt) <= now) return { ok: false, reason: "expired" }
     const claims = Array.isArray(drop.claims) ? drop.claims : []
     if (claims.map(String).includes(String(userId))) return { ok: false, reason: "already" }
+    const allow = allowedIds(drop)
+    if (allow.length && !allow.includes(String(userId))) return { ok: false, reason: "not-allowed" }
     if (claims.length >= Number(drop.maxClaims)) return { ok: false, reason: "soldout" }
     return { ok: true }
 }
@@ -576,7 +603,7 @@ async function fetchDoc(client, guildId, filter) {
     return q?.exec ? await q.exec().catch(() => null) : await q.catch(() => null)
 }
 
-async function createDrop(client, guildId, { amount, maxClaims, durationMin, name, createdBy, kind = "xp", roleId = "", roleName = "", itemId = "", itemName = "", prizes = null, now = Date.now(), boatAvailable = boatEnabled() }) {
+async function createDrop(client, guildId, { amount, maxClaims, durationMin, name, createdBy, kind = "xp", roleId = "", roleName = "", itemId = "", itemName = "", prizes = null, allowedUsers = null, now = Date.now(), boatAvailable = boatEnabled() }) {
     const errors = validateDropInput({ amount, maxClaims, durationMin, kind, roleId, itemId, prizes, boatAvailable })
     if (errors.length) return { ok: false, errors }
 
@@ -599,6 +626,7 @@ async function createDrop(client, guildId, { amount, maxClaims, durationMin, nam
         itemId,
         itemName,
         prizes,
+        allowedUsers,
     })
     await client.db.update(guildId, { $set: { [`drops.${code}`]: drop } }).exec()
     return { ok: true, code, drop, url: dropPath(guildId, code) }
@@ -822,6 +850,8 @@ module.exports = {
     sanitizeName,
     normalizePrizes,
     prizesCount,
+    normalizeAllowedUsers,
+    allowedIds,
     ROLE_DANGEROUS_PERMS,
     roleIsDangerous,
     creatorCanGiveRole,
