@@ -592,7 +592,7 @@ test("asistente de crear: draft y helpers", () => {
     // Borrador base: nombre del comando, usos y duración por defecto.
     const d = dropCmd.makeDraft("Fiesta")
     assert.equal(d.name, "Fiesta")
-    assert.equal(d.maxClaims, 10)
+    assert.equal(d.maxClaims, 3)
     assert.equal(d.durationMin, 1440)
     assert.deepEqual(d.items, [])
     assert.deepEqual(dropCmd.draftPrizes(d), { xp: 0, coins: 0, roles: [], items: [] })
@@ -620,9 +620,10 @@ test("asistente de crear: draft y helpers", () => {
     dropCmd.draftRemoveAllow(d, "no-existe")
     assert.equal(d.allow.length, Drops.LIMITS.allowedMax - 1, "quitar a quien no está: no ruido")
 
-    // Duración: etiqueta de preset y minutos en crudo si no está en la lista.
+    // Duración: etiqueta de preset y horas/minutos compactos si no está.
     assert.equal(dropCmd.durationLabel(60), "1 hora")
-    assert.ok(dropCmd.durationLabel(500).includes("500"))
+    assert.equal(dropCmd.durationLabel(2160), "36 horas", "valor del parámetro caducidad")
+    assert.equal(dropCmd.durationLabel(500), "8 h 20 min")
 })
 
 test("asistente de crear: panel raíz con menús y botones", () => {
@@ -645,7 +646,7 @@ test("asistente de crear: panel raíz con menús y botones", () => {
     assert.ok(rootFlat.text.includes("Crear drop: Fiesta"), rootFlat.text)
     assert.ok(rootFlat.text.includes("nada todavía"), "sin premios se ve claro")
     assert.ok(rootFlat.text.includes("Público"), "sin reservas se dice público")
-    assert.ok(rootFlat.text.includes("Usos:** 10"), rootFlat.text)
+    assert.ok(rootFlat.text.includes("Usos:** 3"), rootFlat.text)
     // Separadores entre bloque config, cabecera premio, lista premios, menús, botones.
     assert.ok(root.toJSON().components.filter(c => c.type === 14).length >= 5, "separadores del esquema")
     // Menú de premios: xp/coins/item. Menú de usuarios nativo (type 5).
@@ -760,13 +761,69 @@ test("asistente de crear: runCreate abre el mensaje y no toca la DB", async () =
     assert.ok(int2.sent.includes("Drop #1"), int2.sent)
 })
 
-test("asistente de crear: metadata solo pide el nombre", () => {
+test("asistente de crear: metadata con nombre, usos y caducidad", () => {
     const dropCmd = require("../commands/slash/drops.js")
-    assert.deepEqual(dropCmd.metadata.args.map(a => a.name), ["crear", "mostrar", "eliminar", "permiso"])
+    assert.deepEqual(dropCmd.metadata.args.map(a => a.name), ["crear", "mostrar", "eliminar", "permisos"])
     const crear = dropCmd.metadata.args[0]
-    assert.deepEqual(crear.args.map(a => a.name), ["nombre"], "solo nombre")
-    assert.ok(!crear.args[0].required, "nombre opcional (Drop #N automático)")
-    assert.ok((crear.description || "").length <= 100, "descripción corta")
+    assert.deepEqual(crear.args.map(a => a.name), ["nombre", "usos", "caducidad"], "3 parámetros opcionales")
+    assert.ok(crear.args.every(a => !a.required), "todos opcionales")
+    const usos = crear.args[1], cad = crear.args[2]
+    assert.ok(usos.description.includes("por defecto: 3"), usos.description)
+    assert.ok(cad.description.includes("por defecto: 24"), cad.description)
+    assert.equal(usos.min, 1)
+    assert.equal(cad.min, 1)
+    // Descripciones dentro del límite de Discord (100).
+    assert.ok(crear.args.every(a => (a.description || "").length <= 100), "descripción corta")
+    assert.ok((crear.description || "").length <= 100, "descripción corto del subcomando")
+    assert.ok((dropCmd.metadata.description || "").length <= 100, "descripción corta del comando")
+})
+
+test("asistente de crear: parámetros usos y caducidad llegan al borrador", async () => {
+    const Tools = require("../classes/Tools.js")
+    const dropCmd = require("../commands/slash/drops.js")
+    const settings = { enabled: true, manualPerms: false, maxLevel: 100, curve: { 1: 100, 2: 0, 3: 0 }, rounding: 1 }
+    const mkTools = doc => ({
+        fetchSettings: async () => doc,
+        canManageServer: () => true,
+        getLevel: (...a) => Tools.global.getLevel(...a),
+        commafy: (...a) => Tools.global.commafy(...a),
+        warn: msg => { throw new Error("warn: " + msg) },
+        WEBSITE: "https://example.test",
+    })
+    const mkInt = values => {
+        const int = {
+            user: { id: "staff1" },
+            guild: { id: "g", ownerId: "owner9" },
+            member: { roles: { highest: { position: 50 } } },
+            options: {
+                get: name => (name in values ? { value: values[name] } : undefined),
+                getInteger: name => (name in values ? values[name] : null),
+                getSubcommand: () => "crear",
+            },
+            deferReply: async () => {},
+            editReply: async msg => { int.sent = flatText(msg); return msg },
+        }
+        return int
+    }
+    // Con parámetros: usos y caducidad (horas) se aplican al panel.
+    const doc = { _id: "g", users: {}, drops: {}, settings }
+    const int = mkInt({ nombre: "Feria", usos: 12, caducidad: 36 })
+    await dropCmd.run(fakeClient(doc), int, mkTools(doc))
+    assert.ok(int.sent.includes("Usos:** 12"), int.sent)
+    assert.ok(int.sent.includes("36 horas"), int.sent)
+
+    // Sin parámetros: por defecto 3 usos y 24 horas.
+    const doc2 = { _id: "g", users: {}, drops: {}, settings: { ...settings } }
+    const int2 = mkInt({})
+    await dropCmd.run(fakeClient(doc2), int2, mkTools(doc2))
+    assert.ok(int2.sent.includes("Usos:** 3"), int2.sent)
+    assert.ok(int2.sent.includes("24 horas"), int2.sent)
+    // Fuera de rango: se acota a los límites del sistema (usos máx 5000, 720 h).
+    const doc3 = { _id: "g", users: {}, drops: {}, settings: { ...settings } }
+    const int3 = mkInt({ usos: 99999, caducidad: 5000 })
+    await dropCmd.run(fakeClient(doc3), int3, mkTools(doc3))
+    assert.ok(int3.sent.includes("Usos:** 5.000"), int3.sent)
+    assert.ok(int3.sent.includes("720 horas"), int3.sent)
 })
 
 test("asistente de crear: resumen con usos, duración y privados", () => {
@@ -824,10 +881,11 @@ test("canUseDrops: gestores siempre, si no roles de la allowlist", () => {
 
 test("/drops permiso añade, lista y quita roles (solo gestores)", async () => {
     const dropCmd = require("../commands/slash/drops.js")
-    assert.deepEqual(dropCmd.metadata.args.map(a => a.name), ["crear", "mostrar", "eliminar", "permiso"])
+    assert.deepEqual(dropCmd.metadata.args.map(a => a.name), ["crear", "mostrar", "eliminar", "permisos"])
     const mkTools = (manager) => ({
         fetchSettings: async () => doc,
         canManageServer: () => manager,
+        commafy: n => String(n),
         warn: msg => { throw new Error("warn: " + msg) },
     })
     const doc = { _id: "g", users: {}, drops: {}, settings: { enabled: true, manualPerms: false } }
@@ -838,7 +896,7 @@ test("/drops permiso añade, lista y quita roles (solo gestores)", async () => {
         options: {
             get: name => (name === "quitar" && quitar ? { value: true } : undefined),
             getRole: () => getRole,
-            getSubcommand: () => "permiso",
+            getSubcommand: () => "permisos",
         },
         deferReply: async () => {},
         editReply: async function(msg) { this.sent = flatText(msg); return msg },
@@ -847,7 +905,7 @@ test("/drops permiso añade, lista y quita roles (solo gestores)", async () => {
     let sent = ""
     await dropCmd.run(client, {
         user: { id: "staff1" }, guild: { id: "g" },
-        options: { get: () => undefined, getRole: () => undefined, getSubcommand: () => "permiso" },
+        options: { get: () => undefined, getRole: () => undefined, getSubcommand: () => "permisos" },
         deferReply: async () => {},
         editReply: async msg => { sent = flatText(msg) },
     }, mkTools(true))
@@ -873,7 +931,7 @@ test("/drops permiso añade, lista y quita roles (solo gestores)", async () => {
     sent = ""
     await dropCmd.run(client, {
         user: { id: "staff1" }, guild: { id: "g" },
-        options: { get: () => undefined, getRole: () => undefined, getSubcommand: () => "permiso" },
+        options: { get: () => undefined, getRole: () => undefined, getSubcommand: () => "permisos" },
         deferReply: async () => {},
         editReply: async msg => { sent = flatText(msg) },
     }, mkTools(true))

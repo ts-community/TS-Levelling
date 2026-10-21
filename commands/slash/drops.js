@@ -226,7 +226,8 @@ const MK = {
     DONE: "wizmk:done",
 }
 
-function makeDraft(name, { maxClaims = 10, durationMin = 1440 } = {}) {
+// Borrador del asistente. Por defecto: 3 usos y 24 h de caducidad.
+function makeDraft(name, { maxClaims = 3, durationMin = 1440 } = {}) {
     return {
         name: String(name || "").trim() || "Drop",
         maxClaims: Math.max(1, Math.min(Drops.LIMITS.usesMax, Math.round(Number(maxClaims) || 10))),
@@ -284,7 +285,14 @@ function draftRemoveAllow(d, id) {
 function durationLabel(min) {
     const m = Math.round(Number(min) || 0)
     const hit = Drops.DURATION_PRESETS.find(p => p.minutes === m)
-    return hit ? hit.label : `${fmtInt(m)} minutos`
+    if (hit) return hit.label
+    // No preset: horas redondas y la cola de minutos si la hay.
+    if (m >= 60) {
+        const hh = Math.floor(m / 60), mm = m % 60
+        const h = hh === 1 ? "hora" : "horas"
+        return mm ? `${fmtInt(hh)} h ${fmtInt(mm)} min` : `${fmtInt(hh)} ${h}`
+    }
+    return `${fmtInt(m)} minutos`
 }
 
 // "🌍 Público" o "🔒 Privado: Nombre (<@id>), ...".
@@ -591,11 +599,13 @@ module.exports = {
         description: "Drops reclamables por web (XP, monedas, objetos).",
         args: [
             { type: "subcommand", name: "crear", description: "Crea un drop con enlace para reclamar (asistente interactivo)", args: [
-                { type: "string", name: "nombre", description: "Nombre del drop (opcional: uso Drop #N)", required: false },
+                { type: "string", name: "nombre", description: "Nombre del drop (por defecto: Drop #N)", required: false },
+                { type: "integer", name: "usos", description: "Usos totales del drop: cada persona lo reclama una vez (por defecto: 3)", required: false, min: 1, max: 5000 },
+                { type: "integer", name: "caducidad", description: "Horas hasta que el enlace caduca (por defecto: 24)", required: false, min: 1, max: 720 },
             ]},
             { type: "subcommand", name: "mostrar", description: "Ver los drops activos del servidor", args: [] },
             { type: "subcommand", name: "eliminar", description: "Eliminar un drop con un menú", args: [] },
-            { type: "subcommand", name: "permiso", description: "Roles que pueden usar /drops (solo gestores)", args: [
+            { type: "subcommand", name: "permisos", description: "Roles que pueden usar /drops (solo gestores)", args: [
                 { type: "role", name: "rol", description: "Rol a añadir (sin rol: ver la lista)", required: false },
                 { type: "bool", name: "quitar", description: "Quitar el rol en vez de añadirlo", required: false },
             ]},
@@ -609,7 +619,7 @@ module.exports = {
         const sub = int.options.getSubcommand(false)
         // Permiso solo para gestores (aunque tengas rol de drops, los permisos
         // los tocan solo ellos). Todo lo demás: gestores o roles de la DB.
-        if (sub === "permiso") {
+        if (sub === "permisos") {
             if (!isManager) return tools.warn("*notMod")
         } else {
             const canUse = isManager || Drops.canUseDrops({ isManager: false, memberRoles: int.member?.roles?.cache, settings: db.settings })
@@ -623,15 +633,15 @@ module.exports = {
         await int.deferReply().catch(() => {})
         if (sub === "mostrar") return module.exports.runList(client, int, tools, {})
         if (sub === "eliminar") return module.exports.runList(client, int, tools, { deleteMode: true })
-        if (sub === "permiso") return module.exports.runPermiso(client, int, tools)
+        if (sub === "permisos") return module.exports.runPermiso(client, int, tools)
         return module.exports.runCreate(client, int, tools, db)
     },
 
     async runCreate(client, int, tools, db) {
-        // ─── Asistente interactivo /drops crear ───
-        // El comando solo pide el nombre (opcional); el resto se configura
-        // en el mensaje con menús y botones V2. Mensaje público (sin efímero);
-        // las elecciones de cantidad van en un panel efímero aparte.
+        // Asistente ─── /drops crear [nombre] [usos] [caducidad]
+        // El usuario puede preajustar nombre, usos y caducidad (en horas) por
+        // parámetro; si no, por defecto 3 usos y 24 h. El resto (premios,
+        // whiteList) se configura en el mensaje con menús y botones.
         const guildId = int.guild.id
         const authorId = int.user.id
         const boat = Drops.boatEnabled()
@@ -643,7 +653,13 @@ module.exports = {
             dropSeq = (Number(doc?.settings?.dropSeq) || 0) + 1
         } catch {}
 
-        const draft = makeDraft(String(int.options.get("nombre")?.value || "").trim() || `Drop #${dropSeq}`)
+        const nameRaw = String(int.options.get("nombre")?.value || "").trim()
+        const over = {}
+        const usesOpt = int.options.getInteger?.("usos")
+        if (usesOpt) over.maxClaims = Math.max(1, Math.min(Drops.LIMITS.usesMax, Math.round(usesOpt)))
+        const durOpt = int.options.getInteger?.("caducidad")
+        if (durOpt) over.durationMin = Math.max(Drops.LIMITS.durationMin, Math.min(Drops.LIMITS.durationMax, Math.round(durOpt * 60)))
+        const draft = makeDraft(nameRaw || `Drop #${dropSeq}`, over)
 
         // Tienda de UnbelievaBoat: carga bajo demanda.
         let storeItems = null, storeError = false
