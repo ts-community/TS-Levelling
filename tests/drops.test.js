@@ -513,36 +513,35 @@ test("bundle claim concede todo y compensa fallos parciales", async () => {
     assert.equal(doc.users.u2?.xp || 0, 0)
 })
 
-test("/drop autocomplete suggests store items by name", async () => {
+test("autocomplete: solo el parámetro drop lista drops activos", async () => {
     const dropCmd = require("../commands/slash/drops.js")
-    const storeItems = [{ id: "aaa", name: "Pepino dorado", price: "1", emoji_unicode: "" }]
-    const realFetch = globalThis.fetch
-    globalThis.fetch = async () => ({ ok: true, json: async () => ({ items: storeItems }) })
-    process.env.UNBELIEVABOAT_TOKEN = "test-token"
-    try {
-        Drops.clearBoatStoreCache("g")
-        let answered = null
-        const int = {
-            guildId: "g",
-            options: { getFocused: () => ({ name: "objeto2", value: "pep" }) },
-            respond: async choices => { answered = choices },
-        }
-        await dropCmd.autocomplete({}, int)
-        assert.deepEqual(answered, [{ name: "Pepino dorado", value: "aaa" }])
-
-        answered = null
-        const other = {
-            guildId: "g",
-            options: { getFocused: () => ({ name: "cantidad", value: "x" }) },
-            respond: async choices => { answered = choices },
-        }
-        await dropCmd.autocomplete({}, other)
-        assert.deepEqual(answered, [], "otras opciones no autocompletan")
-    } finally {
-        globalThis.fetch = realFetch
-        delete process.env.UNBELIEVABOAT_TOKEN
-        Drops.clearBoatStoreCache("g")
+    // El resto de parámetros ya no autocompletan: la tienda se elige en el
+    // asistente, no al escribir el comando.
+    let answered = null
+    const other = {
+        guildId: "g",
+        options: { getFocused: () => ({ name: "objeto2", value: "pep" }) },
+        respond: async choices => { answered = choices },
     }
+    await dropCmd.autocomplete({}, other)
+    assert.deepEqual(answered, [], "otras opciones no autocompletan")
+
+    // "drop": lista los activos con nombre, código y usos reclamados.
+    const doc = { _id: "g", users: {}, drops: {}, settings: {} }
+    const client = fakeClient(doc)
+    const created = await Drops.createDrop(client, "g", { amount: 1000, maxClaims: 3, durationMin: 60, name: "Premio", createdBy: "s" })
+    answered = null
+    const int = {
+        guildId: "g",
+        memberPermissions: { has: () => true },
+        options: { getFocused: () => ({ name: "drop", value: "prem" }) },
+        respond: async choices => { answered = choices },
+    }
+    await dropCmd.autocomplete(client, int)
+    assert.equal(answered.length, 1, answered)
+    assert.equal(answered[0].value, created.code)
+    assert.ok(answered[0].name.includes("Premio"), answered[0].name)
+    assert.ok(answered[0].name.includes("0/3 usos"), answered[0].name)
 })
 
 test("deleteDrop and listDrops", async () => {
@@ -644,7 +643,7 @@ test("asistente de crear: panel raíz con menús y botones", () => {
     const root = dropCmd.buildMakeContainer(dropCmd.makeDraft("Fiesta"), { tools: mkTools, boat: true, storeItems })
     const rootFlat = flatOf(root)
     assert.ok(rootFlat.text.includes("Crear drop: Fiesta"), rootFlat.text)
-    assert.ok(rootFlat.text.includes("nada todavía"), "sin premios se ve claro")
+    assert.ok(rootFlat.text.includes("Sin recompensas por ahora"), "sin premios se ve claro")
     assert.ok(rootFlat.text.includes("Público"), "sin reservas se dice público")
     assert.ok(rootFlat.text.includes("Usos:** 3"), rootFlat.text)
     // Separadores entre bloque config, cabecera premio, lista premios, menús, botones.
@@ -670,7 +669,7 @@ test("asistente de crear: panel raíz con menús y botones", () => {
     // Con XP: premio en la lista y Crear encendido.
     const withXp = dropCmd.buildMakeContainer({ ...dropCmd.makeDraft("Fiesta"), xp: 5000 }, { tools: mkTools, boat: true })
     const withXpFlat = flatOf(withXp)
-    assert.ok(withXpFlat.text.includes("5.000 XP"), withXpFlat.text)
+    assert.ok(withXpFlat.text.includes("**5.000** XP"), withXpFlat.text)
     assert.ok(withXpFlat.ids.some(c => c.id === "wizmk:create" && !c.disabled), "Crear encendido con premio")
 })
 
@@ -710,12 +709,13 @@ test("asistente de crear: paneles efímeros por tipo de premio", () => {
     assert.ok(afterJson.includes("3× Pepino dorado"), "cantidad en el label")
 })
 
-test("asistente de crear: confirmación efímera y cancelado", () => {
+test("asistente de crear: cancelado y sin confirmación aparte", () => {
     const dropCmd = require("../commands/slash/drops.js")
-    const confirmJson = JSON.stringify(dropCmd.buildConfirmContainer("✅ Premios: 🆙 10 XP").toJSON())
-    assert.ok(confirmJson.includes("✅ Premios:"), confirmJson)
+    // El asistente ya no tiene pantalla de confirmación: se valida todo en el
+    // botón Crear. Solo queda la de cancelado.
     const cancelJson = JSON.stringify(dropCmd.buildCancelledContainer().toJSON())
     assert.ok(cancelJson.includes("Cancelado"), cancelJson)
+    assert.ok(!dropCmd.buildConfirmContainer, "pantalla de confirmación retirada")
 })
 
 test("asistente de crear: runCreate abre el mensaje y no toca la DB", async () => {
@@ -750,7 +750,7 @@ test("asistente de crear: runCreate abre el mensaje y no toca la DB", async () =
     const int = mkInt({ nombre: "Fiesta" })
     await dropCmd.run(fakeClient(doc), int, mkTools(doc))
     assert.ok(int.sent.includes("Crear drop: Fiesta"), int.sent)
-    assert.ok(int.sent.includes("nada todavía"), "sin premios todavía")
+    assert.ok(int.sent.includes("Sin recompensas por ahora"), "sin premios todavía")
     assert.equal(Object.keys(doc.drops).length, 0, "nada se crea hasta el botón Crear")
     assert.equal(doc.settings.dropSeq, undefined, "el contador no avanza sin crear")
 
@@ -839,7 +839,7 @@ test("asistente de crear: resumen con usos, duración y privados", () => {
     assert.ok(text.includes("Usos:** 1"), text)
     assert.ok(text.includes("1 hora"), text)
     assert.ok(text.includes("<@1000000000000000001>"), "privado con mención")
-    assert.ok(text.includes("Privado"), text)
+    assert.ok(text.includes("Reservado"), text, "reservado se nombra")
     // Quitar el único privado vuelve a público y no baja los usos a cero.
     dropCmd.draftRemoveAllow(d, "1000000000000000001")
     const text2 = dropCmd.buildMakeContainer(d, { tools: mkTools, boat: true }).toJSON().components
@@ -909,7 +909,7 @@ test("/drops permiso añade, lista y quita roles (solo gestores)", async () => {
         deferReply: async () => {},
         editReply: async msg => { sent = flatText(msg) },
     }, mkTools(true))
-    assert.ok(sent.includes("Nadie extra"), sent)
+    assert.ok(sent.includes("Solo quienes gestionan el servidor"), sent)
     // Con rol de drops pero sin gestionar: denegado igual.
     await assert.rejects(
         dropCmd.run(client, mkInt({ id: "r1", name: "Staff" }), {
@@ -988,9 +988,9 @@ test("/drops mostrar: título, links con (x/y), tachado si agotado y volver atr�
         const texts = textsOf(list)
         assert.ok(texts.includes("## 🎁 Drops del servidor"), "título")
         assert.ok(!texts.includes("Cada persona reclama"), "sin párrafo explicativo largo")
-        assert.ok(texts.includes("[`AAA111`](https://example.test/drop/g/AAA111) (1/3)"), "link con reclamados")
+        assert.ok(texts.includes("[`AAA111`](https://example.test/drop/g/AAA111) - 1/3 -"), "link con reclamados")
         assert.ok(!texts.includes("caduca <t:"), "sin caducidad por línea")
-        assert.ok(texts.includes("~~[`BBB222`](https://example.test/drop/g/BBB222)~~ (2/2)"), "agotado tachado")
+        assert.ok(texts.includes("~~[`BBB222`](https://example.test/drop/g/BBB222)~~ - 2/2 -"), "agotado tachado")
         assert.ok(!texts.includes("CCC333"), "caducados fuera")
         const menuJson = list.toJSON().components.flatMap(c => c.components || []).find(c => c.custom_id === "dropinspect")
         assert.ok(menuJson, "menú debajo")
@@ -999,7 +999,7 @@ test("/drops mostrar: título, links con (x/y), tachado si agotado y volver atr�
         // Vista detalle: unix corto, botones y vuelva atrás PRIMERO.
         const detail = dropCmd.buildDropDetailContainer(rowsOf().filter(r => !r.expired), rowsOf()[0], "https://example.test", "g", tools)
         const dTexts = textsOf(detail)
-        assert.ok(dTexts.includes("1.000 XP"), "premio exacto")
+        assert.ok(dTexts.includes("**1.000** XP"), "premio exacto")
         assert.ok(dTexts.includes("1/3"), "reclamados")
         const unix = Math.floor((now + 3600000) / 1000)
         assert.ok(dTexts.includes(`<t:${unix}:R>`), "caducidad corta")
@@ -1023,7 +1023,7 @@ test("/drops mostrar: título, links con (x/y), tachado si agotado y volver atr�
         const reservedRow = { code: "AAA111", drop: { ...rowsOf()[0].drop, allow: [{ id: "u1", name: "Pepe" }, { id: "u2", name: "Ana" }] }, left: 2, expired: false }
         const locked = dropCmd.buildDropDetailContainer([reservedRow, ...rowsOf().filter(r => !r.expired).slice(1)], reservedRow, "https://example.test", "g", tools)
         const lTexts = textsOf(locked)
-        assert.ok(lTexts.includes("Reservado:"), "línea de reserva")
+        assert.ok(lTexts.includes("Reservado"), "línea de reserva")
         assert.ok(lTexts.includes("<@u1> <@u2>"), "menciones de reservados")
         const lockedJson = locked.toJSON().components.flatMap(c => c.components || [])
         assert.deepEqual(
@@ -1036,7 +1036,7 @@ test("/drops mostrar: título, links con (x/y), tachado si agotado y volver atr�
         assert.deepEqual(quitMenu.options.map(o => [o.value, o.label]), [["u1", "Pepe"], ["u2", "Ana"]])
         // Lista: candado por línea en los reservados.
         const lockList = dropCmd.buildDropsListContainer([reservedRow, ...rowsOf().filter(r => !r.expired).slice(1)], "https://example.test", "g", tools)
-        assert.ok(textsOf(lockList).includes("AAA111) 🔒 (1/3)"), "candado en la lista")
+        assert.ok(textsOf(lockList).includes("[`AAA111`](https://example.test/drop/g/AAA111) 🔒 - 1/3 -"), "candado en la lista")
 
         // Tope de menú: 26 activos → 25 opciones + aviso.
         const many = Array.from({ length: 26 }, (_, i) => ({
@@ -1059,13 +1059,38 @@ test("/drops mostrar: título, links con (x/y), tachado si agotado y volver atr�
             return cont.toJSON().components.flatMap(c => c.components || []).some(c => c.custom_id === "dropinspect")
         }
 
-        // Modo eliminar: cabecera propia y menú de eleminares.
-        const delList = dropCmd.buildDropsListContainer(rowsOf().filter(r => !r.expired), "https://example.test", "g", tools, { deleteMode: true })
-        const delTexts = textsOf(delList)
-        assert.ok(delTexts.includes("## 🗑️ Eliminar un drop"), "cabecera de eliminar")
-        const emptyDel = dropCmd.buildDropsListContainer([], "https://example.test", "g", tools, { deleteMode: true })
-        assert.ok(textsOf(emptyDel).includes("no queda ninguno activo"), "vacío en modo eliminar")
+        // El modo eliminar se quiso como variante de la lista y ya no existe:
+        // siempre coge la cabecera normal.
+        const noDeleteMode = dropCmd.buildDropsListContainer(rowsOf().filter(r => !r.expired), "https://example.test", "g", tools, { deleteMode: true })
+        assert.ok(textsOf(noDeleteMode).includes("## 🎁 Drops del servidor"), "sin modo eliminar")
     })
+})
+
+test("/drops eliminar: pantalla de inexistente y borrado con resumen", async () => {
+    const dropCmd = require("../commands/slash/drops.js")
+    const doc = { _id: "g", users: {}, drops: {}, settings: {} }
+    const client = fakeClient(doc)
+    const created = await Drops.createDrop(client, "g", { amount: 1000, maxClaims: 3, durationMin: 60, name: "Fiesta", createdBy: "s" })
+    const mkInt = getString => ({
+        user: { id: "staff1" },
+        guild: { id: "g" },
+        options: { getString: () => getString },
+        deferReply: async () => {},
+        editReply: async function(msg) { this.sent = flatText(msg); return msg },
+    })
+    // Código que no existe: avisa y no borra nada.
+    const intMiss = mkInt("XXXXXX")
+    await dropCmd.runDelete(client, intMiss, { commafy: n => String(n) })
+    assert.ok(intMiss.sent.includes("## 🗑️ Eliminar drop"), intMiss.sent)
+    assert.ok(intMiss.sent.includes("No existe ningún drop"), intMiss.sent)
+    assert.ok(doc.drops[created.code], "nada borrado sin coincidencia")
+    // Drop real: eliminado con nombre y resumen de usos.
+    const intHit = mkInt(created.code)
+    await dropCmd.runDelete(client, intHit, { commafy: n => String(n) })
+    assert.ok(intHit.sent.includes("Drop eliminado"), intHit.sent)
+    assert.ok(intHit.sent.includes("Fiesta"), intHit.sent)
+    assert.ok(intHit.sent.includes("0/3"), intHit.sent)
+    assert.ok(!doc.drops[created.code], "borrado de la DB")
 })
 
 test("asistente de crear: objetos de la tienda se listan y se quitan", () => {
@@ -1215,5 +1240,5 @@ test("registro del perfil de reservas en el comando y contenedores", () => {
     // Con reservas: el mensaje final también muestra el enlace y la lista de privados
     const locked = dropCmd.buildCreatedContainer({ ...base, allow: [{ id: "u1", name: "Pepe" }] }, "BBB123", "https://example.test/drop/g/BBB123", mkTools, [{ id: "u1", name: "Pepe" }])
     assert.ok(JSON.stringify(locked.toJSON()).includes("https://example.test/drop/g/BBB123"), "enlace en mensaje final con privados")
-    assert.ok(JSON.stringify(locked.toJSON()).includes("Pepe"), "nombre de privado en mensaje final")
+    assert.ok(JSON.stringify(locked.toJSON()).includes("<@u1>"), "mención de privado en mensaje final")
 })

@@ -14,16 +14,23 @@ const MS_PER_YEAR = 365.25 * 24 * 3600 * 1000
 // en serie. Sin esto, dos mensajes (o dos /addxp) seguidos pueden leerse
 // mutuamente antes de que el write del XP llegue a la DB y anunciar dos
 // veces el mismo level-up o el mismo adelantamiento.
+//
+// Encadenado: cada llamada se registra en el Map ANTES de esperar su turno.
+// Con el patrón "await prev y luego registrarse", una ráfaga de mensajes
+// dejaba a todos los seguidores esperando AL MISMO previo; al liberarse,
+// todos reanudaban a la vez (paralelos) y cada uno leía el XP antes de los
+// $inc de los demás → 7 alertas seguidas del mismo cruce de rango, cada una
+// citando su propio mensaje con el XP viejo.
 const authorLocks = new Map()
 
 async function withAuthorLock(guildId, userId, fn) {
     const key = `${guildId}:${userId}`
-    const prev = authorLocks.get(key)
-    if (prev) { try { await prev } catch {} }
+    const tail = authorLocks.get(key) || null
     let release
     const mine = new Promise(resolve => { release = resolve })
     authorLocks.set(key, mine)
     try {
+        if (tail) { try { await tail } catch {} }
         return await fn()
     } finally {
         if (authorLocks.get(key) === mine) authorLocks.delete(key)

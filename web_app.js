@@ -14,7 +14,7 @@ const Tools = require('./classes/Tools.js')
 const Model = require("./classes/DatabaseModel.js");
 const LevelUpEmbed = require('./classes/LevelUpEmbed.js')
 const LevelUpMessage = require("./classes/LevelUpMessage.js")
-const { unlockWebEasterEgg, resolveServerId, DEFAULT_EASTEREGG_GUILD_ID } = require("./classes/WebEasterEgg.js")
+const { unlockWebEasterEgg, resolveServerId, getWebEasterMeta, DEFAULT_EASTEREGG_GUILD_ID } = require("./classes/WebEasterEgg.js")
 const Drops = require("./classes/Drops.js")
 const { createDropRateLimiter } = require("./app/celebration-page.js")
 // Tope anti-fuerza-bruta en páginas de drops (ver createDropRateLimiter).
@@ -124,6 +124,9 @@ app.use(function(req, res, next) {
     if (/^\/(drop|discord|auth)(\/|$)/.test(req.path)) return next()
     // Ruta corta de drops: /<servidor>/<CODIGO>.
     if (/^\/\d{10,30}\/[A-Z0-9]{6,10}\/?$/.test(req.path)) return next()
+    // Ruta corta sin servidor: /<CODIGO> (enlace directo de /drops del
+    // servidor principal; hasta ahora caía al 404 y se redirigía a niveles).
+    if (/^\/[A-Z0-9]{6,10}\/?$/i.test(req.path)) return next()
     return res.redirect(`${siteURL}${req.originalUrl}`)
 })
 

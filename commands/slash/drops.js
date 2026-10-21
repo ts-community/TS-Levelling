@@ -1,32 +1,56 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, MessageFlags, ModalBuilder, SeparatorBuilder, SeparatorSpacingSize, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextDisplayBuilder, TextInputBuilder, TextInputStyle, UserSelectMenuBuilder } = require("discord.js")
 const Drops = require("../../classes/Drops.js")
 
+const ACCENT = 0x87f3ff
 // Emoji de XP del servidor (igual que /rank y /records).
 const XP_EMOJI = "<:XP:1467192533812645939>"
 
-const fmtInt = n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ".")
 // Miles con punto siempre (igual que commafy en las respuestas).
+const fmtInt = n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ".")
 
 const sepBuilder = () => new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
 const textBuilder = content => new TextDisplayBuilder().setContent(content)
 
-// Fecha corta: solo lo relevante ("in 3 horas"), sin fecha completa.
+// Fecha relativa corta ("dentro de 3 horas").
 const shortDate = ts => `<t:${Math.floor(Number(ts) / 1000)}:R>`
 
-// "<:XP:> 5.000 XP + 🪙 1.000 monedas + 🎭 <@&rol> + 📦 2× Y".
+// ─── Bloques de texto compartidos (crear / creado / detalle) ────────────────
+
+// "🔒 Reservado · @a @b" o "🌍 Público".
+function accessLine(allow) {
+    const people = Array.isArray(allow) ? allow.filter(Boolean) : []
+    if (!people.length) return "🌍 **Acceso:** Público"
+    const shown = people.slice(0, 10).map(u => `<@${u.id}>`).join(" ")
+    return `🔒 **Acceso:** Reservado · ${shown}${people.length > 10 ? ` +${people.length - 10} más` : ""}`
+}
+
+// Líneas de premios: una por recompensa, o la nota vacía.
+function prizeLines(prizes, tools) {
+    const lines = []
+    if (prizes.xp > 0) lines.push(`- ${XP_EMOJI} **${tools.commafy(prizes.xp)}** XP`)
+    if (prizes.coins > 0) lines.push(`- 🪙 **${tools.commafy(prizes.coins)}** monedas`)
+    for (const r of prizes.roles || []) lines.push(`- 🎭 <@&${r.id}>`)
+    for (const it of prizes.items || []) lines.push(`- 📦 **${tools.commafy(it.qty)}×** ${it.name || "objeto"}`)
+    return lines.length ? lines.join("\n") : "-# *Sin recompensas por ahora.*"
+}
+
+// Premios de un drop guardado (los antiguos no-pack se muestran en una línea).
+function dropPrizeLines(drop, tools) {
+    if (drop.kind === "bundle") return prizeLines(Drops.normalizePrizes(drop.prizes), tools)
+    return `- ${dropPrizeText(drop, tools)}`
+}
+
+// "XP + 🪙 monedas + ..." en una línea (para la lista).
 function describePrizes(prizes, tools, maxParts = Infinity) {
     const parts = []
     if (prizes.xp > 0) parts.push(`${XP_EMOJI} ${tools.commafy(prizes.xp)} XP`)
     if (prizes.coins > 0) parts.push(`🪙 ${tools.commafy(prizes.coins)} monedas`)
     for (const r of prizes.roles) parts.push(`🎭 <@&${r.id}>`)
     for (const it of prizes.items) parts.push(`📦 ${tools.commafy(it.qty)}× ${it.name || "objeto"}`)
-    // En la lista solo caben 2 premios por línea; el resto se resume.
     if (parts.length > maxParts) parts.splice(maxParts, parts.length - maxParts, `+${parts.length - maxParts} más`)
     return parts.join(" + ")
 }
 
-// Texto corto del premio para lista y detalle (vale para packs y sueltos).
-// En la lista, como mucho maxParts premios y el resto resumido.
 function dropPrizeText(drop, tools, maxParts = Infinity) {
     if (drop.kind === "bundle") return describePrizes(Drops.normalizePrizes(drop.prizes), tools, maxParts)
     if (drop.kind === "role") return `🎭 rol ${drop.roleName || `<@&${drop.roleId}>`}`
@@ -34,12 +58,21 @@ function dropPrizeText(drop, tools, maxParts = Infinity) {
     return `${Drops.kindEmoji(drop.kind)} ${tools.commafy(drop.amount)} ${Drops.kindName(drop.kind)}`
 }
 
+// Añade "**🎁 Premios** / sep / lista / sep" al contenedor.
+function addPrizesBlock(container, linesText) {
+    container.addTextDisplayComponents(textBuilder("**🎁 Premios**"))
+    container.addSeparatorComponents(sepBuilder())
+    container.addTextDisplayComponents(textBuilder(linesText))
+    container.addSeparatorComponents(sepBuilder())
+}
+
+// ─── /drops mostrar y /drops eliminar ───────────────────────────────────────
+
 const MENU_ID = "dropinspect"
 const BACK_VALUE = "__back"
 // Botones del detalle: "drop:<accion>:<CODE>". Los de cantidad/tiempo abren
-// un modal ("dropm:<accion>:<CODE>") para pedir el número exacto. "Reservar"
-// abre una pestaña larga para pegar IDs/menciones; "Abrir a todos" y el menú
-// "Quitar" solo salen cuando el drop ya tiene reservas.
+// un modal ("dropm:<accion>:<CODE>"). "Reservar" abre un modal largo para
+// pegar IDs/menciones; "Abrir a todos" y "Quitar" solo salen con reservas.
 const BTN_PREFIX = "drop"
 const MODAL_PREFIX = "dropm"
 const BTN_DEL = "del"
@@ -90,24 +123,22 @@ function buildTimeModal(code) {
         ))
 }
 
-// Línea de un drop en la lista: link con (reclamados/total) y su premio.
-// Tachado cuando se agotó; candado si solo pueden reclamar reservados.
+// Línea de un drop en la lista: `CODE` (reclamados/total) - premio.
+// Tachado si se agotó; candado si es reservado.
 function dropListLine(row, base, guildId, tools) {
     const { code, drop, left } = row
     const claimed = Math.max(0, Number(drop.maxClaims) - left)
     const url = `${base}${Drops.dropPath(guildId, code)}`
     const head = left <= 0 ? `~~[\`${code}\`](${url})~~` : `[\`${code}\`](${url})`
     const lock = drop.allow?.length ? " 🔒" : ""
-    return `- ${head}${lock} (${tools.commafy(claimed)}/${tools.commafy(drop.maxClaims)}) - ${dropPrizeText(drop, tools, 2)}`
+    return `${head}${lock} - ${tools.commafy(claimed)}/${tools.commafy(drop.maxClaims)} - ${dropPrizeText(drop, tools, 2)}`
 }
 
-// Menú de drops. Con una vista abierta, la primera opción es "Volver atrás"
-// (con ⬅️) para ir a la lista; debajo, los demás drops para saltar entre
-// ellos sin cerrar.
-function buildInspectMenu(rows, selectedCode, { deleteMode = false } = {}) {
+// Menú de drops. Con una vista abierta, la primera opción es "Volver atrás".
+function buildInspectMenu(rows, selectedCode) {
     const menu = new StringSelectMenuBuilder()
         .setCustomId(MENU_ID)
-        .setPlaceholder(deleteMode ? "Elige el drop a eliminar" : "Elige un drop para verlo en detalle")
+        .setPlaceholder("Elige un drop para verlo en detalle")
     if (selectedCode) {
         menu.addOptions(new StringSelectMenuOptionBuilder()
             .setLabel("⬅️ Volver atrás")
@@ -125,55 +156,48 @@ function buildInspectMenu(rows, selectedCode, { deleteMode = false } = {}) {
     return menu
 }
 
-// Lista: título, una línea por drop y el menú debajo. Vacío = una nota y
-// nada más (sin separador de más ni menú sin opciones).
-function buildDropsListContainer(rows, base, guildId, tools, { deleteMode = false } = {}) {
-    const container = new ContainerBuilder().setAccentColor(0x87f3ff)
-    container.addTextDisplayComponents(textBuilder(deleteMode ? `## 🗑️ Eliminar un drop` : `## 🎁 Drops del servidor`))
+// Lista de /drops mostrar: una línea por drop y el menú debajo.
+function buildDropsListContainer(rows, base, guildId, tools) {
+    const container = new ContainerBuilder().setAccentColor(ACCENT)
+    container.addTextDisplayComponents(textBuilder("## 🎁 Drops del servidor"))
     container.addSeparatorComponents(sepBuilder())
     if (!rows.length) {
-        container.addTextDisplayComponents(textBuilder(
-            deleteMode
-                ? `-# No hay ningún drop que eliminar: no queda ninguno activo.`
-                : `-# No hay ningún drop activo. Crea el primero con \`/drops crear\` y saldrá aquí.`,
-        ))
+        container.addTextDisplayComponents(textBuilder("-# *No hay ningún drop activo. Crea uno con `/drops crear`.*"))
         return container
     }
     container.addTextDisplayComponents(textBuilder(
-        rows.slice(0, MAX_MENU_OPTIONS).map(row => dropListLine(row, base, guildId, tools)).join("\n")
-        + (rows.length > MAX_MENU_OPTIONS ? `\n-# +${rows.length - MAX_MENU_OPTIONS} más (elimina viejos para verlos)` : ""),
+        rows.slice(0, MAX_MENU_OPTIONS).map(row => `- ${dropListLine(row, base, guildId, tools)}`).join("\n")
+        + (rows.length > MAX_MENU_OPTIONS ? `\n-# +${rows.length - MAX_MENU_OPTIONS} más` : ""),
     ))
     container.addSeparatorComponents(sepBuilder())
-    container.addActionRowComponents(new ActionRowBuilder().addComponents(buildInspectMenu(rows, null, { deleteMode })))
+    container.addActionRowComponents(new ActionRowBuilder().addComponents(buildInspectMenu(rows, null)))
     return container
 }
 
-// Detalle de un drop: lo esencial en pocas líneas, botones de gestión,
-// menú para quitar reservados (si los hay) y el menú con "Volver atrás"
-// como primera opción.
-function buildDropDetailContainer(rows, row, base, guildId, tools, { deleteMode = false } = {}) {
+// Detalle de un drop: misma estructura que el asistente, con botones de gestión.
+function buildDropDetailContainer(rows, row, base, guildId, tools) {
     const { code, drop, left } = row
     const claimed = Math.max(0, Number(drop.maxClaims) - left)
     const url = `${base}${Drops.dropPath(guildId, code)}`
     const allowed = Array.isArray(drop?.allow) ? drop.allow : []
-    const container = new ContainerBuilder().setAccentColor(0x87f3ff)
+    const container = new ContainerBuilder().setAccentColor(ACCENT)
     container.addTextDisplayComponents(textBuilder(`## 🎁 ${drop.name || "Drop"} \`${code}\``))
     container.addSeparatorComponents(sepBuilder())
-    const info = [
-        `- 🎁 **Premio por persona:** ${dropPrizeText(drop, tools)}`,
-        `- 📊 **Reclamados:** ${tools.commafy(claimed)}/${tools.commafy(drop.maxClaims)}`,
-        `- ⏳ **Caduca:** ${shortDate(drop.expiresAt)}`,
-        `- 🔗 **Enlace:** ${url}`,
-    ]
-    if (allowed.length) {
-        info.push(`- 🔒 **Reservado:** ${allowed.map(u => `<@${u.id}>`).join(" ")}`)
-    }
-    container.addTextDisplayComponents(textBuilder(info.join("\n")))
+    container.addTextDisplayComponents(textBuilder([
+        `👥 **Usos:** ${tools.commafy(claimed)}/${tools.commafy(drop.maxClaims)}`,
+        `📅 **Caduca:** ${shortDate(drop.expiresAt)}`,
+        accessLine(allowed),
+    ].join("\n")))
     container.addSeparatorComponents(sepBuilder())
+    addPrizesBlock(container, dropPrizeLines(drop, tools))
+    container.addTextDisplayComponents(textBuilder(`🔗 **Enlace:** ${url}`))
+    container.addSeparatorComponents(sepBuilder())
+
     const buttons = [
         new ButtonBuilder().setCustomId(`${BTN_PREFIX}:${BTN_DEL}:${code}`).setLabel("Eliminar").setStyle(ButtonStyle.Danger).setEmoji("🗑️"),
-        new ButtonBuilder().setCustomId(`${BTN_PREFIX}:${BTN_USES}:${code}`).setLabel("Añadir usos").setStyle(ButtonStyle.Secondary).setEmoji("➕"),
-        new ButtonBuilder().setCustomId(`${BTN_PREFIX}:${BTN_TIME}:${code}`).setLabel("Añadir tiempo").setStyle(ButtonStyle.Secondary).setEmoji("⏳"),
+        // Con reservas los usos son siempre el nº de reservados.
+        new ButtonBuilder().setCustomId(`${BTN_PREFIX}:${BTN_USES}:${code}`).setLabel("Usos").setStyle(ButtonStyle.Secondary).setEmoji("➕").setDisabled(allowed.length > 0),
+        new ButtonBuilder().setCustomId(`${BTN_PREFIX}:${BTN_TIME}:${code}`).setLabel("Tiempo").setStyle(ButtonStyle.Secondary).setEmoji("⏳"),
         new ButtonBuilder().setCustomId(`${BTN_PREFIX}:${BTN_SOLO}:${code}`).setLabel("Reservar").setStyle(ButtonStyle.Secondary).setEmoji("🔒"),
     ]
     if (allowed.length) {
@@ -183,9 +207,8 @@ function buildDropDetailContainer(rows, row, base, guildId, tools, { deleteMode 
     if (allowed.length) {
         container.addActionRowComponents(new ActionRowBuilder().addComponents(
             new StringSelectMenuBuilder()
-                .setCustomId(`${BTN_PREFIX}:quit:${code}`)
+                .setCustomId(`${QUIT_PREFIX}${code}`)
                 .setPlaceholder("Quitar a un reservado")
-                // En el menú caben 25; el resto se arregla publicando de nuevo.
                 .addOptions(allowed.slice(0, MAX_MENU_OPTIONS).map(u =>
                     new StringSelectMenuOptionBuilder()
                         .setValue(String(u.id))
@@ -194,23 +217,18 @@ function buildDropDetailContainer(rows, row, base, guildId, tools, { deleteMode 
         ))
     }
     container.addSeparatorComponents(sepBuilder())
-    container.addActionRowComponents(new ActionRowBuilder().addComponents(buildInspectMenu(rows, code, { deleteMode })))
+    container.addActionRowComponents(new ActionRowBuilder().addComponents(buildInspectMenu(rows, code)))
     return container
 }
 
-// Todas las respuestas van en Componentes V2 y visibles (sin efímero).
+// Todas las respuestas van en Componentes V2 y visibles.
 const V2 = { components: c => ({ components: [c], flags: [MessageFlags.IsComponentsV2], allowedMentions: { parse: [] } }) }
-const V2_EPHEMERAL = { components: c => ({ components: [c], flags: [MessageFlags.IsComponentsV2, MessageFlags.Ephemeral], allowedMentions: { parse: [] } }) }
 const say = (int, container) => int.editReply(V2.components(container))
 
-// Drops nuevos nunca llevan roles como premio (quitar roles de reparto:
-// jerarquía/permisos de staff = riesgo).
-
-// ─── Asistente /drops crear: borrador y helpers ───────────────────────────
-// Panel raíz: resumen (usos, caducidad, privado/público) + menú de premios +
-// menú de reservados + botones de nombre/usos/caducidad y Crear/Cancelar.
-// La eleccion de cantidad sale en un panel EFÍMERO y al elegir se edita
-// el mensaje original. Nada toca la BD hasta pulsar "Crear".
+// ─── Asistente /drops crear ─────────────────────────────────────────────────
+// Un único mensaje con dos vistas: el panel principal y el selector de un
+// premio (se cambia con update() sobre el mismo mensaje: más rápido que un
+// panel efímero aparte). Nada toca la BD hasta pulsar "Crear".
 const MK = {
     MENU: "wizmk:reward",
     USERS: "wizmk:users",
@@ -266,47 +284,52 @@ function draftRemoveItem(d, id) {
     d.items = d.items.filter(it => it.id !== String(id))
 }
 
-// Reservas: fusiona, limpia y recorta al tope (sin duplicados). Con
-// reservas, el drop queda privado y los usos se igualan automáticamente a
-// la cantidad de usuarios reservados (cada uno reclama una vez).
+// Reservas: con reservados, los usos son SIEMPRE el nº de reservados.
+function syncUses(d) {
+    if (d.allow.length) d.maxClaims = Math.min(Drops.LIMITS.usesMax, d.allow.length)
+}
+
+// Sustituye la lista de reservados (el menú de usuarios muestra la selección
+// actual, así que elegir/quitar ahí equivale a reemplazar). Vacío = público.
+function draftSetAllow(d, picks) {
+    d.allow = Drops.normalizeAllowedUsers(Array.isArray(picks) ? picks : [])
+    syncUses(d)
+    return d.allow
+}
+
+// Fusiona (se conserva por compatibilidad).
 function draftAddAllow(d, picks) {
     d.allow = Drops.normalizeAllowedUsers([...(d.allow || []), ...(Array.isArray(picks) ? picks : [])])
-    if (d.allow.length) d.maxClaims = d.allow.length
+    syncUses(d)
     return d.allow
 }
 
 function draftRemoveAllow(d, id) {
     d.allow = d.allow.filter(u => String(u?.id) !== String(id))
-    if (!d.allow.length) return
-    d.maxClaims = Math.max(d.maxClaims, d.allow.length)
+    syncUses(d)
 }
 
-// Duración: etiqueta del preset si existe; minutos en crudo si no.
+// Duración: etiqueta del preset si existe; si no, horas y minutos.
 function durationLabel(min) {
     const m = Math.round(Number(min) || 0)
     const hit = Drops.DURATION_PRESETS.find(p => p.minutes === m)
     if (hit) return hit.label
-    // No preset: horas redondas y la cola de minutos si la hay.
     if (m >= 60) {
         const hh = Math.floor(m / 60), mm = m % 60
-        const h = hh === 1 ? "hora" : "horas"
-        return mm ? `${fmtInt(hh)} h ${fmtInt(mm)} min` : `${fmtInt(hh)} ${h}`
+        return mm ? `${fmtInt(hh)} h ${fmtInt(mm)} min` : `${fmtInt(hh)} ${hh === 1 ? "hora" : "horas"}`
     }
     return `${fmtInt(m)} minutos`
 }
 
-// "🌍 Público" o "🔒 Privado: Nombre (<@id>), ...".
+// Compatibilidad con los tests: texto de acceso del borrador.
 function describeAllow(allow) {
-    const people = Array.isArray(allow) ? allow : []
-    if (!people.length) return "🌍 **Público:** cualquiera puede reclamar"
-    const list = people.map(u => `${u.name} (<@${u.id}>)`)
-    return `🔒 **Privado:** ${list.join(", ")}${people.length > 10 ? ` (+${people.length - 10} más)` : ""}`
+    return accessLine(allow)
 }
 
 const presetOption = (label, value, description) =>
     new StringSelectMenuOptionBuilder().setLabel(String(label).slice(0, 100)).setValue(String(value)).setDescription(String(description).slice(0, 100))
 
-// Resumen de premios del borrador para confirmaciones: "🆙 10.000 XP + 📦 3× X".
+// "🆙 10.000 XP + 📦 3× X" para los textos cortos.
 function prizeSummary(d, tools) {
     const parts = []
     if (d.xp > 0) parts.push(`🆙 ${tools.commafy(d.xp)} XP`)
@@ -315,74 +338,74 @@ function prizeSummary(d, tools) {
     return parts.join(" + ")
 }
 
-// Panel raíz del asistente. Estructura:
-// título / sep / usos+caducidad+privado / sep / "Premio por persona" /
-// sep / lista de premios / sep / menús / sep / botones config / sep / crear.
-function buildMakeContainer(draft, { tools = { commafy: fmtInt }, boat = false, storeItems = null } = {}) {
-    const container = new ContainerBuilder().setAccentColor(0x87f3ff)
+// Panel principal:
+// título / sep / usos+caducidad+acceso / sep / Premios / sep / lista / sep /
+// menú de premios + menú de usuarios / sep / nombre-usos-caducidad / sep / crear-cancelar
+function buildMakeContainer(draft, { tools = { commafy: fmtInt }, boat = false } = {}) {
+    const container = new ContainerBuilder().setAccentColor(ACCENT)
+    const reserved = draft.allow.length > 0
 
     container.addTextDisplayComponents(textBuilder(`## 📋 Crear drop: ${draft.name}`))
     container.addSeparatorComponents(sepBuilder())
     container.addTextDisplayComponents(textBuilder([
-        `👥 **Usos:** ${tools.commafy(draft.maxClaims)}`,
+        `👥 **Usos:** ${tools.commafy(draft.maxClaims)}${reserved ? " *(= reservados)*" : ""}`,
         `📅 **Caducidad:** ${durationLabel(draft.durationMin)}`,
-        describeAllow(draft.allow),
+        accessLine(draft.allow),
     ].join("\n")))
     container.addSeparatorComponents(sepBuilder())
-    container.addTextDisplayComponents(textBuilder(`💰 **Premio por persona:**`))
-    container.addSeparatorComponents(sepBuilder())
-    const parts = prizeSummary(draft, tools)
-    container.addTextDisplayComponents(textBuilder(parts ? parts.split(" + ").map(p => `- ${p}`).join("\n") : "-# nada todavía"))
-    container.addSeparatorComponents(sepBuilder())
+    addPrizesBlock(container, prizeLines(draftPrizes(draft), tools))
 
     const rewardOptions = [
-        presetOption("🆙 XP", "xp", "Elegir/recambiar la XP por persona"),
-        boat && presetOption("🪙 Monedas", "coins", "Elegir/cambiar las monedas"),
-        boat && presetOption("📦 Objeto", "item", "Añadir/quitar objetos de tienda"),
+        presetOption("🆙 XP", "xp", "Elegir o cambiar la XP"),
+        boat && presetOption("🪙 Monedas", "coins", "Elegir o cambiar las monedas"),
+        boat && presetOption("📦 Objeto", "item", "Añadir o quitar objetos de la tienda"),
     ].filter(Boolean)
-    const reward = new StringSelectMenuBuilder()
-        .setCustomId(MK.MENU)
-        .setPlaceholder("Elige un tipo de premio")
-        .addOptions(...rewardOptions)
-    container.addActionRowComponents(new ActionRowBuilder().addComponents(reward))
+    container.addActionRowComponents(new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+            .setCustomId(MK.MENU)
+            .setPlaceholder("➕ Añadir premio")
+            .addOptions(...rewardOptions),
+    ))
 
     const users = new UserSelectMenuBuilder()
         .setCustomId(MK.USERS)
-        .setPlaceholder("Añadir usuarios → drop privado")
-        .setMinValues(1)
+        .setPlaceholder("🌍 Público · elige usuarios para reservarlo 🔒")
+        .setMinValues(0)
         .setMaxValues(25)
+    if (reserved) users.setDefaultUsers(draft.allow.slice(0, 25).map(u => String(u.id)))
     container.addActionRowComponents(new ActionRowBuilder().addComponents(users))
 
     container.addSeparatorComponents(sepBuilder())
     container.addActionRowComponents(new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(MK.NAME).setLabel("Nombre").setStyle(ButtonStyle.Secondary).setEmoji("🏷️"),
-        new ButtonBuilder().setCustomId(MK.USES).setLabel("Usos").setStyle(ButtonStyle.Secondary).setEmoji("👥"),
+        new ButtonBuilder().setCustomId(MK.USES).setLabel("Usos").setStyle(ButtonStyle.Secondary).setEmoji("👥").setDisabled(reserved),
         new ButtonBuilder().setCustomId(MK.DUR).setLabel("Caducidad").setStyle(ButtonStyle.Secondary).setEmoji("📅"),
     ))
     container.addSeparatorComponents(sepBuilder())
     container.addActionRowComponents(new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(MK.CREATE).setLabel("Crear").setStyle(ButtonStyle.Success)
+        new ButtonBuilder().setCustomId(MK.CREATE).setLabel("Crear").setStyle(ButtonStyle.Success).setEmoji("✅")
             .setDisabled(!(draft.xp > 0 || draft.coins > 0 || draft.items.length > 0)),
-        new ButtonBuilder().setCustomId(MK.CANCEL).setLabel("Cancelar").setStyle(ButtonStyle.Danger).setEmoji("🚫"),
+        new ButtonBuilder().setCustomId(MK.CANCEL).setLabel("Cancelar").setStyle(ButtonStyle.Danger).setEmoji("✖️"),
     ))
     return container
 }
 
-// Panel EFÍMERO para elegir cantidad de un tipo de premio. Al elegir, se
-// edita el mensaje original y este panel muestra la confirmación.
-function buildPickContainer(kind, { tools = { commafy: fmtInt }, boat = false, storeItems = null, draft = null } = {}) {
-    const container = new ContainerBuilder().setAccentColor(0x87f3ff)
-    const titles = { xp: "🆙 XP por reclamo", coins: "🪙 Monedas por reclamo", item: "📦 Objeto del premio" }
+// Vista de selección de un premio (sustituye al panel principal hasta volver).
+function buildPickContainer(kind, { tools = { commafy: fmtInt }, storeItems = null, draft = null } = {}) {
+    const container = new ContainerBuilder().setAccentColor(ACCENT)
+    const titles = { xp: "🆙 XP", coins: "🪙 Monedas", item: "📦 Objetos" }
     container.addTextDisplayComponents(textBuilder(`## ${titles[kind] || "Premio"}`))
     container.addSeparatorComponents(sepBuilder())
 
     if (kind === "xp" || kind === "coins") {
         const actual = kind === "xp" ? draft?.xp : draft?.coins
-        if (actual > 0) container.addTextDisplayComponents(textBuilder(`-# Actual: ${tools.commafy(actual)} ${kind === "xp" ? "XP" : "monedas"}`))
+        container.addTextDisplayComponents(textBuilder(actual > 0
+            ? `**Actual:** ${tools.commafy(actual)} ${kind === "xp" ? "XP" : "monedas"}`
+            : "-# *Sin configurar.*"))
         const presets = kind === "xp" ? Drops.AMOUNT_PRESETS : Drops.COIN_PRESETS
         const menu = new StringSelectMenuBuilder()
             .setCustomId(kind === "xp" ? MK.XP : MK.COINS)
-            .setPlaceholder(kind === "xp" ? "Elige la XP por persona" : "Elige las monedas por persona")
+            .setPlaceholder("Elige una cantidad")
         for (const p of presets) {
             const amount = kind === "xp" ? p.xp : p.coins
             menu.addOptions(presetOption(
@@ -393,22 +416,21 @@ function buildPickContainer(kind, { tools = { commafy: fmtInt }, boat = false, s
         menu.addOptions(presetOption("✏️ Personalizada…", "custom", "Escribe la cantidad exacta"))
         menu.addOptions(presetOption("🗑️ Quitar este premio", "none", "Dejarlo sin este premio"))
         container.addActionRowComponents(new ActionRowBuilder().addComponents(menu))
-        container.addTextDisplayComponents(textBuilder(kind === "xp"
-            ? "-# Presets de récords: el equivalente sale en cada opción."
-            : "-# Cada economía tiene su escala: tú decides lo razonable."))
     } else if (kind === "item") {
+        container.addTextDisplayComponents(textBuilder(draft?.items?.length
+            ? draft.items.map(it => `- 📦 **${tools.commafy(it.qty)}×** ${it.name}`).join("\n")
+            : "-# *Sin objetos todavía.*"))
         if (draft?.items?.length) {
-            container.addTextDisplayComponents(textBuilder(draft.items.map(it => `- 📦 **${tools.commafy(it.qty)}× ${it.name}**`).join("\n")))
             container.addActionRowComponents(new ActionRowBuilder().addComponents(
                 new StringSelectMenuBuilder()
                     .setCustomId(MK.RITEM)
-                    .setPlaceholder("Quitar un objeto del premio")
+                    .setPlaceholder("Quitar un objeto")
                     .addOptions(draft.items.map(it => presetOption(`${it.qty}× ${it.name}`, it.id, "Quitar del premio"))),
             ))
         }
         const menu = new StringSelectMenuBuilder()
             .setCustomId(MK.ITEM)
-            .setPlaceholder("Elige un objeto de la tienda")
+            .setPlaceholder("Añadir un objeto de la tienda")
         for (const it of (storeItems || []).slice(0, MAX_MENU_OPTIONS)) {
             menu.addOptions(presetOption(
                 `${it.emoji ? it.emoji + " " : ""}${it.name}`, it.id,
@@ -421,59 +443,38 @@ function buildPickContainer(kind, { tools = { commafy: fmtInt }, boat = false, s
 
     container.addSeparatorComponents(sepBuilder())
     container.addActionRowComponents(new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(MK.DONE).setLabel("Cerrar").setStyle(ButtonStyle.Secondary).setEmoji("⬅️"),
+        new ButtonBuilder().setCustomId(MK.DONE).setLabel("Volver").setStyle(ButtonStyle.Secondary).setEmoji("⬅️"),
     ))
     return container
 }
 
-// Confirmación efímera compacta.
-function buildConfirmContainer(text) {
-    return new ContainerBuilder().setAccentColor(0x87f3ff)
-        .addTextDisplayComponents(textBuilder(text))
-        .addSeparatorComponents(sepBuilder())
-        .addTextDisplayComponents(textBuilder("-# Hecho: el panel principal está actualizado."))
-}
-
-// Pantalla de cancelado del asistente.
+// Pantalla de cancelado.
 function buildCancelledContainer() {
-    return new ContainerBuilder().setAccentColor(0x87f3ff)
-        .addTextDisplayComponents(textBuilder("## 🚫 Cancelado"))
-        .addTextDisplayComponents(textBuilder("-# El asistente se cerró: no se ha creado ningún drop."))
+    return new ContainerBuilder().setAccentColor(ACCENT)
+        .addTextDisplayComponents(textBuilder("## ✖️ Cancelado"))
+        .addTextDisplayComponents(textBuilder("-# *No se ha creado ningún drop.*"))
 }
 
-// Mensaje final del drop creado. Solo texto: el enlace es lo importante.
+// Drop creado: misma estructura que el asistente (sin menús ni botones) y,
+// al final, el enlace.
 function buildCreatedContainer(drop, code, url, tools = { commafy: fmtInt }, allow = null) {
-    const container = new ContainerBuilder().setAccentColor(0x87f3ff)
-    container.addTextDisplayComponents(textBuilder(`## 🎁 Drop creado: ${drop.name || "Drop"} \`${code}\``))
+    const people = Array.isArray(allow) && allow.length ? allow : (Array.isArray(drop?.allow) ? drop.allow : [])
+    const container = new ContainerBuilder().setAccentColor(ACCENT)
+    container.addTextDisplayComponents(textBuilder(`## ✅ Drop creado: ${drop.name || "Drop"}`))
     container.addSeparatorComponents(sepBuilder())
-    container.addTextDisplayComponents(textBuilder(`💰 **Premio por persona:**`))
+    container.addTextDisplayComponents(textBuilder([
+        `👥 **Usos:** ${tools.commafy(drop.maxClaims)}`,
+        `📅 **Caduca:** ${shortDate(drop.expiresAt)}`,
+        accessLine(people),
+    ].join("\n")))
     container.addSeparatorComponents(sepBuilder())
     const prizes = Drops.normalizePrizes(drop.prizes || { xp: drop.xp, coins: drop.coins, roles: [], items: drop.items || [] })
-    const prizeParts = [
-        prizes.xp > 0 && `- 🆙 ${tools.commafy(prizes.xp)} XP`,
-        prizes.coins > 0 && `- 🪙 ${tools.commafy(prizes.coins)} monedas`,
-        ...prizes.roles.map(r => `- 🎭 <@&${r.id}>`),
-        ...prizes.items.map(it => `- 📦 ${tools.commafy(it.qty)}× ${it.name || "objeto"}`),
-    ].filter(Boolean)
-    container.addTextDisplayComponents(textBuilder(prizeParts.length ? prizeParts.join("\n") : "-# nada todavía"))
-    container.addSeparatorComponents(sepBuilder())
-    const people = (Array.isArray(allow) ? allow : []).filter(Boolean).length ? allow : (Array.isArray(drop?.allow) ? drop.allow : [])
-    const shown = people.slice(0, 10)
-    const lines = [
-        `- 👥 **Usos:** ${tools.commafy(drop.maxClaims)}`,
-        `- ⏳ **Caduca:** ${shortDate(drop.expiresAt)}`,
-        people.length ? `- 🔒 **Privado:** ${shown.map(u => (u.name ? `${u.name} (<@${u.id}>)` : `<@${u.id}>`)).join(", ")}${people.length > 10 ? ` (+${people.length - 10} más)` : ""}` : "",
-    ].filter(Boolean)
-    container.addTextDisplayComponents(textBuilder(lines.join("\n")))
-    container.addSeparatorComponents(sepBuilder())
+    addPrizesBlock(container, prizeLines(prizes, tools))
     container.addTextDisplayComponents(textBuilder(`🔗 **Enlace:** ${url}`))
-    container.addSeparatorComponents(sepBuilder())
-    container.addTextDisplayComponents(textBuilder("-# Comparte el enlace: cada persona lo reclama una vez, hasta agotar usos o que caduque."))
     return container
 }
 
-// Modales del asistente. Todos pican el campo "value" (los tests fijan
-// ese contract; los prefills opcionales rellenan el valor actual).
+// Modales del asistente. Todos usan el campo "value".
 function makeTextInput(prefill, opts) {
     const input = new TextInputBuilder()
         .setCustomId("value")
@@ -513,15 +514,15 @@ function buildMakeDurModal(prefill = "") {
 function buildMakeXpModal(prefill = "") {
     return new ModalBuilder()
         .setCustomId("dropw:xp")
-        .setTitle("XP por reclamo")
+        .setTitle("XP del premio")
         .addComponents(new ActionRowBuilder().addComponents(
-            makeTextInput(prefill, { label: "Cuánto XP por persona", placeholder: "Ej: 5000", max: 7 })))
+            makeTextInput(prefill, { label: "Cuánta XP por persona", placeholder: "Ej: 5000", max: 7 })))
 }
 
 function buildMakeCoinsModal(prefill = "") {
     return new ModalBuilder()
         .setCustomId("dropw:coins")
-        .setTitle("Monedas por reclamo")
+        .setTitle("Monedas del premio")
         .addComponents(new ActionRowBuilder().addComponents(
             makeTextInput(prefill, { label: "Cuántas monedas por persona", placeholder: "Ej: 10000", max: 10 })))
 }
@@ -531,14 +532,14 @@ function buildMakeQtyModal(item) {
         .setCustomId(`dropw:qty:${item.id}`)
         .setTitle(`Unidades: ${item.name}`.slice(0, 45))
         .addComponents(new ActionRowBuilder().addComponents(
-            makeTextInput("", { label: "Unidades por reclamo", placeholder: "1", max: 3 })))
+            makeTextInput("", { label: "Unidades por persona", placeholder: "1", max: 3 })))
 }
 
-// Modal del detalle "/drops mostrar": pegar IDs o menciones para privar.
+// Modal de /drops mostrar: pegar IDs o menciones para reservar.
 function buildReserveModal(code) {
     return new ModalBuilder()
         .setCustomId(`dropw:solo:${code}`)
-        .setTitle(`Privar ${code}`)
+        .setTitle(`Reservar ${code}`)
         .addComponents(new ActionRowBuilder().addComponents(
             new TextInputBuilder()
                 .setCustomId("value")
@@ -549,8 +550,7 @@ function buildReserveModal(code) {
                 .setMaxLength(2000)))
 }
 
-// Extrae las menciones <@…> y los IDs crudos (17-20 dígitos) de un texto
-// (o de una lista), sin duplicados y con el tope de reservas.
+// Extrae menciones <@…> e IDs crudos (17-20 dígitos), sin duplicados.
 function parseAllowedInput(input) {
     const text = Array.isArray(input) ? input.join(" ") : String(input || "")
     const found = []
@@ -561,32 +561,35 @@ function parseAllowedInput(input) {
     return found.slice(0, Drops.LIMITS.allowedMax)
 }
 
-// Añade privados (y sube usos si hacen falta: cada privado necesita su
-// usado, además de los usos ya gastados por ajenos). Devuelve
-// { ok, added, total, bump }.
+// Reclamos de gente que NO está en la lista de reservados (ocupan usos).
+const foreignClaims = (drop, allow) =>
+    (drop.claims || []).filter(c => !allow.some(u => String(u.id) === String(c))).length
+
+// Añade reservados. Los usos pasan a ser: nº de reservados + reclamos ajenos ya hechos.
 async function applyReserve(client, guildId, code, users) {
     const doc = await client.db.fetch(guildId, ["drops"]).exec().catch(() => null)
     const drop = doc?.drops?.[code]
     if (!drop) return { ok: false }
     const before = Array.isArray(drop.allow) ? drop.allow : []
     const clean = Drops.normalizeAllowedUsers([...before, ...(Array.isArray(users) ? users : [])])
-    const foreign = (drop.claims || []).filter(c => !clean.some(u => String(u.id) === String(c))).length
-    const bump = Math.max(Number(drop.maxClaims) || 0, clean.length + foreign)
+    const bump = Math.min(Drops.LIMITS.usesMax, clean.length + foreignClaims(drop, clean))
     await client.db.update(guildId, { $set: { [`drops.${code}.allow`]: clean, [`drops.${code}.maxClaims`]: bump } }).exec()
     return { ok: true, added: clean.length - before.length, total: clean.length, bump }
 }
 
-// Quita a un usuario de los privados (devuelve la lista final o null).
+// Quita a un reservado y reajusta los usos (si quedan reservados).
 async function applyAllowRemove(client, guildId, code, userId) {
     const doc = await client.db.fetch(guildId, ["drops"]).exec().catch(() => null)
     const drop = doc?.drops?.[code]
     if (!drop) return null
     const allow = (Array.isArray(drop.allow) ? drop.allow : []).filter(u => String(u?.id) !== String(userId))
-    await client.db.update(guildId, { $set: { [`drops.${code}.allow`]: allow } }).exec()
+    const $set = { [`drops.${code}.allow`]: allow }
+    if (allow.length) $set[`drops.${code}.maxClaims`] = Math.min(Drops.LIMITS.usesMax, allow.length + foreignClaims(drop, allow))
+    await client.db.update(guildId, { $set }).exec()
     return allow
 }
 
-// Hace el drop público de nuevo (borra los privados).
+// Hace el drop público de nuevo (borra los reservados).
 async function applyOpenAll(client, guildId, code) {
     await client.db.update(guildId, { $set: { [`drops.${code}.allow`]: [] } }).exec()
     return true
@@ -604,7 +607,9 @@ module.exports = {
                 { type: "integer", name: "caducidad", description: "Horas hasta que el enlace caduca (por defecto: 24)", required: false, min: 1, max: 720 },
             ]},
             { type: "subcommand", name: "mostrar", description: "Ver los drops activos del servidor", args: [] },
-            { type: "subcommand", name: "eliminar", description: "Eliminar un drop con un menú", args: [] },
+            { type: "subcommand", name: "eliminar", description: "Eliminar un drop activo", args: [
+                { type: "string", name: "drop", description: "Drop a eliminar (elige de la lista)", required: true, autocomplete: true },
+            ]},
             { type: "subcommand", name: "permisos", description: "Roles que pueden usar /drops (solo gestores)", args: [
                 { type: "role", name: "rol", description: "Rol a añadir (sin rol: ver la lista)", required: false },
                 { type: "bool", name: "quitar", description: "Quitar el rol en vez de añadirlo", required: false },
@@ -617,8 +622,7 @@ module.exports = {
         if (!db) return tools.warn("*noData")
         const isManager = tools.canManageServer(int.member, db.settings.manualPerms)
         const sub = int.options.getSubcommand(false)
-        // Permiso solo para gestores (aunque tengas rol de drops, los permisos
-        // los tocan solo ellos). Todo lo demás: gestores o roles de la DB.
+        // Permisos: solo gestores. El resto: gestores o roles de la DB.
         if (sub === "permisos") {
             if (!isManager) return tools.warn("*notMod")
         } else {
@@ -627,26 +631,20 @@ module.exports = {
         }
         if (!db.settings.enabled) return tools.warn("*xpDisabled")
 
-        // Defer del tirón: las validaciones y las llamadas a la API de
-        // UnbelievaBoat tardan; sin defer, Discord "no responde" aunque todo
-        // salga bien. A partir de aquí, warn() cae en el edit del defer.
+        // Defer inmediato: las llamadas a la BD y a UnbelievaBoat tardan.
         await int.deferReply().catch(() => {})
         if (sub === "mostrar") return module.exports.runList(client, int, tools, {})
-        if (sub === "eliminar") return module.exports.runList(client, int, tools, { deleteMode: true })
+        if (sub === "eliminar") return module.exports.runDelete(client, int, tools)
         if (sub === "permisos") return module.exports.runPermiso(client, int, tools)
         return module.exports.runCreate(client, int, tools, db)
     },
 
     async runCreate(client, int, tools, db) {
-        // Asistente ─── /drops crear [nombre] [usos] [caducidad]
-        // El usuario puede preajustar nombre, usos y caducidad (en horas) por
-        // parámetro; si no, por defecto 3 usos y 24 h. El resto (premios,
-        // whiteList) se configura en el mensaje con menús y botones.
         const guildId = int.guild.id
         const authorId = int.user.id
         const boat = Drops.boatEnabled()
 
-        // Contador para nombre automático.
+        // Contador para el nombre automático.
         let dropSeq = 0
         try {
             const doc = await client.db.fetch(guildId, ["settings.dropSeq"]).exec().catch(() => null)
@@ -661,214 +659,156 @@ module.exports = {
         if (durOpt) over.durationMin = Math.max(Drops.LIMITS.durationMin, Math.min(Drops.LIMITS.durationMax, Math.round(durOpt * 60)))
         const draft = makeDraft(nameRaw || `Drop #${dropSeq}`, over)
 
-        // Tienda de UnbelievaBoat: carga bajo demanda.
-        let storeItems = null, storeError = false
-        const ensureStore = async () => {
-            if (storeItems || storeError) return
-            try { storeItems = await Drops.fetchBoatStore(guildId) }
-            catch { storeError = true }
-        }
+        // La tienda de UnbelievaBoat se precarga en segundo plano (sin esperar):
+        // cuando se abre "Objeto" casi siempre ya está lista.
+        let storeItems = null, storeError = false, storeReady = !boat
+        const storePromise = boat
+            ? Drops.fetchBoatStore(guildId).then(s => { storeItems = s }).catch(() => { storeError = true }).finally(() => { storeReady = true })
+            : Promise.resolve()
 
         const toolsLite = { commafy: (...a) => tools.commafy(...a) }
-        const render = () => buildMakeContainer(draft, { tools: toolsLite, boat, storeItems })
+        let view = "main"
+        const render = () => view === "main"
+            ? buildMakeContainer(draft, { tools: toolsLite, boat })
+            : buildPickContainer(view, { tools: toolsLite, storeItems, draft })
 
-        // Modal + espera de envío: showModal ya reconoce el componente, y el
-        // modal submit se procesa aquí mismo (los errores van efímeros).
+        // Modal + espera del envío. showModal ya reconoce la interacción.
         const askModal = async (i, modalId, modal) => {
             try { await i.showModal(modal) } catch { return null }
             try { return await i.awaitModalSubmit({ filter: s => s.customId === modalId && s.user.id === authorId, time: 120000 }) }
             catch { return null }
         }
+        const errorReply = (sub, content) => sub.reply({ content, ephemeral: true }).catch(() => {})
 
-        // Mensaje inicial (no efímero): editReply devuelve el mensaje.
         const sent = await int.editReply(V2.components(render())).catch(() => null)
         if (!sent) return
-        const editMain = async () => { await sent.edit(V2.components(render())).catch(() => {}) }
         const collector = sent.createMessageComponentCollector?.({ time: 24 * 60 * 60 * 1000 })
         if (!collector) return
 
         let busy = false
 
-        // ── Choque de premio épímero: al elegir configura el borrador,
-        // edita el panel original y confirma arriba en el mismo efímero.
-        const openPick = async (kind, packInt) => {
-            if (kind === "coins" && !boat) {
-                return packInt.reply({ content: "Monedas: hace falta UnbelievaBoat configurado.", ephemeral: true }).catch(() => {})
-            }
-            if (kind === "item") {
-                await ensureStore()
-                if (!storeItems?.length) {
-                    return packInt.reply({ content: storeError ? "No pude leer la tienda de UnbelievaBoat." : "La tienda está vacía.", ephemeral: true }).catch(() => {})
-                }
-            }
-            const panel = await packInt.reply({
-                ...V2_EPHEMERAL.components(buildPickContainer(kind, { tools: toolsLite, boat, storeItems, draft })),
-                fetchReply: true,
-            }).catch(() => null)
-            if (!panel) return
-            const own = panel.createMessageComponentCollector?.({ time: 5 * 60 * 1000 })
-            if (!own) return
-            own.on("collect", async j => {
-                if (j.user.id !== authorId) return
-                // Cerrar: queda el panel con la confirmación y se detiene.
-                if (j.isButton() && j.customId === MK.DONE) {
-                    await j.update(V2_EPHEMERAL.components(buildConfirmContainer("✅ Panel cerrado"))).catch(() => {})
-                    own.stop("done")
-                    return
-                }
-                const id = j.customId
-                // ── Cantidad fija de XP ──
-                if (j.isStringSelectMenu() && id === MK.XP) {
-                    const v = j.values?.[0]
-                    if (v === "custom") {
-                        const sub = await askModal(j, "dropw:xp", buildMakeXpModal(draft.xp || ""))
-                        if (!sub) return
-                        const n = Math.round(Number(sub.fields.getTextInputValue("value")) || 0)
-                        if (n < Drops.LIMITS.amountMin || n > Drops.LIMITS.amountMax) {
-                            await sub.reply({ content: `Pon un número entre ${fmtInt(Drops.LIMITS.amountMin)} y ${fmtInt(Drops.LIMITS.amountMax)} XP.`, ephemeral: true }).catch(() => {})
-                            return
-                        }
-                        draft.xp = n
-                        // El modal ya reconoció a j: se reconoce el envío y se
-                        // refresca el panel efímero desde el propio submit.
-                        await editMain()
-                        await sub.update(V2_EPHEMERAL.components(buildConfirmContainer(`✅ Premios: ${prizeSummary(draft, toolsLite) || "sin premios"}`))).catch(() => {})
-                        own.stop("ok")
-                        return
-                    }
-                    if (v === "none") {
-                        draft.xp = 0
-                    } else {
-                        draft.xp = Math.round(Number(v) || 0)
-                    }
-                    await editMain()
-                    await j.update(V2_EPHEMERAL.components(buildConfirmContainer(`✅ Premios: ${prizeSummary(draft, toolsLite) || "sin premios"}`))).catch(() => {})
-                    own.stop("ok")
-                    return
-                }
-                // ── Cantidad fija de monedas ──
-                if (j.isStringSelectMenu() && id === MK.COINS) {
-                    const v = j.values?.[0]
-                    if (v === "custom") {
-                        const sub = await askModal(j, "dropw:coins", buildMakeCoinsModal(draft.coins || ""))
-                        if (!sub) return
-                        const n = Math.round(Number(sub.fields.getTextInputValue("value")) || 0)
-                        if (n < Drops.LIMITS.coinMin || n > Drops.LIMITS.coinMax) {
-                            await sub.reply({ content: `Pon un número entre ${fmtInt(Drops.LIMITS.coinMin)} y ${fmtInt(Drops.LIMITS.coinMax)} monedas.`, ephemeral: true }).catch(() => {})
-                            return
-                        }
-                        draft.coins = n
-                        await editMain()
-                        await sub.update(V2_EPHEMERAL.components(buildConfirmContainer(`✅ Premios: ${prizeSummary(draft, toolsLite) || "sin premios"}`))).catch(() => {})
-                        own.stop("ok")
-                        return
-                    }
-                    if (v === "none") {
-                        draft.coins = 0
-                    } else {
-                        draft.coins = Math.round(Number(v) || 0)
-                    }
-                    await editMain()
-                    await j.update(V2_EPHEMERAL.components(buildConfirmContainer(`✅ Premios: ${prizeSummary(draft, toolsLite) || "sin premios"}`))).catch(() => {})
-                    own.stop("ok")
-                    return
-                }
-                // ── Objetos: añadir con modal de unidades ──
-                if (j.isStringSelectMenu() && id === MK.ITEM) {
-                    const item = (storeItems || []).find(it => it.id === j.values?.[0])
-                    if (!item) return
-                    if (draft.items.length >= 3 && !draft.items.some(it => it.id === item.id)) {
-                        await j.update(V2_EPHEMERAL.components(buildConfirmContainer("⚠️ Máximo 3 objetos distintos."))).catch(() => {})
-                        return
-                    }
-                    const sub = await askModal(j, `dropw:qty:${item.id}`, buildMakeQtyModal(item))
-                    if (!sub) return
-                    const n = Math.round(Number(sub.fields.getTextInputValue("value")) || 0)
-                    if (n < 1 || n > Drops.LIMITS.qtyMax) {
-                        await sub.reply({ content: `Pon un número entre 1 y ${Drops.LIMITS.qtyMax}.`, ephemeral: true }).catch(() => {})
-                        return
-                    }
-                    draftAddItem(draft, item, n)
-                    await editMain()
-                    await sub.update(V2_EPHEMERAL.components(buildConfirmContainer(`✅ Premios: ${prizeSummary(draft, toolsLite) || "sin premios"}`))).catch(() => {})
-                    own.stop("ok")
-                    return
-                }
-                // ── Objetos: quitar uno del premio ──
-                if (j.isStringSelectMenu() && id === MK.RITEM) {
-                    draftRemoveItem(draft, j.values?.[0])
-                    await editMain()
-                    await j.update(V2_EPHEMERAL.components(buildConfirmContainer(`✅ Premios: ${prizeSummary(draft, toolsLite) || "sin premios"}`))).catch(() => {})
-                    own.stop("ok")
-                    return
-                }
-            })
-            own.on("end", () => {})
-        }
-
         collector.on("collect", async i => {
             if (i.user.id !== authorId) return tools.denyButton(i, "drops")
             const id = i.customId
 
-            // ── Menú de tipo de premio: abre el panel efímero de cantidad ──
+            // ── Menú "Añadir premio": cambia a la vista del premio ──
             if (i.isStringSelectMenu() && id === MK.MENU) {
                 const val = i.values?.[0]
-                if (val === "xp" || val === "coins" || val === "item") {
-                    await openPick(val, i)
+                if (val !== "xp" && val !== "coins" && val !== "item") return
+                if (val === "coins" && !boat) return
+                if (val === "item") {
+                    if (!storeReady) {
+                        await i.deferUpdate().catch(() => {})
+                        await storePromise
+                        if (!storeItems?.length) {
+                            return i.followUp({ content: storeError ? "No pude leer la tienda de UnbelievaBoat." : "La tienda está vacía.", ephemeral: true }).catch(() => {})
+                        }
+                        view = "item"
+                        return i.editReply(V2.components(render())).catch(() => {})
+                    }
+                    if (!storeItems?.length) {
+                        return errorReply(i, storeError ? "No pude leer la tienda de UnbelievaBoat." : "La tienda está vacía.")
+                    }
                 }
-                return
+                view = val
+                return i.update(V2.components(render())).catch(() => {})
             }
 
-            // ── Menú de reservados: el drop pasa a privado y su usos = reservas ──
+            // ── Volver desde la vista de un premio ──
+            if (i.isButton() && id === MK.DONE) {
+                view = "main"
+                return i.update(V2.components(render())).catch(() => {})
+            }
+
+            // ── XP / monedas: preset, personalizada o quitar ──
+            if (i.isStringSelectMenu() && (id === MK.XP || id === MK.COINS)) {
+                const isXp = id === MK.XP
+                const key = isXp ? "xp" : "coins"
+                const v = i.values?.[0]
+                if (v === "custom") {
+                    const sub = await askModal(i, isXp ? "dropw:xp" : "dropw:coins", isXp ? buildMakeXpModal(draft.xp || "") : buildMakeCoinsModal(draft.coins || ""))
+                    if (!sub) return
+                    const n = Math.round(Number(sub.fields.getTextInputValue("value")) || 0)
+                    const [min, max] = isXp ? [Drops.LIMITS.amountMin, Drops.LIMITS.amountMax] : [Drops.LIMITS.coinMin, Drops.LIMITS.coinMax]
+                    if (n < min || n > max) {
+                        return errorReply(sub, `Pon un número entre ${fmtInt(min)} y ${fmtInt(max)}.`)
+                    }
+                    draft[key] = n
+                    view = "main"
+                    return sub.update(V2.components(render())).catch(() => {})
+                }
+                draft[key] = v === "none" ? 0 : Math.round(Number(v) || 0)
+                view = "main"
+                return i.update(V2.components(render())).catch(() => {})
+            }
+
+            // ── Objetos: añadir (con modal de unidades) ──
+            if (i.isStringSelectMenu() && id === MK.ITEM) {
+                const item = (storeItems || []).find(it => it.id === i.values?.[0])
+                if (!item) return
+                if (draft.items.length >= 3 && !draft.items.some(it => it.id === item.id)) {
+                    return errorReply(i, "Máximo 3 objetos distintos.")
+                }
+                const sub = await askModal(i, `dropw:qty:${item.id}`, buildMakeQtyModal(item))
+                if (!sub) return
+                const n = Math.round(Number(sub.fields.getTextInputValue("value")) || 0)
+                if (n < 1 || n > Drops.LIMITS.qtyMax) {
+                    return errorReply(sub, `Pon un número entre 1 y ${Drops.LIMITS.qtyMax}.`)
+                }
+                draftAddItem(draft, item, n)
+                view = "main"
+                return sub.update(V2.components(render())).catch(() => {})
+            }
+
+            // ── Objetos: quitar (se queda en la vista para quitar más) ──
+            if (i.isStringSelectMenu() && id === MK.RITEM) {
+                draftRemoveItem(draft, i.values?.[0])
+                return i.update(V2.components(render())).catch(() => {})
+            }
+
+            // ── Usuarios: la selección completa define los reservados ──
             if (i.isUserSelectMenu() && id === MK.USERS) {
-                await i.deferUpdate()
                 const picks = i.values.slice(0, 25).map(uid => ({
                     id: uid,
                     name: i.members?.get(uid)?.displayName || i.users?.get(uid)?.username || `usuario ${uid}`,
                 }))
-                const before = draft.allow.length
-                draftAddAllow(draft, picks)
-                if (picks.length && draft.allow.length === before) {
-                    await i.followUp({ content: `Tope de reservas alcanzado (${Drops.LIMITS.allowedMax}).`, ephemeral: true }).catch(() => {})
-                }
-                await i.editReply(V2.components(render())).catch(() => {})
-                return
+                draftSetAllow(draft, picks)
+                return i.update(V2.components(render())).catch(() => {})
             }
 
-            // ── Botones simples: nombre, usos, caducidad ──
+            // ── Nombre / usos / caducidad ──
             if (i.isButton() && id === MK.NAME) {
                 const sub = await askModal(i, "dropw:name", buildMakeNameModal(draft.name))
                 if (!sub) return
                 const v = String(sub.fields.getTextInputValue("value") || "").trim().slice(0, 40)
                 if (v) draft.name = v
-                await sub.update(V2.components(render())).catch(() => {})
-                return
+                return sub.update(V2.components(render())).catch(() => {})
             }
             if (i.isButton() && id === MK.USES) {
+                if (draft.allow.length) return errorReply(i, "Con reservados, los usos son el número de reservados.")
                 const sub = await askModal(i, "dropw:uses", buildMakeUsesModal(String(draft.maxClaims)))
                 if (!sub) return
                 draft.maxClaims = Math.max(1, Math.min(Drops.LIMITS.usesMax, Math.round(Number(sub.fields.getTextInputValue("value")) || 0)))
-                await sub.update(V2.components(render())).catch(() => {})
-                return
+                return sub.update(V2.components(render())).catch(() => {})
             }
             if (i.isButton() && id === MK.DUR) {
                 const sub = await askModal(i, "dropw:dur", buildMakeDurModal(String(draft.durationMin)))
                 if (!sub) return
                 draft.durationMin = Math.max(Drops.LIMITS.durationMin, Math.min(Drops.LIMITS.durationMax, Math.round(Number(sub.fields.getTextInputValue("value")) || 1440)))
-                await sub.update(V2.components(render())).catch(() => {})
-                return
+                return sub.update(V2.components(render())).catch(() => {})
             }
 
             // ── Crear / Cancelar ──
             if (i.isButton() && id === MK.CREATE) {
                 const prizes = draftPrizes(draft)
                 if (Drops.prizesCount(prizes) === 0) {
-                    return i.reply({ content: "Añade al menos una recompensa antes de crear.", ephemeral: true }).catch(() => {})
+                    return errorReply(i, "Añade al menos una recompensa antes de crear.")
                 }
                 if (busy) return
                 busy = true
                 try {
                     await i.deferUpdate()
+                    syncUses(draft)
                     const res = await Drops.createDrop(client, guildId, {
                         maxClaims: draft.maxClaims,
                         durationMin: draft.durationMin,
@@ -881,11 +821,11 @@ module.exports = {
                     if (!res.ok) throw new Error((res.errors || []).join("; "))
                     const code = res.code
                     if (dropSeq > 0) {
-                        await client.db.update(guildId, { $set: { "settings.dropSeq": dropSeq } }).exec().catch(() => {})
+                        client.db.update(guildId, { $set: { "settings.dropSeq": dropSeq } }).exec().catch(() => {})
                     }
                     const url = Drops.dropUrl(guildId, code, tools.WEBSITE)
-                    await i.editReply(V2.components(buildCreatedContainer(res.drop, code, url, tools, draft.allow)))
                     collector.stop("created")
+                    await i.editReply(V2.components(buildCreatedContainer(res.drop, code, url, tools, draft.allow)))
                 } catch (e) {
                     console.error("[drops:crear]", e?.message)
                     await i.followUp({ content: "No se pudo crear el drop: revisa los premios e inténtalo de nuevo.", ephemeral: true }).catch(() => {})
@@ -901,34 +841,68 @@ module.exports = {
         collector.on("end", async (_, reason) => {
             if (reason === "cancel" || reason === "created") return
             try {
-                await sent.edit(V2.components(new ContainerBuilder().setAccentColor(0x87f3ff)
+                await sent.edit(V2.components(new ContainerBuilder().setAccentColor(ACCENT)
                     .addTextDisplayComponents(textBuilder("## ⏱️ Tiempo agotado"))
-                    .addTextDisplayComponents(textBuilder("-# El asistente se cerró: reabre `/drops crear` cuando quieras."))))
+                    .addTextDisplayComponents(textBuilder("-# *Reabre `/drops crear` cuando quieras.*"))))
             } catch {}
         })
     },
 
-    // ───
-    async runList(client, int, tools, { deleteMode = false } = {}) {
+    // ─── /drops eliminar drop:<código> ───
+    // El autocompletado lista los drops activos; al enviar, se borra directo.
+    async runDelete(client, int, tools) {
+        const guildId = int.guild.id
+        const typed = String(int.options.getString("drop") || "").trim()
+        const doc = await client.db.fetch(guildId, ["drops"]).exec().catch(() => null)
+        const drops = doc?.drops || {}
+        const keys = Object.keys(drops)
+        const code = keys.find(k => k === typed) || keys.find(k => k.toLowerCase() === typed.toLowerCase())
+        const container = new ContainerBuilder().setAccentColor(ACCENT)
+        if (!code) {
+            container.addTextDisplayComponents(textBuilder("## 🗑️ Eliminar drop"))
+            container.addSeparatorComponents(sepBuilder())
+            container.addTextDisplayComponents(textBuilder(`No existe ningún drop con el código \`${typed.slice(0, 20)}\`.\n-# *Elígelo de la lista al escribir el comando.*`))
+            return say(int, container)
+        }
+        const drop = drops[code]
+        try {
+            await Drops.deleteDrop(client, guildId, code)
+        } catch (e) {
+            console.error("[drops:eliminar]", e?.message)
+            return tools.warn("No se pudo eliminar el drop. Inténtalo de nuevo.")
+        }
+        const claimed = Array.isArray(drop.claims) ? drop.claims.length : 0
+        container.addTextDisplayComponents(textBuilder(`## 🗑️ Drop eliminado: ${drop.name || "Drop"} \`${code}\``))
+        container.addSeparatorComponents(sepBuilder())
+        container.addTextDisplayComponents(textBuilder([
+            `👥 **Usos:** ${tools.commafy(claimed)}/${tools.commafy(drop.maxClaims)}`,
+            accessLine(Array.isArray(drop.allow) ? drop.allow : []),
+        ].join("\n")))
+        container.addSeparatorComponents(sepBuilder())
+        addPrizesBlock(container, dropPrizeLines(drop, tools))
+        container.addTextDisplayComponents(textBuilder("-# *El enlace ya no funciona.*"))
+        return say(int, container)
+    },
+
+    // ─── /drops mostrar ───
+    async runList(client, int, tools) {
         const base = Drops.dropsBaseUrl(tools.WEBSITE)
         const guildId = int.guild.id
         const authorId = int.user.id
 
         const fetchRows = async () => {
             const doc = await client.db.fetch(guildId, ["drops"]).exec().catch(() => null)
-            // Solo los que aún no han expirado; los agotados salen tachados.
+            // Solo los no expirados; los agotados salen tachados.
             return Drops.listDrops(doc).filter(r => !r.expired)
         }
-        // El menú y los botones trabajan sobre la foto más fresca (los usos y
-        // la caducidad cambian con +10/+24h o al reclamar).
         let currentRows = await fetchRows()
         let selected = null
         const render = () => {
             const fresh = selected ? currentRows.find(r => r.code === selected) : null
             if (selected && !fresh) selected = null
             return fresh
-                ? buildDropDetailContainer(currentRows, fresh, base, guildId, tools, { deleteMode })
-                : buildDropsListContainer(currentRows, base, guildId, tools, { deleteMode })
+                ? buildDropDetailContainer(currentRows, fresh, base, guildId, tools)
+                : buildDropsListContainer(currentRows, base, guildId, tools)
         }
 
         await say(int, render())
@@ -940,8 +914,8 @@ module.exports = {
             currentRows = await fetchRows()
             await editor.editReply(V2.components(render()))
         }
-        // Botones de cantidad/tiempo: abren un modal para el número exacto y
-        // al confirmar refrescan el mensaje de arriba.
+
+        // Usos / tiempo: modal con el número exacto; luego se refresca el panel.
         const openAmountModal = async (buttonInt, action, code) => {
             const isUses = action === BTN_USES
             const modalId = `${MODAL_PREFIX}:${action}:${code}`
@@ -950,21 +924,16 @@ module.exports = {
             } catch { return }
             let submitted = null
             try {
-                submitted = await buttonInt.awaitModalSubmit({
-                    filter: i => i.customId === modalId && i.user.id === authorId,
-                    time: 120000,
-                })
+                submitted = await buttonInt.awaitModalSubmit({ filter: i => i.customId === modalId && i.user.id === authorId, time: 120000 })
             } catch { submitted = null }
             if (!submitted) return
             let raw = ""
-            try {
-                raw = submitted.fields.getTextInputValue("amount")
-            } catch { raw = "" }
+            try { raw = submitted.fields.getTextInputValue("amount") } catch { raw = "" }
             const parsed = parseModalAmount(raw, isUses ? USES_BOUNDS : HOURS_BOUNDS)
             if (!parsed.ok) {
                 return submitted.reply({
                     content: isUses
-                        ? `Pon un número de usos entre ${USES_BOUNDS.min} y ${USES_BOUNDS.max} usos.`
+                        ? `Pon un número de usos entre ${USES_BOUNDS.min} y ${USES_BOUNDS.max}.`
                         : `Pon un número de horas entre ${HOURS_BOUNDS.min} y ${HOURS_BOUNDS.max}.`,
                     ephemeral: true,
                 }).catch(() => {})
@@ -974,32 +943,28 @@ module.exports = {
                 const doc = await client.db.fetch(guildId, [`drops.${code}`]).exec().catch(() => null)
                 const drop = doc?.drops?.[code]
                 if (!drop) {
-                    return submitted.followUp({ content: "Ese drop ya no existe. Reabre /drops mostrar." }).catch(() => {})
+                    return submitted.followUp({ content: "Ese drop ya no existe. Reabre /drops mostrar.", ephemeral: true }).catch(() => {})
                 }
                 if (isUses) {
+                    if (drop.allow?.length) {
+                        return submitted.followUp({ content: "Con reservados, los usos son el número de reservados.", ephemeral: true }).catch(() => {})
+                    }
                     const total = Number(drop.maxClaims) + parsed.value
                     if (total > Drops.LIMITS.usesMax) {
-                        return submitted.followUp({ content: `Se pasaría del máximo (${tools.commafy(Drops.LIMITS.usesMax)} usos).` }).catch(() => {})
+                        return submitted.followUp({ content: `Se pasaría del máximo (${tools.commafy(Drops.LIMITS.usesMax)} usos).`, ephemeral: true }).catch(() => {})
                     }
                     await client.db.update(guildId, { $set: { [`drops.${code}.maxClaims`]: total } }).exec()
                 } else {
                     await client.db.update(guildId, { $set: { [`drops.${code}.expiresAt`]: Number(drop.expiresAt) + parsed.value * 3600 * 1000 } }).exec()
                 }
-                currentRows = await fetchRows()
                 selected = code
-                // El modal ya reconoció a buttonInt: el panel se refresca
-                // editando el mensaje directamente.
-                await message.edit(V2.components(render())).catch(() => {})
-                await submitted.followUp({
-                    content: isUses
-                        ? `✅ +${tools.commafy(parsed.value)} usos a \`${code}\`.`
-                        : `✅ +${tools.commafy(parsed.value)} h a \`${code}\`.`,
-                }).catch(() => {})
+                await refresh(submitted)
             } catch {
-                try { await submitted.followUp({ content: "No se pudo actualizar. Reabre /drops mostrar." }) } catch {}
+                try { await submitted.followUp({ content: "No se pudo actualizar. Reabre /drops mostrar.", ephemeral: true }) } catch {}
             }
         }
-        // Botón "Privatizar": pega IDs o menciones y añade los reservados.
+
+        // Reservar: pegar IDs o menciones.
         const openReserveModal = async (buttonInt, code) => {
             const modalId = `dropw:solo:${code}`
             try {
@@ -1007,10 +972,7 @@ module.exports = {
             } catch { return }
             let submitted = null
             try {
-                submitted = await buttonInt.awaitModalSubmit({
-                    filter: i => i.customId === modalId && i.user.id === authorId,
-                    time: 120000,
-                })
+                submitted = await buttonInt.awaitModalSubmit({ filter: i => i.customId === modalId && i.user.id === authorId, time: 120000 })
             } catch { submitted = null }
             if (!submitted) return
             let raw = ""
@@ -1020,39 +982,32 @@ module.exports = {
                 return submitted.reply({ content: "Pega al menos una mención <@usuario> o un ID válido.", ephemeral: true }).catch(() => {})
             }
             try {
-                const picks = []
-                for (const uid of ids) {
+                await submitted.deferUpdate()
+                const picks = await Promise.all(ids.map(async uid => {
                     const member = await int.guild?.members?.fetch?.(uid).catch(() => null)
-                    picks.push({ id: uid, name: member?.displayName || `usuario ${uid}` })
-                }
+                    return { id: uid, name: member?.displayName || `usuario ${uid}` }
+                }))
                 const res = await applyReserve(client, guildId, code, picks)
                 if (!res.ok) throw new Error("missing")
-                currentRows = await fetchRows()
                 selected = code
-                await message.edit(V2.components(render())).catch(() => {})
-                await submitted.followUp({
-                    content: `🔒 \`${code}\` privado: ${tools.commafy(res.total)} en total (usos: ${tools.commafy(res.bump)}).`,
-                }).catch(() => {})
+                await refresh(submitted)
             } catch {
                 try { await submitted.followUp({ content: "No se pudo actualizar. Reabre /drops mostrar.", ephemeral: true }) } catch {}
             }
         }
+
         const collector = message.createMessageComponentCollector({ time: 24 * 60 * 60 * 1000 })
         collector.on("collect", async interaction => {
             if (!interaction.isStringSelectMenu() && !interaction.isButton()) return
-            if (interaction.user.id !== authorId) {
-                return tools.denyButton(interaction, "drops")
-            }
+            if (interaction.user.id !== authorId) return tools.denyButton(interaction, "drops")
             // Los botones con modal se abren sin defer (showModal ya reconoce).
             if (interaction.isButton()) {
                 const [prefix, action, code] = String(interaction.customId || "").split(":")
                 if (prefix === BTN_PREFIX && (action === BTN_USES || action === BTN_TIME)) {
-                    await openAmountModal(interaction, action, code)
-                    return
+                    return openAmountModal(interaction, action, code)
                 }
                 if (prefix === BTN_PREFIX && action === BTN_SOLO) {
-                    await openReserveModal(interaction, code)
-                    return
+                    return openReserveModal(interaction, code)
                 }
             }
             if (busy) return
@@ -1070,7 +1025,6 @@ module.exports = {
                     if (uid) {
                         await applyAllowRemove(client, guildId, code, uid)
                         await refresh(interaction)
-                        await interaction.followUp({ content: `✅ Quité <@${uid}> del privado de \`${code}\`.` }).catch(() => {})
                     }
                 } else if (interaction.isButton()) {
                     const [prefix, action, code] = id.split(":")
@@ -1078,80 +1032,82 @@ module.exports = {
                         await Drops.deleteDrop(client, guildId, code)
                         selected = null
                         await refresh(interaction)
-                        await interaction.followUp({ content: `🗑️ Drop \`${code}\` eliminado.` }).catch(() => {})
                     } else if (prefix === BTN_PREFIX && action === BTN_OPEN) {
                         await applyOpenAll(client, guildId, code)
                         await refresh(interaction)
-                        await interaction.followUp({ content: `🌍 \`${code}\` público de nuevo.` }).catch(() => {})
                     }
                 }
             } catch {
-                try {
-                    await interaction.followUp({ content: "No se pudo actualizar. Reabre /drops mostrar." })
-                } catch {}
+                try { await interaction.followUp({ content: "No se pudo actualizar. Reabre el comando.", ephemeral: true }) } catch {}
             } finally {
                 busy = false
             }
         })
         collector.on("end", async () => {
             try {
+                // Desactiva botones y menús al expirar (también los de las secciones).
                 const container = render()
+                const disable = c => { if (typeof c.setDisabled === "function") c.setDisabled(true) }
                 for (const row of container.components) {
-                    for (const comp of (row.components || [])) {
-                        if (typeof comp.setDisabled === "function") comp.setDisabled(true)
-                    }
+                    for (const comp of (row.components || [])) disable(comp)
+                    if (row.accessory) disable(row.accessory)
                 }
                 await message.edit(V2.components(container))
             } catch {}
         })
     },
 
-    // Permisos de /drops (solo gestores, ver run): roles en settings.dropRoles.
+    // Permisos de /drops (solo gestores): roles en settings.dropRoles.
     async runPermiso(client, int, tools) {
-        const container = new ContainerBuilder().setAccentColor(0x87f3ff)
-        container.addTextDisplayComponents(textBuilder(`## 🔑 Permiso de /drops`))
+        const container = new ContainerBuilder().setAccentColor(ACCENT)
+        container.addTextDisplayComponents(textBuilder("## 🔑 Permisos de /drops"))
         container.addSeparatorComponents(sepBuilder())
         const role = int.options.getRole("rol")
         if (role) {
             if (role.id === int.guild.id) return tools.warn("Elige un rol válido (no @everyone).")
             if (int.options.get("quitar")?.value) {
                 await client.db.update(int.guild.id, { $pull: { "settings.dropRoles": { id: role.id } } }).exec()
-                container.addTextDisplayComponents(textBuilder(`- 🗑️ <@&${role.id}> ya no puede usar \`/drops\`.`))
+                container.addTextDisplayComponents(textBuilder(`🗑️ <@&${role.id}> ya no puede usar \`/drops\`.`))
             } else {
                 await client.db.update(int.guild.id, { $addToSet: { "settings.dropRoles": { id: role.id } } }).exec()
-                container.addTextDisplayComponents(textBuilder(`- ✅ <@&${role.id}> ya puede usar \`/drops\` (crear, ver, eliminar).`))
+                container.addTextDisplayComponents(textBuilder(`✅ <@&${role.id}> ya puede usar \`/drops\`.`))
             }
         } else {
             const doc = await client.db.fetch(int.guild.id, ["settings.dropRoles"]).exec().catch(() => null)
             const roles = Array.isArray(doc?.settings?.dropRoles) ? doc.settings.dropRoles : []
-            if (!roles.length) {
-                container.addTextDisplayComponents(textBuilder([
-                    `- Nadie extra puede usar \`/drops\`: solo quienes gestionan el servidor.`,
-                    `-# Añade uno con \`/drops permiso rol:@Staff\`.`,
-                ].join("\n")))
-            } else {
-                container.addTextDisplayComponents(textBuilder([
-                    `- Quien gestione el servidor siempre puede. Además:`,
-                    roles.map(r => `- <@&${r.id}>`).join("\n"),
-                ].join("\n")))
-            }
+            container.addTextDisplayComponents(textBuilder(roles.length
+                ? `Quien gestione el servidor siempre puede. Además:\n${roles.map(r => `- <@&${r.id}>`).join("\n")}`
+                : "Solo quienes gestionan el servidor.\n-# *Añade uno con `/drops permisos rol:@Staff`.*"))
         }
         return say(int, container)
     },
 
-    // Autocompletado: sugiere items de la tienda por nombre (el valor es el
-    // ID). Sin economía o sin items, lista vacía.
+    // Autocompletado de /drops eliminar: lista los drops activos (el valor es el
+    // código). Solo para quien puede usar /drops: los códigos son los enlaces.
     async autocomplete(client, int) {
         try {
             const focused = int.options.getFocused(true)
-            if (!focused || !String(focused.name || "").startsWith("objeto")) return int.respond([])
             const guildId = int.guildId || int.guild?.id
-            if (!guildId) return int.respond([])
-            const items = await Drops.suggestBoatItems(guildId, focused.value).catch(() => [])
-            return int.respond(items.slice(0, 25).map(it => ({
-                name: `${it.emoji ? `${it.emoji} ` : ""}${it.name}`.slice(0, 100),
-                value: it.id,
-            })))
+            if (!focused || !guildId || focused.name !== "drop") return int.respond([])
+            const doc = await client.db.fetch(guildId, ["drops", "settings.dropRoles"]).exec().catch(() => null)
+            const allowed = Drops.canUseDrops({
+                isManager: !!int.memberPermissions?.has("ManageGuild"),
+                memberRoles: int.member?.roles?.cache,
+                settings: doc?.settings || {},
+            })
+            if (!allowed) return int.respond([])
+            const q = String(focused.value || "").trim().toLowerCase()
+            const rows = Drops.listDrops(doc)
+                .filter(r => !r.expired)
+                .filter(r => !q || r.code.toLowerCase().includes(q) || String(r.drop.name || "").toLowerCase().includes(q))
+            return int.respond(rows.slice(0, 25).map(({ code, drop, left }) => {
+                const claimed = Math.max(0, Number(drop.maxClaims) - left)
+                const lock = drop.allow?.length ? "🔒 " : ""
+                return {
+                    name: `${lock}${drop.name || "Drop"} - ${code} - ${fmtInt(claimed)}/${fmtInt(drop.maxClaims)} usos`.slice(0, 100),
+                    value: code,
+                }
+            }))
         } catch {
             try { await int.respond([]) } catch {}
         }
@@ -1186,14 +1142,16 @@ module.exports.makeDraft = makeDraft
 module.exports.draftPrizes = draftPrizes
 module.exports.draftAddItem = draftAddItem
 module.exports.draftRemoveItem = draftRemoveItem
+module.exports.draftSetAllow = draftSetAllow
 module.exports.draftAddAllow = draftAddAllow
 module.exports.draftRemoveAllow = draftRemoveAllow
 module.exports.durationLabel = durationLabel
 module.exports.describeAllow = describeAllow
+module.exports.accessLine = accessLine
+module.exports.prizeLines = prizeLines
 module.exports.prizeSummary = prizeSummary
 module.exports.buildMakeContainer = buildMakeContainer
 module.exports.buildPickContainer = buildPickContainer
-module.exports.buildConfirmContainer = buildConfirmContainer
 module.exports.buildCancelledContainer = buildCancelledContainer
 module.exports.buildCreatedContainer = buildCreatedContainer
 module.exports.buildMakeNameModal = buildMakeNameModal

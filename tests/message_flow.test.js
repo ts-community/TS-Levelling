@@ -352,6 +352,29 @@ test("withAuthorLock isolates different authors and guilds", async () => {
     assert.deepEqual(order.slice(0, 3), ["start-a", "start-b", "start-c"])
 })
 
+test("withAuthorLock serializes a burst queued while one is in flight", async () => {
+    // Ráfaga: 7 mensajes del mismo autor llegan mientras el primero sigue en
+    // marcha. Todos deben correr en serie, no todos juntos al liberarse el
+    // primero (ese desbordamiento anunciaba el mismo level-up X veces, una
+    // por mensaje, porque todos leían el XP antes de los $inc de los demás).
+    const order = []
+    const slow = async id => {
+        order.push(`start-${id}`)
+        await new Promise(r => setTimeout(r, 5))
+        order.push(`end-${id}`)
+        return id
+    }
+    const jobs = []
+    for (let i = 1; i <= 7; i++) jobs.push(NewMessage.withAuthorLock("g1", "u1", () => slow(i)))
+    await Promise.all(jobs)
+    // nunca hay solapamiento: todo start va tras su end anterior
+    for (let i = 0; i < order.length; i += 2) {
+        assert.equal(order[i], `start-${(i / 2) + 1}`)
+        assert.equal(order[i + 1], `end-${(i / 2) + 1}`)
+    }
+    assert.deepEqual(order, [...Array(7)].flatMap((_, i) => [`start-${i + 1}`, `end-${i + 1}`]))
+})
+
 test("withAuthorLock releases after failure", async () => {
     await assert.rejects(NewMessage.withAuthorLock("g1", "u9", async () => { throw new Error("x") }))
     const ok = await NewMessage.withAuthorLock("g1", "u9", async () => "fine")
