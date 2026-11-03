@@ -12,7 +12,7 @@ function escapeHtml(s) {
 // Iconos SVG (trazo), por nombre. Sin emojis: el círculo grande lleva un
 // símbolo fino y limpio, coloreado blanco traslúcido.
 const ICONS = {
-    egg: '<path d="M12 2.7c-3.7 0-6.9 5.2-6.9 10.4C5.1 18.4 8.1 22 12 22s6.9-3.6 6.9-8.9C18.9 7.9 15.7 2.7 12 2.7z"/><path d="M9.1 11c.3-2.5 1.5-4.6 3-5.6"/>',
+    egg: '<path d="M12 2.5c-3.8 0-7 5.4-7 10.6C5 18.4 8.1 22 12 22s7-3.6 7-8.9C19 7.9 15.8 2.5 12 2.5z"/><path d="M5.4 11.2l2.2-1.6 2.2 1.6 2.2-1.6 2.2 1.6 2.2-1.6 2.2 1.6"/><path d="M5.3 15.6h13.4"/><path d="M9 6.6c.6-.8 1.3-1.3 2-1.6"/>',
     gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
     trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',

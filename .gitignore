@@ -3,3 +3,6 @@ json/auto
 .env
 .vscode
 .package-lock.json
+# Copias de .env con secretos
+.env.*
+!.env.example

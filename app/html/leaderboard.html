@@ -118,11 +118,11 @@
             bottom: 14px;
             width: 30px;
             height: 40px;
-            /* Huevo de verdad: estrecho arriba, redondo abajo, ligeramente
-               torcido como si estuviera escondido */
-            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: linear-gradient(160deg, rgba(135, 243, 255, 0.55), rgba(167, 139, 250, 0.5) 45%, rgba(245, 215, 110, 0.45));
+            /* El dibujo es un SVG dentro del botón; ligeramente torcido
+               como si estuviera escondido */
+            padding: 0;
+            border: 0;
+            background: none;
             opacity: 0.45;
             filter: blur(9px);
             transform: rotate(-16deg);
@@ -130,13 +130,12 @@
             z-index: 40;
             transition: opacity 0.35s ease, filter 0.45s ease, box-shadow 0.45s ease;
         }
+        #secretEasterTrigger svg { display: block; width: 100%; height: 100%; }
         #secretEasterTrigger:hover,
         #secretEasterTrigger:focus-visible,
         #secretEasterTrigger:active {
             opacity: 1;
-            filter: blur(0);
-            border-color: rgba(255, 255, 255, 0.45);
-            box-shadow: 0 0 18px rgba(135, 243, 255, 0.8), 0 0 42px rgba(167, 139, 250, 0.55);
+            filter: blur(0) drop-shadow(0 0 8px rgba(135, 243, 255, 0.8)) drop-shadow(0 0 18px rgba(167, 139, 250, 0.55));
             animation: eggReady 0.55s ease-in-out infinite alternate;
         }
         @keyframes eggReady {
@@ -179,6 +178,28 @@
     <div id="everything" style="display: none">
 
     <button id="secretEasterTrigger" type="button" aria-label="Easter egg">
+        <svg viewBox="0 0 60 80" aria-hidden="true">
+            <defs>
+                <linearGradient id="eggShell" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#87f3ff"/>
+                    <stop offset=".5" stop-color="#a78bfa"/>
+                    <stop offset="1" stop-color="#f5d76e"/>
+                </linearGradient>
+                <radialGradient id="eggShine" cx=".35" cy=".28" r=".55">
+                    <stop offset="0" stop-color="#fff" stop-opacity=".7"/>
+                    <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+                </radialGradient>
+                <clipPath id="eggClip"><path d="M30 2C15 2 3 26 3 47c0 18 12 31 27 31s27-13 27-31C57 26 45 2 30 2z"/></clipPath>
+            </defs>
+            <path d="M30 2C15 2 3 26 3 47c0 18 12 31 27 31s27-13 27-31C57 26 45 2 30 2z" fill="url(#eggShell)"/>
+            <g clip-path="url(#eggClip)">
+                <rect x="0" y="34" width="60" height="9" fill="#00e6a0" opacity=".85"/>
+                <path d="M0 52l6-6 6 6 6-6 6 6 6-6 6 6 6-6 6 6 6-6 6 6" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round" opacity=".9"/>
+                <g fill="#fff" opacity=".85"><circle cx="15" cy="22" r="2.5"/><circle cx="30" cy="17" r="2.5"/><circle cx="45" cy="22" r="2.5"/><circle cx="18" cy="64" r="2.5"/><circle cx="30" cy="68" r="2.5"/><circle cx="42" cy="64" r="2.5"/></g>
+                <ellipse cx="30" cy="40" rx="30" ry="40" fill="url(#eggShine)"/>
+            </g>
+            <path d="M30 2C15 2 3 26 3 47c0 18 12 31 27 31s27-13 27-31C57 26 45 2 30 2z" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"/>
+        </svg>
     </button>
 
     <div class="lbLayout">
