@@ -1,0 +1,39 @@
+# CI: se ejecuta en cada push a la rama principal y en cada PR.
+# MergeGuard exige que este job pase antes de fusionar.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests (Node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Instalar Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+      - name: Comprobar sintaxis
+        run: find . -name '*.js' -not -path './node_modules/*' -print0 | xargs -0 -r -n1 node --check
+      - name: Tests
+        run: pnpm test
