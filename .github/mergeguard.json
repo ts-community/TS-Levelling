@@ -9,7 +9,9 @@
   ],
   "approvalLabel": "mergeguard:approve",
   "skipLabel": "mergeguard:skip",
-  "requiredChecks": [],
+  "requiredChecks": [
+    "Tests (Node)"
+  ],
   "allowedBaseBranches": [],
   "dependabot": true,
   "requireSecurityAlerts": true,
