@@ -249,13 +249,6 @@ async runInner(client, message, tools) {
             }
         }
 
-        // Economía: refresca el saldo de UnbelievaBoat (con throttle por
-        // usuario) y concede los tiers de monedas alcanzados. Sin economía
-        // conectada no hace nada.
-        const coinUnlocks = await tracker.syncUserCoins({
-            client, guild: message.guild, guildId: message.guild.id, userId: author, userData,
-        })
-        if (coinUnlocks?.length) pendingUnlocks.push(...coinUnlocks)
     } catch {}
 
     // Enviar todos los desbloqueos de golpe (batching)
@@ -270,6 +263,25 @@ async runInner(client, message, tools) {
             await tracker.sendBatchedUnlocks({ client, userId: author, avatarUrl, unlocks: pendingUnlocks })
         } catch {}
     }
+
+    // La sincronización de economía puede tardar por la API externa. No debe
+    // retrasar el aviso inmediato de récords, especialmente los ocultos.
+    tracker.syncUserCoins({
+        client, guild: message.guild, guildId: message.guild.id, userId: author, userData,
+    }).then(async coinUnlocks => {
+        if (!coinUnlocks?.length) return
+        try {
+            let avatarUrl = ""
+            if (message.member && typeof message.member.displayAvatarURL === "function") {
+                avatarUrl = message.member.displayAvatarURL({ format: "png", dynamic: true })
+            }
+            await tracker.sendBatchedUnlocks({ client, userId: author, avatarUrl, unlocks: coinUnlocks })
+        } catch (error) {
+            console.warn(`Could not send coin record unlocks for ${author}:`, error.message)
+        }
+    }).catch(error => {
+        console.warn(`Could not sync coin records for ${author}:`, error.message)
+    })
 
     // Rol de hitos a todo el que habla. AWAITS a propósito: si queda en
     // paralelo, el roles.set del sync de roles de nivel (más abajo) puede

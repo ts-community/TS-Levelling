@@ -1242,3 +1242,25 @@ test("registro del perfil de reservas en el comando y contenedores", () => {
     assert.ok(JSON.stringify(locked.toJSON()).includes("https://example.test/drop/g/BBB123"), "enlace en mensaje final con privados")
     assert.ok(JSON.stringify(locked.toJSON()).includes("<@u1>"), "mención de privado en mensaje final")
 })
+
+test("claimOutcomeNote explica dónde acabó cada premio", () => {
+    assert.match(Drops.claimOutcomeNote({ kind: "xp" }), /XP/)
+    assert.match(Drops.claimOutcomeNote({ kind: "coins" }), /UnbelievaBoat/)
+    assert.match(Drops.claimOutcomeNote({ kind: "item" }), /inventario/)
+    assert.match(Drops.claimOutcomeNote({ kind: "role" }), /rol/)
+    const bundle = Drops.claimOutcomeNote({ kind: "bundle", prizes: { xp: 1, coins: 1, roles: [{ id: "r" }], items: [{ id: "i" }] } })
+    assert.match(bundle, /XP/)
+    assert.match(bundle, /monedas/)
+    assert.equal(Drops.claimOutcomeNote(null), Drops.claimOutcomeNote({ kind: "xp" }))
+})
+
+test("isDropWebPath reconoce rutas completas y cortas del drop", () => {
+    assert.equal(Drops.isDropWebPath("/drop/1093864130030612521/ABCD2345"), true)
+    assert.equal(Drops.isDropWebPath("/1093864130030612521/ABCD2345"), true)
+    assert.equal(Drops.isDropWebPath("/ABCD2345"), true)
+    assert.equal(Drops.isDropWebPath("/servers"), false)
+    assert.equal(Drops.isDropWebPath("/easteregg"), false)
+    assert.equal(Drops.isDropWebPath("/EASTEREGG"), false)
+    assert.equal(Drops.isDropWebPath("/discord?next=/ABCD2345"), false)
+    assert.equal(Drops.isDropWebPath("/drop/123/abc"), false)
+})

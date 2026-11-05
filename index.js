@@ -7,6 +7,7 @@ const mongoose = require("mongoose")
 
 const Tools = require("./classes/Tools.js")
 const Model = require("./classes/DatabaseModel.js")
+const MonthlyTop = require("./classes/MonthlyTop.js")
 
 // automatic files: these handle discorad status and version number, manage them with the dev commands
 const autoPath = "./json/auto/"
@@ -21,15 +22,7 @@ const startTime = Date.now()
 
 const memberCleanupInterval = 6 * 60 * 60 * 1000
 const memberCleanupBatchSize = 500
-const monthlyLogChannelId = "1160813323655331850"
-const staffRoleIds = new Set([
-    "1106553480803516437",
-    "1107345436492185753",
-    "1106553536839422022",
-    "1202685031219200040",
-    "1107329826982989906",
-    "1107331844866846770"
-])
+const staffRoleIds = new Set(MonthlyTop.STAFF_ROLE_IDS)
 const memberFetchCacheTime = 6 * 60 * 60 * 1000
 const memberFetchSpacing = 5000
 const memberFetchBatchSize = 1000
@@ -170,6 +163,33 @@ function getNextMadridMonthStart() {
     return new Date(utcEstimate)
 }
 
+function getMadridDateAt(year, month, day, hour = 0, minute = 0) {
+    const utcGuess = Date.UTC(year, month - 1, day, hour, minute)
+    for (let offset = -14; offset <= 14; offset++) {
+        const candidate = new Date(utcGuess - offset * 60 * 60 * 1000)
+        const parts = getMadridParts(candidate)
+        if (Number(parts.year) === year &&
+            Number(parts.month) === month &&
+            Number(parts.day) === day &&
+            Number(parts.hour) === hour &&
+            Number(parts.minute) === minute) return candidate
+    }
+    return new Date(utcGuess)
+}
+
+function getStaffVoteWindow(now = new Date()) {
+    const parts = getMadridParts(now)
+    const year = Number(parts.year)
+    const month = Number(parts.month)
+    const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
+    const openDay = Math.max(1, daysInMonth - (MonthlyTop.STAFF_VOTE_DAYS_BEFORE_END - 1))
+    return {
+        period: `${year}-${String(month).padStart(2, "0")}`,
+        openAt: getMadridDateAt(year, month, openDay, 0, 0),
+        closeAt: getMadridDateAt(year, month, daysInMonth, 23, 59),
+    }
+}
+
 function scheduleMadridMonthlyRollover() {
     const target = getNextMadridMonthStart()
     const delay = Math.max(target.getTime() - Date.now(), 1000)
@@ -206,12 +226,40 @@ function scheduleMadridDailyRollover() {
     }, checkDelay)
 }
 
-function getSpanishMonthName(period) {
-    return new Intl.DateTimeFormat("es-ES", {
-        timeZone: "Europe/Madrid",
-        month: "long",
-        year: "numeric"
-    }).format(new Date(`${period}-02T12:00:00Z`))
+const staffVoteStartLocks = new Set()
+
+async function maybeStartStaffVote(guild, server, knownMembers) {
+    if (guild.id !== MonthlyTop.MAIN_GUILD_ID || !server) return null
+    const window = getStaffVoteWindow()
+    const now = Date.now()
+    if (now < window.openAt.getTime() || now >= window.closeAt.getTime()) return null
+    if (server.info?.monthlyStaffVote?.period === window.period) return null
+
+    const lockKey = `${guild.id}:${window.period}`
+    if (staffVoteStartLocks.has(lockKey)) return null
+    staffVoteStartLocks.add(lockKey)
+
+    try {
+        const members = knownMembers || await fetchMembersForMaintenance(guild)
+        if (!members) return null
+
+        const result = await MonthlyTop.startStaffVote(client, guild, server, members, window.period, window.closeAt)
+        if (result?.error) console.warn(`Could not start monthly staff vote for ${guild.id}: ${result.error}`)
+        return result
+    } finally {
+        staffVoteStartLocks.delete(lockKey)
+    }
+}
+
+async function ensureMonthlyStaffVote() {
+    const guild = client.guilds.cache.get(MonthlyTop.MAIN_GUILD_ID)
+    if (!guild) return
+    try {
+        const server = await client.db.fetch(guild.id).exec()
+        await maybeStartStaffVote(guild, server)
+    } catch (error) {
+        console.warn(`Could not ensure monthly staff vote for ${guild.id}:`, error.message)
+    }
 }
 
 function getMonthlySnapshot(server, members, period) {
@@ -252,61 +300,6 @@ function getMonthlySnapshot(server, members, period) {
     }
 }
 
-function getNextPeriod(period) {
-    const [yearPart, monthPart] = String(period).split("-")
-    let year = Number(yearPart)
-    let month = Number(monthPart) + 1
-    if (month === 13) {
-        month = 1
-        year++
-    }
-    return `${year}-${String(month).padStart(2, "0")}`
-}
-
-async function logMonthlyTop(guild, snapshot, period) {
-    const channel = await client.channels.fetch(monthlyLogChannelId).catch(() => null)
-    if (!channel || channel.guild?.id !== guild.id || !channel.isTextBased()) return false
-
-    const formatTop = (title, entries) => {
-        const lines = entries.map((user, index) =>
-            `${index + 1}. <@${user.id}> - Nivel ${user.level} - **${client.globalTools.commafy(user.xp)} XP** - ${client.globalTools.commafy(user.messages)} mensajes`)
-        return [`### ${title}`, lines.length ? lines.join("\n") : "-# Sin actividad registrada"].join("\n")
-    }
-    const capitalize = text => text ? text.charAt(0).toUpperCase() + text.slice(1) : text
-    const monthName = capitalize(getSpanishMonthName(period))
-    const nextMonthName = capitalize(getSpanishMonthName(getNextPeriod(period)))
-    const staffCount = Number(snapshot.totals?.staff) || (snapshot.staff || []).length
-    const memberCount = Number(snapshot.totals?.members) || (snapshot.members || []).length
-
-    const separator = () => new Discord.SeparatorBuilder()
-        .setDivider(true)
-        .setSpacing(Discord.SeparatorSpacingSize.Small)
-    const text = content => new Discord.TextDisplayBuilder().setContent(content)
-    const container = new Discord.ContainerBuilder()
-        .setAccentColor(0x8ecae6)
-        .addTextDisplayComponents(text(`# 📋 Registro mensual - ${monthName}`))
-        .addSeparatorComponents(separator())
-        .addTextDisplayComponents(text(formatTop("Staff más activos", snapshot.staff || [])))
-        .addSeparatorComponents(separator())
-        .addTextDisplayComponents(text(formatTop("Miembros más activos", snapshot.members || [])))
-        .addSeparatorComponents(separator())
-        .addTextDisplayComponents(text(
-            `-# Cierre de ${monthName} - ${staffCount} staff y ${memberCount} miembros con actividad - Contadores a 0 para ${nextMonthName}`
-        ))
-
-    try {
-        await channel.send({
-            components: [container],
-            flags: Discord.MessageFlags.IsComponentsV2,
-            allowedMentions: { parse: [] },
-        })
-        return true
-    } catch (error) {
-        console.warn(`Could not send monthly top for ${guild.id} (${period}):`, error.message)
-        return false
-    }
-}
-
 const monthlyMaintenanceLocks = new Set()
 // Mantenimiento de periodos (diario + mensual, hora española).
 // Reset LÓGICO: no se pone a 0 a todos los usuarios (caro y con carreras).
@@ -334,6 +327,9 @@ async function processMonthlyMessages(guild, knownServer, knownMembers) {
         // hacer doble reset ni comerse el +1 del primero.
         const server = await client.db.fetch(guild.id).exec()
         if (!server) return { dailyReset: false, monthlyReset: false }
+        await maybeStartStaffVote(guild, server, knownMembers).catch(error => {
+            console.warn(`Could not start monthly staff vote for ${guild.id}:`, error.message)
+        })
         let dailyReset = false
         let monthlyReset = false
 
@@ -365,6 +361,32 @@ async function processMonthlyMessages(guild, knownServer, knownMembers) {
         if (!members) return { dailyReset, monthlyReset }
         const monthlyTop = getMonthlySnapshot(server, members, previousPeriod)
 
+        if (guild.id === MonthlyTop.MAIN_GUILD_ID) {
+            const staffVote = await MonthlyTop.resolveStaffVote(client, guild, server, previousPeriod)
+            if (staffVote?.error) console.warn(`Could not resolve monthly staff vote for ${guild.id}: ${staffVote.error}`)
+            if (staffVote?.winnerId) {
+                const winnerData = server.users?.[staffVote.winnerId] || {}
+                monthlyTop.staff = [MonthlyTop.buildStaffWinnerEntry(
+                    server,
+                    previousPeriod,
+                    staffVote.winnerId,
+                    client.globalTools.getLevel(winnerData.xp || 0, server.settings),
+                )]
+                monthlyTop.staffVote = {
+                    winnerId: staffVote.winnerId,
+                    winnerLabel: staffVote.winnerLabel,
+                    votes: staffVote.winnerVotes,
+                    tieBreak: staffVote.tieBreak === true,
+                    totalVotes: (staffVote.results || []).reduce((sum, item) => sum + (Number(item.votes) || 0), 0),
+                }
+            } else {
+                monthlyTop.staff = []
+                if (!staffVote) console.warn(`No monthly staff vote found for ${previousPeriod} in ${guild.id}`)
+            }
+        } else {
+            monthlyTop.staff = []
+        }
+
         // El reset NO depende del log: se guarda siempre y el anuncio es
         // best-effort (antes, si fallaba un destino, el mes no reseteaba
         // nunca y se acumulaba).
@@ -376,11 +398,20 @@ async function processMonthlyMessages(guild, knownServer, knownMembers) {
         }).exec()
         monthlyReset = true
 
-        try {
-            const logged = await logMonthlyTop(guild, monthlyTop, previousPeriod)
-            if (!logged) console.warn(`Monthly top for ${guild.id} (${previousPeriod}) reset but log incomplete`)
-        } catch (e) {
-            console.warn(`Could not log monthly top for ${guild.id}:`, e.message)
+        if (guild.id === MonthlyTop.MAIN_GUILD_ID) {
+            try {
+                const roles = await MonthlyTop.assignTopRoles(guild, monthlyTop, previousPeriod)
+                if (roles.error) console.warn(`Could not assign monthly top roles for ${guild.id}: ${roles.error}`)
+
+                const rewards = await MonthlyTop.giveMonthlyCoins(client, guild, monthlyTop, previousPeriod)
+                if (rewards.error) console.warn(`Could not give monthly coins for ${guild.id}: ${rewards.error}`)
+
+                const sent = await MonthlyTop.sendMonthlyTop(client, guild, monthlyTop, previousPeriod, { rewards: rewards.rewards })
+                if (!sent.public) console.warn(`Monthly top for ${guild.id} (${previousPeriod}) could not be sent to the public channel`)
+                if (!sent.admin) console.warn(`Monthly top for ${guild.id} (${previousPeriod}) could not be sent to the admin channel`)
+            } catch (e) {
+                console.warn(`Could not send monthly top for ${guild.id}:`, e.message)
+            }
         }
         return { dailyReset, monthlyReset }
     } finally {
@@ -508,10 +539,29 @@ fs.readdirSync(dir).forEach(type => {
     })
 })
 
+const activities = [
+    { name: "/rank" },
+    { name: "/top" },
+    { name: "/records" }
+]
+
+let activityIndex = 0
+
 client.statusData = rawStatus
+
 client.updateStatus = function() {
-    let status = client.statusData
-    client.user.setPresence({ activities: status.type ? [{ name: status.name, state: status.state || undefined, type: Discord.ActivityType[status.type], url: status.url }] : [], status: status.status })
+    const activity = activities[activityIndex]
+
+    client.user.setPresence({
+        activities: [{
+            name: "Custom Status",
+            type: Discord.ActivityType.Custom,
+            state: activity.name
+        }],
+        status: rawStatus.status
+    })
+
+    activityIndex = (activityIndex + 1) % activities.length
 }
 
 // when online
@@ -529,7 +579,7 @@ client.on("clientReady", () => {
     })
 
     client.updateStatus()
-    setInterval(client.updateStatus, 15 * 60000);
+    setInterval(client.updateStatus, 15 * 60 * 1000)
 
     for (const guild of client.guilds.cache.values()) {
         fetchMembersForMaintenance(guild).catch(error => {
@@ -549,6 +599,7 @@ client.on("clientReady", () => {
     }, coinSyncDelay)
     scheduleMadridMonthlyRollover()
     scheduleMadridDailyRollover()
+    ensureMonthlyStaffVote()
 
     // run the web server
     if (client.shard.id == 0 && config.enableWebServer) require("./web_app.js")(client)

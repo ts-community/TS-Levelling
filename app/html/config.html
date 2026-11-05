@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="/css/polaris.css?v=10" type="text/css" rel="stylesheet">
+    <link href="/css/polaris.css?v=11" type="text/css" rel="stylesheet">
     <link rel="icon" href="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless">
     <title>TS Community</title>
 
@@ -156,7 +156,7 @@
 
             <h2>Activar XP</h2>
             <p class="details">Cuando está activado, los miembros podrán ganar XP. Esto es la base del bot.</p>
-            <label style="margin-top: 5px"; class="slider">
+            <label class="slider" style="margin-top: 5px">
                 <input db="enabled" id="enableLevelUp" type="checkbox" saveName="db">
                 <span class="sliderspan"></span>
             </label>
@@ -293,7 +293,7 @@
 
             <div class="centerflex spacedflex">
                 <p>Quitar este rol al obtener uno superior</p>
-                <label style="margin-top: 5px"; class="slider">
+                <label class="slider" style="margin-top: 5px">
                     <input id="rewardKeep" type="checkbox" checked>
                     <span class="sliderspan"></span>
                 </label>
@@ -301,7 +301,7 @@
 
             <div class="centerflex spacedflex excludeMode">
                 <p>Avanzado: Excluir este rol al sincronizar roles</p>
-                <label style="margin-top: 5px"; class="slider">
+                <label class="slider" style="margin-top: 5px">
                     <input id="rewardExclude" type="checkbox">
                     <span class="sliderspan"></span>
                 </label>
@@ -333,7 +333,7 @@
                     <h2>Sincronización manual</h2>
                     <p class="details">Si los miembros deberían poder sincronizar sus roles manualmente cuando quieran</p>
 
-                    <label style="margin-top: 5px"; class="slider">
+                    <label class="slider" style="margin-top: 5px">
                         <input type="checkbox" tabindex="0" db="rewardSyncing.noManual" invert="true" saveName="db">
                         <span class="sliderspan"></span>
                     </label>
@@ -345,7 +345,7 @@
                     <h2>Mostrar aviso de sincronización</h2>
                     <p class="details">Muestra un mensaje de aviso en /rank si los roles de un miembro no están bien sincronizados</p>
 
-                    <label style="margin-top: 5px"; class="slider">
+                    <label class="slider" style="margin-top: 5px">
                         <input type="checkbox" tabindex="0" db="rewardSyncing.noWarning" invert="true" saveName="db">
                         <span class="sliderspan"></span>
                     </label>
@@ -355,7 +355,7 @@
                     <h2>Avanzado: Excluir roles</h2>
                     <p class="details">Evita que ciertos roles se vuelvan a añadir o se quiten al sincronizar.</p>
 
-                    <label style="margin-top: 5px"; class="slider">
+                    <label class="slider" style="margin-top: 5px">
                         <input type="checkbox" tabindex="0" id="excludeRewardToggle">
                         <span class="sliderspan"></span>
                     </label>
@@ -372,7 +372,7 @@
 
             <h2>Activar mensaje</h2>
             <p class="details">Cuando está activado, se enviará un mensaje o MD cada vez que alguien suba de nivel.</p>
-            <label style="margin-top: 5px"; class="slider">
+            <label class="slider" style="margin-top: 5px">
                 <input db="levelUp.enabled" type="checkbox" saveName="db" onchange="$('.ifmessageenabled').toggle($(this).prop('checked'))">
                 <span class="sliderspan"></span>
             </label>
@@ -479,7 +479,7 @@
                 <div class="sideoption">
                     <h2>Modo embed</h2>
                     <p class="details">Envía un embed más vistoso en vez de un mensaje normal (¡avanzado!)</p>
-                    <label style="margin-top: 5px"; class="slider">
+                    <label class="slider" style="margin-top: 5px">
                         <input id="toggleLvlUpEmbed" type="checkbox" tabindex="0" db="levelUp.embed" saveName="db">
                         <span class="sliderspan"></span>
                     </label>
@@ -490,7 +490,7 @@
 
         <div class="settingBox box fulllength ifmessageenabled">
             <h1>Intervalo</h1>
-            <p class=>Con qué frecuencia se debe enviar el mensaje (ej. cada 3 niveles)</p>
+            <p>Con qué frecuencia se debe enviar el mensaje (ej. cada 3 niveles)</p>
 
             <div class="simpleflex" style="margin-bottom: 25px">
                 <div class="sideoption">
@@ -511,7 +511,7 @@
                     <div class="field">
                         <div class="centerflex spacedflex">
                             <p>Nivel</p>
-                            <input id="num_levelinterval" style="width: 100px" type="number" min="0" max="1000" default="0" db="levelUp.multipleUntil" saveName="db">
+                            <input id="num_levelmultipleuntil" style="width: 100px" type="number" min="0" max="1000" default="0" db="levelUp.multipleUntil" saveName="db">
                         </div>
                     </div>
                 </div>
@@ -520,7 +520,7 @@
             <div class="sideoption">
                 <h2>Solo roles de recompensa</h2>
                 <p class="details">Solo envía el mensaje de subida de nivel al obtener un nuevo rol de recompensa</p>
-                <label style="margin-top: 5px"; class="slider">
+                <label class="slider" style="margin-top: 5px">
                     <input type="checkbox" tabindex="0" db="levelUp.rewardRolesOnly" saveName="db" onchange="$('#roleVariables').toggle($(this).prop('checked'))">
                     <span class="sliderspan"></span>
                 </label>
@@ -604,7 +604,7 @@
 
             <h2>Activar tarjetas de rango</h2>
             <p class="details">Permite a los miembros consultar su XP con /rank. Desactivar esto también ocultará la mayoría de la información en /calculate.</p>
-            <label style="margin-top: 5px"; class="slider">
+            <label class="slider" style="margin-top: 5px">
                 <input type="checkbox" tabindex="0" db="rankCard.disabled" invert="true" saveName="db" onchange="$('.ifrankenabled').toggle($(this).prop('checked'))">
                 <span class="sliderspan"></span>
             </label>
@@ -614,7 +614,7 @@
         <div class="settingBox box ifrankenabled">
             <h2>Ocultar cooldown</h2>
             <p class="details">Evita que los miembros vean el tiempo restante hasta que puedan volver a ganar XP.</p>
-            <label style="margin-top: 5px"; class="slider">
+            <label class="slider" style="margin-top: 5px">
                 <input type="checkbox" tabindex="0" db="rankCard.hideCooldown" saveName="db">
                 <span class="sliderspan"></span>
             </label>
@@ -623,7 +623,7 @@
         <div class="settingBox box">
             <h2>Ocultar multiplicadores</h2>
             <p class="details">Evita que los miembros vean qué roles tienen multiplicadores. (excepto los de 0x)</p>
-            <label style="margin-top: 5px"; class="slider">
+            <label class="slider" style="margin-top: 5px">
                 <input type="checkbox" tabindex="0" db="hideMultipliers" saveName="db">
                 <span class="sliderspan"></span>
             </label>
@@ -632,7 +632,7 @@
         <div class="settingBox box ifrankenabled" style="min-height: 171px">
             <h2>Forzar oculto</h2>
             <p class="details">Fuerza a que los usos de /rank sean siempre ocultos (efímeros), es decir, que solo el miembro que escribió el comando pueda ver el mensaje.<br></p>
-            <label style="margin-top: 5px"; class="slider">
+            <label class="slider" style="margin-top: 5px">
                 <input type="checkbox" tabindex="0" db="rankCard.ephemeral" saveName="db">
                 <span class="sliderspan"></span>
             </label>
@@ -641,7 +641,7 @@
         <div class="settingBox box ifrankenabled" style="min-height: 171px">
             <h2>XP relativa</h2>
             <p class="details">Cambia la sección de 'siguiente nivel' de /rank para que empiece en 0 y solo incluya la XP de ese nivel. Ej. Si el nivel 10 requiere 2000 XP y el nivel 11 requiere 3000, se mostrará "500/1000 XP hasta el nivel 11" para un miembro con 2500 XP.</p>
-            <label style="margin-top: 5px"; class="slider">
+            <label class="slider" style="margin-top: 5px">
                 <input type="checkbox" tabindex="0" db="rankCard.relativeLevel" saveName="db">
                 <span class="sliderspan"></span>
             </label>
@@ -662,7 +662,7 @@
 
             <h2>Activar clasificación</h2>
             <p class="details">Permite a los miembros ver y comparar sus rangos en una gran clasificación.</p>
-            <label style="margin-top: 5px"; class="slider">
+            <label class="slider" style="margin-top: 5px">
                 <input type="checkbox" tabindex="0" db="leaderboard.disabled" invert="true" saveName="db" onchange="$('.iflbenabled').toggle($(this).prop('checked'))">
                 <span class="sliderspan"></span>
             </label>
@@ -672,7 +672,7 @@
         <div class="settingBox box ifrankenabled">
             <h2>Forzar oculto</h2>
             <p class="details">Fuerza a que los usos de /top sean siempre ocultos (efímeros).<br></p>
-            <label style="margin-top: 5px"; class="slider">
+            <label class="slider" style="margin-top: 5px">
                 <input type="checkbox" tabindex="0" db="leaderboard.ephemeral" saveName="db">
                 <span class="sliderspan"></span>
             </label>
@@ -681,7 +681,7 @@
         <div class="settingBox box iflbenabled">
             <h2>Ocultar roles de recompensa</h2>
             <p class="details">Desactiva la visualización de la lista de roles de recompensa en la clasificación online.</p>
-            <label style="margin-top: 5px"; class="slider">
+            <label class="slider" style="margin-top: 5px">
                 <input type="checkbox" tabindex="0" db="leaderboard.hideRoles" saveName="db">
                 <span class="sliderspan"></span>
             </label>
@@ -691,7 +691,7 @@
             <h2>Nivel mínimo</h2>
             <p class="details">Restringe la clasificación a los miembros que hayan alcanzado cierto nivel. Muestra a todos los miembros del servidor si se pone en 0.</p>
             <div class="centerflex spacedflex">
-                <input id="maxEntries" style="width: 100px" type="number" min="0" max="1000" placeholder="0" default="0" db="leaderboard.minLevel" saveName="db">
+                <input id="minLevel" style="width: 100px" type="number" min="0" max="1000" placeholder="0" default="0" db="leaderboard.minLevel" saveName="db">
             </div>
         </div>
 
@@ -706,7 +706,7 @@
         <div class="settingBox box iflbenabled">
             <h2>Clasificación privada</h2>
             <p class="details">Restringe la clasificación online para que solo los miembros del servidor puedan acceder a ella.<br>(requiere iniciar sesión)</p>
-            <label style="margin-top: 5px"; class="slider">
+            <label class="slider" style="margin-top: 5px">
                 <input type="checkbox" tabindex="0" db="leaderboard.private" saveName="db">
                 <span class="sliderspan"></span>
             </label>
@@ -841,7 +841,7 @@
         <div class="settingBox box" style="min-height: 171px">
             <h2>Ignorar permisos</h2>
             <p class="details">Permite que <b>cualquiera</b> ejecute comandos de moderador (ej. /addxp o /clear) aunque no tengan el permiso de Gestionar servidor. Útil si quieres configurar permisos personalizados de comandos slash para el servidor.</p>
-            <label style="margin-top: 5px"; class="slider">
+            <label class="slider" style="margin-top: 5px">
                 <input type="checkbox" tabindex="0" db="manualPerms" saveName="db">
                 <span class="sliderspan"></span>
             </label>
@@ -859,7 +859,7 @@
             <h2>Color de embed personalizado para /rank</h2>
             <p class="details">Cambia el color del embed al usar /rank.<br>Por defecto usa el color de rol/perfil del miembro.</p>
             <div class="centerflex" style="height: 45px">
-                <label style="margin-top: 5px"; class="slider">
+                <label class="slider" style="margin-top: 5px">
                     <input type="checkbox" tabindex="0" id="useCustomEmbedColRank" onchange="$('#customEmbedColRankConfig').toggle($(this).prop('checked')); checkUnsavedChanges()">
                     <span class="sliderspan"></span>
                 </label>
@@ -876,7 +876,7 @@
             <h2>Color de embed personalizado para /top</h2>
             <p class="details">Cambia el color del embed al usar /top.<br>Por defecto usa el verde de Polaris.</p>
             <div class="centerflex" style="height: 45px">
-                <label style="margin-top: 5px"; class="slider">
+                <label class="slider" style="margin-top: 5px">
                     <input type="checkbox" tabindex="0" id="useCustomEmbedColTop" onchange="$('#customEmbedColTopConfig').toggle($(this).prop('checked')); checkUnsavedChanges()">
                     <span class="sliderspan"></span>
                 </label>
@@ -895,12 +895,16 @@
 
 <script type="text/javascript" src="/polaris.js"></script>
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.js"></script>
-<script async src="https://www.googletagmanager.com/gtag/js?id=UA-135255146-1"></script>
-<script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag('js', new Date()); gtag('config', 'UA-135255146-1');</script>
 <script src="https://www.desmos.com/api/v1.7/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
 
 <script>
     addUhOh()
+
+    // Escapa texto de Discord (nombres de roles, canales, servidor) antes de meterlo en HTML.
+    // Sin esto, alguien con Gestionar roles o canales podía ejecutar código en la sesión de un administrador.
+    function esc(value) {
+        return String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
+    }
 
     $('#userMenuButton').on('click', function(e) {
         e.stopPropagation()
@@ -984,7 +988,7 @@
         $('.serverName').text(data.guild.name)
         $('.serverMembers').text(commafy(data.guild.members || "?") + " miembro" + (data.guild.members == 1 ? "" : "s"))
         $('.serverIcon').attr('src', data.guild.icon || "/assets/avatar.png")
-        $('#otherServers').append(data.ownedServers.map(x => `<option value="${x.id}">${x.name}</option>`))
+        $('#otherServers').append(data.ownedServers.map(x => `<option value="${x.id}">${esc(x.name)}</option>`))
 
         if (data.user) {
             let avatarURL = data.user.avatar
@@ -1051,7 +1055,7 @@
         })
 
         presets.forEach(x => {
-            $('#curvePresets').append(`<option value="${x.name}">${x.name}</option>`)
+            $('#curvePresets').append(`<option value="${esc(x.name)}">${esc(x.name)}</option>`)
         })
 
         let foundPreset = presets.find(x => x.name != data.guild.name && JSON.stringify([x.curve, x.round, x.bestRange]) == JSON.stringify([db.curve, db.rounding, [db.gain.min, db.gain.max]])) || presets[0]
@@ -1236,7 +1240,7 @@
                 else $(`#rewardRoleSelect option[value=${reward.id}]`).prop('hidden', true)
 
                 $('#rewards div[col="lvl"]').append(`<p class="rewardLevel numberinput" tabindex="-1" roleID="${reward.id}" min="1" max="1000" default="10" contenteditable>${reward.level}</p>`)
-                $('#rewards div[col="role"]').append(`<p class="longname" style="color: ${foundRole.color == "#000000" ? "var(--defaultrolecol)" : foundRole.color}">${foundRole.name}</p>`)
+                $('#rewards div[col="role"]').append(`<p class="longname" style="color: ${foundRole.color == "#000000" ? "var(--defaultrolecol)" : foundRole.color}">${esc(foundRole.name)}</p>`)
                 $('#rewards div[col="keep"]').append(`<p class="toggleRow" tr="keep" tabindex="0" roleID="${reward.id}" style="color: ${reward.keep ? "lime" : "nah"}">${reward.keep ? "Sí" : "No"}${reward.noSync && !excludeEnabled ? "*" : ""}</p>`)
                 $('#rewards div[col="exclude"]').append(`<p class="toggleRow" tr="noSync" tabindex="0" roleID="${reward.id}" style="color: ${reward.noSync ? "red" : "lime"}">${reward.noSync ? "No" : "Sí"}</p>`)
                 $('#rewards div[col="delete"]').append(`<p class="deleteRow deleteReward" tabindex="0" roleID="${reward.id}">🗑️</p>`)
@@ -1256,7 +1260,7 @@
                 if (option.val() == data.guild.id) return
                 option.css("color", "")
                 option.prop("disabled", true)
-                option.html(option.html() + " -- demasiado alto para otorgar!")
+                option.text(option.text() + " -- demasiado alto para otorgar!")
             }
 
             return roleSelect.append(option)
@@ -1264,7 +1268,7 @@
 
         // role selectors
         data.roles.forEach(x => {
-            let roleOption = $(`<option value="${x.id}">${x.name}</option>`)
+            let roleOption = $(`<option value="${x.id}">${esc(x.name)}</option>`)
             roleOption.css("color", x.color == "#000000" ? "var(--defaultrolecol)" : x.color)
 
             if (!x.managed) appendRoleSelect('#rewardRoleSelect', roleOption, x, true, rewards.some(r => r.id == x.id))
@@ -1272,7 +1276,7 @@
         })
 
         let channelPrefixes = { channel: "#", category: "&gt; ", vc: "🔊 ", thread: "└─ ", forum: "💬 "}
-        let chMultiplierChannels = data.channels.map(x => `<option ${x.type == "category" ? `style="font-weight: bold"` : ""} value="${x.id}">${channelPrefixes[x.type] || "* "}${x.name}</option>`)
+        let chMultiplierChannels = data.channels.map(x => `<option ${x.type == "category" ? `style="font-weight: bold"` : ""} value="${x.id}">${channelPrefixes[x.type] || "* "}${esc(x.name)}</option>`)
         $('#channelMultiplierSelect').append("<option value='none' selected disabled>(canal)</option>").append(chMultiplierChannels)
 
 
@@ -1358,7 +1362,7 @@
                 else $(`#roleMultiplierSelect option[value=${boost.id}]`).prop('hidden', true)
 
                 $('#roleMultipliers div[col="boost"]').append(`<p class="roleMultiplierAmount numberinput" roleID="${boost.id}" min="0" max="100" decimals="4" default="1" tabindex="-1" contenteditable>${+boost.boost}x</p>`)
-                $('#roleMultipliers div[col="role"]').append(`<p class="longname" style="color: ${foundRole.color == "#000000" ? "var(--defaultrolecol)" : foundRole.color}">${foundRole.name}</p>`)
+                $('#roleMultipliers div[col="role"]').append(`<p class="longname" style="color: ${foundRole.color == "#000000" ? "var(--defaultrolecol)" : foundRole.color}">${esc(foundRole.name)}</p>`)
                 $('#roleMultipliers div[col="delete"]').append(`<p class="deleteRow deleteRoleMultiplier" tabindex="0" roleID="${boost.id}">🗑️</p>`)
             })
             $('#roleMultiplierCount').html(roleMultipliers.length)
@@ -1417,7 +1421,7 @@
                 else $(`#channelMultiplierSelect option[value=${boost.id}]`).prop('hidden', true)
 
                 $('#channelMultipliers div[col="boost"]').append(`<p class="channelMultiplierAmount numberinput" channelID="${boost.id}" min="0" max="100" decimals="4" default="1" tabindex="-1" contenteditable>${+boost.boost}x</p>`)
-                $('#channelMultipliers div[col="channel"]').append(`<p class="longname">${channelPrefixes[foundChannel.type] || "* "}${foundChannel.name}</p>`)
+                $('#channelMultipliers div[col="channel"]').append(`<p class="longname">${channelPrefixes[foundChannel.type] || "* "}${esc(foundChannel.name)}</p>`)
                 $('#channelMultipliers div[col="delete"]').append(`<p class="deleteRow deleteChannelMultiplier" tabindex="0" channelID="${boost.id}">🗑️</p>`)
             })
             $('#channelMultiplierCount').html(channelMultipliers.length)
@@ -1453,7 +1457,7 @@
 
 
         // level up message channel
-        $("#lvlMessageSelect").append(data.channels.filter(x => x.type == "channel").map(x => `<option value="${x.id}">#${x.name}</option>`))
+        $("#lvlMessageSelect").append(data.channels.filter(x => x.type == "channel").map(x => `<option value="${x.id}">#${esc(x.name)}</option>`))
         $("#lvlMessageSelect").val(db.levelUp.channel)
         if (!$("#lvlMessageSelect").val()) $("#lvlMessageSelect").val("current")
 
@@ -1632,11 +1636,11 @@
         return `${commafy(amount)} ${str}${amount == 1 ? "" : "s"}`
     }
 
-    this.commafy = function(num, locale="en-US") {
+    this.commafy = function(num, locale="es-ES") {
             return num.toLocaleString(locale, { maximumFractionDigits: 10 })
         }
 
-    function commafy(num, locale="en-US") {
+    function commafy(num, locale="es-ES") {
         return num.toLocaleString(locale, { maximumFractionDigits: 10 })
     }
 

@@ -29,6 +29,7 @@ module.exports = (client) => {
 const app = express();
 const tools = Tools.global
 
+app.disable('x-powered-by')
 app.use(cookieParser());
 app.use(express.json({ limit: '20mb' }));  // keeping the limit pretty high for json imports, some servers are like 10+ megabytes
 app.use(timeout('20s'));
@@ -123,10 +124,10 @@ app.use(function(req, res, next) {
     if (!dropsHost || req.hostname !== dropsHost) return next()
     if (/^\/(drop|discord|auth)(\/|$)/.test(req.path)) return next()
     // Ruta corta de drops: /<servidor>/<CODIGO>.
-    if (/^\/\d{10,30}\/[A-Z0-9]{6,10}\/?$/.test(req.path)) return next()
+    if (/^\/\d{10,30}\/[A-Z0-9]{6,12}\/?$/i.test(req.path)) return next()
     // Ruta corta sin servidor: /<CODIGO> (enlace directo de /drops del
     // servidor principal; hasta ahora caía al 404 y se redirigía a niveles).
-    if (/^\/[A-Z0-9]{6,10}\/?$/i.test(req.path)) return next()
+    if (/^\/[A-Z0-9]{6,12}\/?$/i.test(req.path)) return next()
     return res.redirect(`${siteURL}${req.originalUrl}`)
 })
 
@@ -143,6 +144,7 @@ app.get(["/rank", "/roles", "/levels", "/records"], (req, res) => {
 app.get(["/settings", "/servers"], (req, res) => sendRedirect(res, "/servers"))
 
 app.get("/easteregg", async function(req, res) {
+    res.set("Cache-Control", "no-store")
     const { renderCelebrationPage, escapeHtml } = require("./app/celebration-page.js")
     const [user, guilds] = await getDiscordInfo(req)
     const guildId = resolveServerId({ guildId: req.query.guild || req.query.server || req.query.guildId, guilds, defaultGuildId: DEFAULT_EASTEREGG_GUILD_ID })
@@ -157,32 +159,33 @@ app.get("/easteregg", async function(req, res) {
     // Textos cortos: el título lleva el nombre del reto y el párrafo no lo
     // repite. Tras reclamar, dos CTA: rango (primario) y records (secundario).
     const rewardDetail = (note) => `<div class="detail"><span>Recompensa</span><strong><img src="/assets/icons/xp.png" alt="XP">${escapeHtml(xpStr)}</strong><small>${note}</small></div>`
+    const serverButtons = id => `<a class="btn-primary" href="/rank/${encodeURIComponent(id)}">Ver mi rango</a>`
+        + `<a class="secondary" href="/records/${encodeURIComponent(id)}">Ver mis records</a>`
 
     if (!user) {
         // Sin sesión: celebra el hallazgo, pero el CTA es iniciar sesión.
         const anonGuild = escapeHtml((guildId && client.guilds.cache.get(guildId)?.name) || guildId || "el servidor")
         return res.status(401).send(renderCelebrationPage({
             title: "¡Easter egg encontrado!",
-            message: `Has descubierto el logro oculto <strong>${eggName}</strong> en <strong>${anonGuild}</strong>. Inicia sesión con Discord para reclamarlo.`,
+            message: `Has descubierto el logro oculto <strong>${eggName}</strong> en ${anonGuild}. <strong>Inicia sesión con Discord</strong> para reclamarlo.`,
             badge: "egg",
             kicker: "Logro oculto",
             status: "login",
             celebration: true,
-            detailsHtml: rewardDetail(`${eggDesc}. Se suma a tu XP y a tu XP mensual.`),
-            actionsHtml: `<a class="btn-primary" href="/discord?next=${encodeURIComponent(req.originalUrl)}">Iniciar sesión para reclamar</a>`
-                + (guildId ? `<a class="secondary" href="/leaderboard/${encodeURIComponent(guildId)}">Ver clasificación</a>`
-                    : `<a class="secondary" href="/servers">Ir al dashboard</a>`),
+            detailsHtml: rewardDetail(`${eggDesc}. Se suma a tu XP en el servidor.`),
+            actionsHtml: `<a class="btn-primary" href="/discord?next=${encodeURIComponent(req.originalUrl)}">Iniciar sesión para reclamar</a>`,
         }))
     }
 
     if (!guildId) {
         return res.status(400).send(renderCelebrationPage({
             title: "Easter egg",
-            message: "No pude detectar el servidor. Abre el secreto desde la web o añade ?guild=TU_ID.",
+            message: "No pude detectar el servidor. Abre el secreto desde la web o añade <strong>?guild=TU_ID</strong> al enlace.",
+            kicker: "Sin servidor",
             badge: "egg",
-            status: "info",
+            status: "warning",
             celebration: false,
-            actionsHtml: `<a class="btn-primary" href="/servers">Ir al dashboard</a>`,
+            actionsHtml: `<a class="btn-primary" href="/">Volver al inicio</a>`,
         }))
     }
 
@@ -199,32 +202,30 @@ app.get("/easteregg", async function(req, res) {
     const progress = result.result
         ? `${result.result.totalCompleted ?? result.result.done ?? 1}/${result.result.totalVisible ?? result.result.total ?? 1} Records`
         : null
-    const progressDetail = progress ? `<div class="detail"><span>Tu progreso</span><strong><img src="/assets/icons/records.png" alt="Records">${escapeHtml(progress)}</strong><small>Sigue con /records en Discord o en la web.</small></div>` : ""
+    const progressDetail = progress ? `<div class="detail"><span>Tu progreso</span><strong><img src="/assets/icons/records.png" alt="Records">${escapeHtml(progress)}</strong><small>Consulta /records para ver tus logros.</small></div>` : ""
 
     if (result.unlocked) {
         return res.send(renderCelebrationPage({
             title: eggNameRaw,
-            message: `Logro oculto conseguido en <strong>${name}</strong>: la recompensa ya está sumada a tu XP y a tu XP mensual.`,
-            badge: "trophy",
+            message: `Logro oculto <strong>conseguido</strong> en ${name}: la recompensa ya está sumada a tu <strong>XP en el servidor</strong>.`,
+            badge: "egg",
             kicker: "Desbloqueado",
-            status: "success",
+            status: "easter",
             celebration: true,
             detailsHtml: rewardDetail(eggDesc) + progressDetail,
-            actionsHtml: `<a class="btn-primary" href="/rank/${encodeURIComponent(guildId)}">Ver mi rango</a>`
-                + `<a class="secondary" href="/records/${encodeURIComponent(guildId)}">Ver records</a>`,
+            actionsHtml: serverButtons(guildId),
         }))
     }
 
     return res.send(renderCelebrationPage({
         title: eggNameRaw,
-        message: `Ya reclamaste este secreto en <strong>${name}</strong>: la recompensa no se repite, pero puedes volver a celebrarlo cuando quieras.`,
+        message: `Ya has <strong>reclamado</strong> este secreto en ${name}: la recompensa no se repite, pero puedes volver a celebrarlo cuando quieras.`,
         badge: "check",
         kicker: "Ya lo tienes",
         status: "claimed",
         celebration: "soft",
         detailsHtml: rewardDetail(`${eggDesc} — ya la recibiste la primera vez.`) + progressDetail,
-        actionsHtml: `<a class="btn-primary" href="/rank/${encodeURIComponent(guildId)}">Ver mi rango</a>`
-            + `<a class="secondary" href="/records/${encodeURIComponent(guildId)}">Ver records</a>`,
+        actionsHtml: serverButtons(guildId),
     }))
 })
 
@@ -233,18 +234,21 @@ app.get("/easteregg", async function(req, res) {
 // Abrir el enlace con sesión iniciada reclama directamente (una vez por
 // persona, hasta agotar usos o que caduque).
 async function handleDropClaim(req, res) {
+    res.set("Cache-Control", "no-store")
     const { renderCelebrationPage, escapeHtml: escapeDropHtml } = require("./app/celebration-page.js")
     const Drops = require("./classes/Drops.js")
 
     const guildId = String(req.params.guild || "")
     const code = String(req.params.code || "").toUpperCase()
-    const validPath = /^\d{10,30}$/.test(guildId) && /^[A-Z0-9]{6,10}$/.test(code)
+    const validPath = /^\d{10,30}$/.test(guildId) && /^[A-Z0-9]{6,12}$/.test(code)
 
     const [user] = await getDiscordInfo(req)
     const doc = validPath ? await client.db.fetch(guildId, ["drops"]).exec().catch(() => null) : null
     const drop = validPath ? (doc?.drops || {})[code] : null
     const guildName = escapeDropHtml(client.guilds.cache.get(guildId)?.name || guildId || "el servidor")
-    const leaderboardHref = `/leaderboard/${encodeURIComponent(guildId)}`
+
+    // Fechas siempre en hora de Madrid (el VPS suele estar en UTC).
+    const fmtDate = ts => new Date(Number(ts)).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
 
     // Premio resumido en una frase (para mensajes de estado).
     const dropPrize = d => {
@@ -263,22 +267,25 @@ async function handleDropClaim(req, res) {
     }
 
     // Apartado 1: lista de recompensas personalizada, una fila por premio.
+    // Las monedas se ingresan en el BANCO de UnbelievaBoat (ver addBoatCoins en classes/Drops.js).
+    const XP_NOTE = "se suma a tu XP en el servidor"
+    const COINS_NOTE = "van a tu banco de UnbelievaBoat"
     const rewardRows = d => {
         const rows = []
         if (d.kind === "bundle") {
             const p = d.prizes || {}
-            if (Number(p.xp) > 0) rows.push([`+${Number(p.xp).toLocaleString("es-ES")} XP`, "se suma a tu XP y a tu XP mensual"])
-            if (Number(p.coins) > 0) rows.push([`+${Number(p.coins).toLocaleString("es-ES")} monedas`, "van a tu cash de UnbelievaBoat"])
+            if (Number(p.xp) > 0) rows.push([`+${Number(p.xp).toLocaleString("es-ES")} XP`, XP_NOTE])
+            if (Number(p.coins) > 0) rows.push([`+${Number(p.coins).toLocaleString("es-ES")} monedas`, COINS_NOTE])
             for (const r of (Array.isArray(p.roles) ? p.roles : [])) rows.push([`Rol ${escapeDropHtml(r.name || "del evento")}`, "tuyo para siempre"])
             for (const it of (Array.isArray(p.items) ? p.items : [])) rows.push([`${Number(it.qty).toLocaleString("es-ES")}x ${escapeDropHtml(it.name || "objeto")}`, "a tu inventario de UnbelievaBoat"])
         } else if (d.kind === "coins") {
-            rows.push([`+${Number(d.amount).toLocaleString("es-ES")} monedas`, "van a tu cash de UnbelievaBoat"])
+            rows.push([`+${Number(d.amount).toLocaleString("es-ES")} monedas`, COINS_NOTE])
         } else if (d.kind === "role") {
             rows.push([`Rol ${escapeDropHtml(d.roleName || "del evento")}`, "tuyo para siempre"])
         } else if (d.kind === "item") {
             rows.push([`${Number(d.amount).toLocaleString("es-ES")}x ${escapeDropHtml(d.itemName || "objeto")}`, "a tu inventario de UnbelievaBoat"])
         } else {
-            rows.push([`+${Number(d.amount).toLocaleString("es-ES")} XP`, "se suma a tu XP y a tu XP mensual"])
+            rows.push([`+${Number(d.amount).toLocaleString("es-ES")} XP`, XP_NOTE])
         }
         return rows.map(([value, note]) => `<div class="rewardRow"><b>${value}</b><small>${note}</small></div>`).join("")
     }
@@ -294,8 +301,7 @@ async function handleDropClaim(req, res) {
     // Apartado 3: cuenta atrás viva si sigue abierto; fecha de cierre si no.
     const expiryDetail = (d, ended) => {
         if (ended) {
-            const closed = new Date(d.expiresAt).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
-            return `<div class="detail"><span>Cerró el</span><strong class="countdownPast">${escapeDropHtml(closed)}</strong><small>El enlace ya no reparte premios.</small></div>`
+            return `<div class="detail"><span>Cerró el</span><strong class="countdownPast">${escapeDropHtml(fmtDate(d.expiresAt))}</strong><small>El enlace ya no otorga premios.</small></div>`
         }
         return `<div class="detail"><span>Caduca en</span><strong class="countdown" id="dropCountdown" data-expires="${Number(d.expiresAt) || 0}">…</strong><small>Después el enlace deja de funcionar.</small></div>`
     }
@@ -311,18 +317,25 @@ async function handleDropClaim(req, res) {
         return `<div class="detail"><span>Reservado a</span><strong>${shown}</strong><small>Solo estas personas pueden reclamarlo.</small></div>`
     }
 
+    // Tras iniciar sesión se vuelve al enlace canónico completo: la ruta
+    // corta depende del subdominio y desde /auth (web principal) acababa en
+    // un 404 sin reclamar.
+    const loginNext = `/drop/${encodeURIComponent(guildId)}/${encodeURIComponent(code)}`
+
     // CTA fija: rango primero (donde se ve el resultado) y records después.
     const serverButtons = `<a class="btn-primary" href="/rank/${encodeURIComponent(guildId)}">Ver mi rango</a>`
-        + `<a class="secondary" href="/records/${encodeURIComponent(guildId)}">Ver records</a>`
+        + `<a class="secondary" href="/records/${encodeURIComponent(guildId)}">Ver mis records</a>`
+    const homeButton = `<a class="secondary" href="/">Volver al inicio</a>`
 
     if (!validPath || !drop) {
         return res.status(404).send(renderCelebrationPage({
             title: "Este drop no existe",
-            message: "Revisa que el enlace esté completo: lo crea el staff con <strong>/drops</strong> y puede haberse borrado.",
+            message: "No hemos encontrado ningún drop con este enlace. Revisa que esté <strong>completo</strong> o que el drop no se haya <strong>eliminado</strong>.",
+            kicker: "No encontrado",
             badge: "search",
-            status: "info",
+            status: "error",
             celebration: false,
-            actionsHtml: `<a class="secondary" href="/servers">Ir al dashboard</a>`,
+            actionsHtml: homeButton,
         }))
     }
 
@@ -333,24 +346,24 @@ async function handleDropClaim(req, res) {
     if (!user) {
         const reserved = allowNames(drop)
         const reservedNote = reserved.length
-            ? ` Está <strong>reservado</strong>: solo lo pueden reclamar <strong>${reserved.slice(0, 12).join(", ")}${reserved.length > 12 ? ` y ${reserved.length - 12} más` : ""}</strong>.`
+            ? ` Es un drop <strong>reservado</strong>: solo pueden reclamarlo ${reserved.slice(0, 12).join(", ")}${reserved.length > 12 ? ` y ${reserved.length - 12} más` : ""}.`
             : ""
         return res.status(401).send(renderCelebrationPage({
             title: drop.name,
-            message: `El staff de <strong>${guildName}</strong> está repartiendo <strong>${dropPrize(drop)}</strong>.${reservedNote} <strong>Inicia sesión con Discord</strong> para reclamar el tuyo antes de que se agote o caduque.`,
-            badge: "gift",
+            message: `El staff de ${guildName} está repartiendo <strong>${dropPrize(drop)}</strong>.${reservedNote} <strong>Inicia sesión con Discord</strong> para reclamar el tuyo antes de que se agote o caduque.`,
+            kicker: "Sesión necesaria",
+            badge: "login",
             status: "login",
             celebration: "soft",
             detailsHtml: dropDetails(drop, left),
-            actionsHtml: `<a class="btn-primary" href="/discord?next=${encodeURIComponent(req.path)}">Iniciar sesión para reclamar</a>`
-                + `<a class="secondary" href="${leaderboardHref}">Ver clasificación</a>`,
+            actionsHtml: `<a class="btn-primary" href="/discord?next=${encodeURIComponent(loginNext)}">Iniciar sesión para reclamar</a>`,
         }))
     }
 
     if (expiredDrop(drop)) {
         return res.send(renderCelebrationPage({
             title: drop.name,
-            message: `Cerró el ${new Date(drop.expiresAt).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}. El enlace ya no reparte premios.`,
+            message: `<strong>Cerró el ${escapeDropHtml(fmtDate(drop.expiresAt))}</strong>. El enlace ya no otorga premios.`,
             badge: "hourglass",
             kicker: "Terminado",
             status: "expired",
@@ -363,7 +376,7 @@ async function handleDropClaim(req, res) {
     if (check.reason === "expired") {
         return res.send(renderCelebrationPage({
             title: drop.name,
-            message: "Este drop terminó hace un momento. Estate atento a los próximos que lance el staff.",
+            message: "Este drop <strong>terminó</strong> hace un momento. Estate atento a los próximos que lance el staff.",
             badge: "hourglass",
             kicker: "Terminado",
             status: "expired",
@@ -376,10 +389,10 @@ async function handleDropClaim(req, res) {
     if (check.reason === "soldout") {
         return res.send(renderCelebrationPage({
             title: drop.name,
-            message: "Todos los usos ya están repartidos. ¡Más suerte la próxima vez!",
-            badge: "gift",
+            message: "Este drop se ha <strong>agotado</strong>: ya se han reclamado todos los usos. ¡Más suerte la próxima vez!",
+            badge: "box",
             kicker: "Agotado",
-            status: "info",
+            status: "expired",
             celebration: false,
             detailsHtml: rewardsDetail(drop) + reserveDetail(drop) + claimsDetail(drop, 0),
             actionsHtml: serverButtons,
@@ -389,10 +402,10 @@ async function handleDropClaim(req, res) {
     if (check.reason === "not-allowed") {
         return res.status(403).send(renderCelebrationPage({
             title: drop.name,
-            message: "Este drop está <strong>reservado</strong>: solo lo pueden reclamar las personas de la lista. Si te toca, pide al staff que te añada.",
+            message: "Este drop está <strong>reservado</strong>: solo pueden reclamarlo las personas que el staff haya elegido.",
             badge: "lock",
             kicker: "Reservado",
-            status: "info",
+            status: "warning",
             celebration: false,
             detailsHtml: dropDetails(drop, left),
             actionsHtml: serverButtons,
@@ -402,7 +415,7 @@ async function handleDropClaim(req, res) {
     if (check.reason === "already") {
         return res.send(renderCelebrationPage({
             title: drop.name,
-            message: "Ya pediste este drop antes. Cada persona solo puede reclamarlo una vez.",
+            message: "Ya has <strong>reclamado</strong> este drop antes. Cada persona solo puede reclamarlo una vez.",
             badge: "check",
             kicker: "Ya lo tienes",
             status: "claimed",
@@ -414,73 +427,79 @@ async function handleDropClaim(req, res) {
 
     const claimed = await Drops.claimDrop(client, guildId, code, String(user.id))
     if (!claimed.ok) {
+        const current = claimed.drop || drop
+        const currentLeft = Drops.claimsLeft(current)
+
         if (claimed.reason === "not-allowed") {
             return res.status(403).send(renderCelebrationPage({
                 title: drop.name,
-                message: "Alguien ha reservado el drop mientras abrías la página: ahora solo lo pueden reclamar las personas de la lista.",
+                message: "Alguien ha <strong>reservado</strong> el drop mientras abrías la página: ahora solo pueden reclamarlo las personas que el staff haya elegido.",
                 badge: "lock",
                 kicker: "Reservado",
-                status: "info",
+                status: "warning",
                 celebration: false,
-                detailsHtml: dropDetails(claimed.drop || drop, Drops.claimsLeft(claimed.drop || drop)),
+                detailsHtml: dropDetails(current, currentLeft),
                 actionsHtml: serverButtons,
             }))
         }
+        // Los drops de rol están desactivados en el comando; estos dos mensajes
+        // solo salen si algún día se activan.
         if (claimed.reason === "role-hierarchy") {
             return res.status(403).send(renderCelebrationPage({
                 title: drop.name,
-                message: `El rol de este drop está <strong>por encima de tu rol más alto</strong>, así que no se entrega. Avisa al staff. <strong>No has perdido tu reclamo.</strong>`,
+                message: "<strong>No se ha podido reclamar</strong> este drop: incluye un rol que está por encima de tu rol más alto y el bot no puede dártelo. Tu reclamo sigue disponible: avisa al staff.",
                 badge: "alert",
-                kicker: "Rol no entregado",
-                status: "info",
+                kicker: "No reclamado",
+                status: "warning",
                 celebration: false,
-                detailsHtml: dropDetails(claimed.drop || drop, Drops.claimsLeft(claimed.drop || drop)),
+                detailsHtml: dropDetails(current, currentLeft),
                 actionsHtml: serverButtons,
             }))
         }
         if (claimed.reason === "role-unsafe") {
             return res.status(403).send(renderCelebrationPage({
                 title: drop.name,
-                message: `El rol cambió desde que se creó el drop y ahora tiene <strong>permisos peligrosos</strong>, así que no se entrega. Avisa al staff para que lo revise. <strong>No has perdido tu reclamo.</strong>`,
+                message: "<strong>No se ha podido reclamar</strong> este drop: el rol que incluye ahora tiene <strong>permisos peligrosos</strong> y el bot no lo entrega. Tu reclamo sigue disponible: avisa al staff.",
                 badge: "alert",
-                kicker: "Rol no entregado",
-                status: "info",
+                kicker: "No reclamado",
+                status: "warning",
                 celebration: false,
-                detailsHtml: dropDetails(claimed.drop || drop, Drops.claimsLeft(claimed.drop || drop)),
+                detailsHtml: dropDetails(current, currentLeft),
                 actionsHtml: serverButtons,
             }))
         }
         if (claimed.reason === "api-error") {
-            const retryNote = claimed.drop?.kind === "coins"
+            const cause = current.kind === "coins"
                 ? "No se pudo conectar con UnbelievaBoat."
-                : "No se pudo entregar el premio (rol sin permisos o economía caída)."
+                : "El bot no pudo entregar el premio (falta de permisos o economía caída)."
             return res.status(502).send(renderCelebrationPage({
                 title: drop.name,
-                message: `${retryNote} <strong>No has perdido tu reclamo: recarga la página e inténtalo de nuevo.</strong> Si sigue fallando, avisa al staff.`,
+                message: `${cause} <strong>No has gastado tu reclamo</strong>: pulsa Reintentar. Si sigue fallando, avisa al staff.`,
                 badge: "alert",
                 kicker: "Error",
-                status: "info",
+                status: "error",
                 celebration: false,
-                detailsHtml: dropDetails(claimed.drop || drop, Drops.claimsLeft(claimed.drop || drop)),
-                actionsHtml: `<a class="btn-primary" href="">Reintentar</a>` + serverButtons,
+                detailsHtml: dropDetails(current, currentLeft),
+                actionsHtml: `<a class="btn-primary" href="">Reintentar</a>`,
             }))
         }
         if (claimed.reason === "missing") {
             return res.status(404).send(renderCelebrationPage({
                 title: "Este drop no existe",
-                message: "Justo se ha borrado: revisa el enlace si quieres los próximos.",
+                message: "Este drop se ha <strong>eliminado</strong> justo ahora. Estate atento a los próximos.",
+                kicker: "No encontrado",
                 badge: "search",
-                status: "info",
+                status: "error",
                 celebration: false,
-                actionsHtml: `<a class="secondary" href="/servers">Ir al dashboard</a>`,
+                actionsHtml: homeButton,
             }))
         }
         return res.send(renderCelebrationPage({
             title: drop.name,
-            message: "Justo se te han adelantado: ya no quedan usos.",
-            badge: "gift",
+            message: "Alguien se te ha <strong>adelantado</strong>: ya no quedan usos.",
+            badge: "box",
             kicker: "Agotado",
-            status: "info",
+            status: "expired",
             celebration: false,
             detailsHtml: rewardsDetail(drop) + reserveDetail(drop) + claimsDetail(drop, 0),
             actionsHtml: serverButtons,
@@ -489,8 +508,8 @@ async function handleDropClaim(req, res) {
 
     return res.send(renderCelebrationPage({
         title: drop.name,
-        message: `Has reclamado tu parte del drop. ${walletNote(claimed.drop)}`,
-        badge: "trophy",
+        message: "¡Has <strong>reclamado</strong> el drop! Tus recompensas ya están entregadas.",
+        badge: "gift",
         kicker: "Reclamado",
         status: "success",
         celebration: true,
@@ -503,7 +522,7 @@ async function handleDropClaim(req, res) {
 app.get("/drop/:guild/:code", dropRateLimit, handleDropClaim)
 // En el subdominio de drops la ruta es corta: drops.tscomunity.es/<guild>/<CODE>.
 // Fuera de él redirige a la completa para no duplicar URLs.
-app.get("/:guild(\\d{10,30})/:code([A-Z0-9]{6,10})", function(req, res, next) {
+app.get("/:guild(\\d{10,30})/:code([A-Za-z0-9]{6,12})", function(req, res, next) {
     const dropsHost = Drops.dropsHostname()
     if (dropsHost && req.hostname === dropsHost) return dropRateLimit(req, res, () => handleDropClaim(req, res))
     return res.redirect(`/drop/${req.params.guild}/${req.params.code}`)
@@ -1335,7 +1354,7 @@ app.get("/auth", async function(req, res) {
 
         // make a request to the discord token endpoint, to show that the code is in the right hands
         // tried using rest for this but ran into issues, oh well
-        fetch(discordAPI + "/oauth2/token", {
+        fetch(discordAPI + "oauth2/token", {
             method: "POST",
             headers: {
                 "Authorization": `Basic ${authCreds}`,
@@ -1364,16 +1383,23 @@ function decodeNext(state) {
 }
 
 function storeAuthToken(res, tokens, next) {
-    let randomNumbers = [tools.rng(1e3, 1e4-1), tools.rng(1e4, 1e5-1), tools.rng(1e5, 1e6-1), tools.rng(1e6, 1e7-1), Number(Date.now().toString().slice(-7))]
-    let randomID = randomNumbers.map(x => x.toString(16)).join("-") // just combine a bunch of random numbers!!!! pretty much anything goes here
+    // id de sesión aleatorio criptográfico (antes se armaba con Math.random + la hora)
+    let randomID = require("crypto").randomBytes(32).toString("hex")
     let expiration = Date.now() + (1000 * tokens.expires_in) // when the token expires (one week)
     authDB.delete({ expires: { $lt: Date.now() } }).then(() => {}) // clear expired tokens
     authDB.create({ _id: randomID, access_token: tokens.access_token, refresh_token: tokens.refresh_token, expires: expiration }).then((data) => {
-        res.cookie("polaris", randomID, { "expires": new Date(expiration), domain: sharedCookieDomain() });
+        res.cookie("polaris", randomID, {
+            expires: new Date(expiration),
+            domain: sharedCookieDomain(),
+            httpOnly: true,
+            sameSite: "lax",
+            secure: String(siteURL).startsWith("https://"),
+        });
         if (next) { // vuelve a donde estaba (p. ej. el drop), en el subdominio de drops si es una ruta de drop
             const dropsHost = Drops.dropsHostname()
-            const isDrop = /^\/(drop\/)?\d{10,30}\/[A-Z0-9]{6,10}$/.test(next)
-            return sendRedirect(res, isDrop && dropsHost ? `https://${dropsHost}${next}` : next)
+            // Ruta completa o corta del subdominio. Así el login vuelve al
+            // drop en el dominio correcto y sí se reclama.
+            return sendRedirect(res, Drops.isDropWebPath(next) && dropsHost ? `https://${dropsHost}${next}` : next)
         }
         sendRedirect(res, "/?authorized") // sweet, back to the homepage
     }).catch((e) => { console.error(e); sendRedirect(res, "/") })
@@ -1400,11 +1426,22 @@ async function getDiscordToken(token) {
 /* STEP 5
 Now we can make requests to Discord to get the client's stuff! */
 let discordCache = {} // cache data to prevent rate limits
+
+// Limpieza: ninguna de las dos cachés se vaciaba nunca y crecían sin parar.
+setInterval(() => {
+    const now = Date.now()
+    for (const k of Object.keys(discordCache)) if (discordCache[k].expires < now) delete discordCache[k]
+    for (const k of Object.keys(tokenCache)) if (tokenCache[k].expires < now) delete tokenCache[k]
+}, 60 * 1000).unref()
+
 async function getDiscordInfo(req, userOnly) {
     let token = await getDiscordToken(req.cookies.polaris) // get discord's tokens using the token in their cookies
     if (!token) return userOnly ? null : [null, null]
 
-    let foundData = discordCache[token] // check for cached data
+    // La clave tiene que ser un string único por sesión. Antes era el propio objeto
+    // `token`, que como clave de un objeto se convierte en texto ("[object Object]").
+    let cacheKey = token.access_token
+    let foundData = discordCache[cacheKey] // check for cached data
     if (foundData && Date.now() <= foundData.expires) return foundData.data // return cached data if it exists and hasn't expired
 
     // the two things the client authorized - user data and guilds. this is all we need
@@ -1426,28 +1463,37 @@ async function getDiscordInfo(req, userOnly) {
 
     if (!userData || !guilds || userData.message || guilds.message || !userData.id) return [null, null] // if discord sends error
     let discordRes = [userData, guilds] // return this as an array, so we can do "let [userData, guilds]"
-    discordCache[token] = {data: discordRes, expires: Date.now() + 15000} // 15 second cache to prevent ratelimits uwu
+    discordCache[cacheKey] = {data: discordRes, expires: Date.now() + 15000} // 15 second cache to prevent ratelimits uwu
     return discordRes
 }
 
 /* STEP 6
 If the client wants to log out, we should probably respect that and delete their stuff */
 app.get("/logout", async function(req, res) {
-    let token = await getDiscordToken(req.cookies.polaris)
-    if (!token) return sendRedirect(res, "/")
+    const sessionID = req.cookies.polaris
+    const token = await getDiscordToken(sessionID)
+
+    // La cookie es de .tscomunity.es: para borrarla hay que repetir el dominio.
+    res.clearCookie("polaris", { domain: sharedCookieDomain() })
+    res.clearCookie("polaris") // por si quedó alguna antigua sin dominio
+    if (!sessionID || !token) return sendRedirect(res, "/")
+
+    // La sesión deja de valer también en el servidor, no solo en el navegador.
+    delete tokenCache[sessionID]
+    delete discordCache[token.access_token]
+    authDB.delete({ _id: sessionID }).catch(() => {})
 
     fetch(discordAPI + "oauth2/token/revoke", {
         method: "POST",
         headers: { "Content-type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
-            client_id: auth.id,
-            client_secret: auth.secret,
-            token
+            client_id: process.env.DISCORD_ID,
+            client_secret: process.env.DISCORD_SECRET,
+            token: token.access_token
         })
-    }).then(() => { // discord has invalidated the token!
-        res.clearCookie("polaris"); // remove token from cookies
-        sendRedirect(res, "/"); // return home
-    }).catch(e => sendRedirect(res, "/"))
+    }).catch(console.error)
+
+    return sendRedirect(res, "/") // return home
 })
 
 // ========================================================================= \\
@@ -1456,15 +1502,16 @@ app.get("/logout", async function(req, res) {
 
 app.get("/api", function(req, res) { res.send("ඞ") })
 
-// Un /CODE suelto (6-10 alfanuméricos): solo es un drop del servidor
-// principal. Va al final para pisar ninguna ruta fija (/rank, /logout…).
-app.get("/:code([A-Z0-9]{6,10})", function(req, res, next) {
-    const dropsHost = Drops.dropsHostname()
-    if (dropsHost && req.hostname === dropsHost) {
-        req.params.guild = Drops.MAIN_GUILD_ID
-        return dropRateLimit(req, res, () => handleDropClaim(req, res))
-    }
-    return next()
+// Un /CODE suelto (6-12 alfanuméricos): drop del servidor principal. Se
+// acepta tanto en el subdominio de drops como en la web principal (si un
+// enlace corto acaba aquí, igualmente se reclama en vez de dar 404). Va al
+// final para no pisar ninguna ruta fija (/rank, /logout…).
+app.get("/:code([A-Za-z0-9]{6,12})", function(req, res, next) {
+    // Rutas fijas que pueden no existir según config (support/changelog) no
+    // son códigos de drop aunque tengan la misma longitud.
+    if (/^(support|changelog|servers|logout|discord|auth|easteregg|api)$/i.test(req.params.code)) return next()
+    req.params.guild = Drops.MAIN_GUILD_ID
+    return dropRateLimit(req, res, () => handleDropClaim(req, res))
 })
 
 app.get("*", function(req, res) { res.status(404); sendPage(res, "404") })
@@ -1480,6 +1527,8 @@ app.use(function (err, req, res, next) {
 process.on('uncaughtException', (e) => { console.warn(e) });
 process.on('unhandledRejection', (e, p) => { console.warn(e) });
 
-app.listen(auth.serverPort, () => console.log(`Web server online at http://localhost:${auth.serverPort} (${+process.uptime().toFixed(2)} secs)`));
+// Solo en local: nginx es el único que debe poder hablar con el bot.
+// (Si el bot corre en Docker, quita "127.0.0.1" y cierra el puerto en el firewall.)
+app.listen(auth.serverPort, "127.0.0.1", () => console.log(`Web server online at http://127.0.0.1:${auth.serverPort} (${+process.uptime().toFixed(2)} secs)`));
 
 }

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="/css/polaris.css?v=10" type="text/css" rel="stylesheet">
+    <link href="/css/polaris.css?v=11" type="text/css" rel="stylesheet">
     <link rel="icon" href="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless">
     <title>Clasificación</title>
 
@@ -268,9 +268,9 @@
     <h2 id="noXPYet" box="leaderboard" style="text-align: center; display: none" class="lbBox">¡Nadie en este servidor tiene XP todavía!</h2>
 
     <div id="pageInfo" box="leaderboard" class="middleflex lbBox" style="flex-direction: row; margin-top: 20px">
-        <button id="pageDown" onclick="setPage(page - 1)" disabled style="width: 44px; min-width: 44px; height: 44px; padding: 0px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); margin-right: 20px;">&lt;-</button>
-        <p style="font-weight: bold; font-size: 22px">Page <input id="pageNumber" min="1" onchange="setPage(+$(this).val())" type="number" value="1" style="font-size: 22px; margin: 0px 5px; font-weight: bold; width: 50px; height: 32px; text-align: center"> of <span id="totalPages">1</span></p>
-        <button id="pageUp" onclick="setPage(page + 1)" style="width: 44px; min-width: 44px; height: 44px; padding: 0px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); margin-left: 20px;">-&gt;</button>
+        <button id="pageDown" onclick="setPage(page - 1)" disabled style="width: 44px; min-width: 44px; height: 44px; padding: 0px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); margin-right: 20px;" aria-label="Página anterior">&lsaquo;</button>
+        <p style="font-weight: bold; font-size: 22px">Página <input id="pageNumber" min="1" onchange="setPage(+$(this).val())" type="number" value="1" style="font-size: 22px; margin: 0px 5px; font-weight: bold; width: 50px; height: 32px; text-align: center"> de <span id="totalPages">1</span></p>
+        <button id="pageUp" onclick="setPage(page + 1)" style="width: 44px; min-width: 44px; height: 44px; padding: 0px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); margin-left: 20px;" aria-label="Página siguiente">&rsaquo;</button>
     </div>
 
     <div id="statPickerWrap" style="display: none">
@@ -284,7 +284,7 @@
 
     <h2 box="roles" class="lbBox plsLogIn">¡Inicia sesión para ver tu progreso hacia los roles de recompensa!</h2>
     <div id="roleList" box="roles" class="leaderboardBox lbBox" style="display: none"><div class="lbCardGrid" id="roleGrid"></div></div>
-    <h2 id="noRewardRoles" box="roles" style="text-align: center; display: none" class="lbBox">This server doesn't have any reward roles!</h2>
+    <h2 id="noRewardRoles" box="roles" style="text-align: center; display: none" class="lbBox">¡Este servidor no tiene roles de recompensa!</h2>
 
     <h2 box="levels" class="lbBox plsLogIn">¡Inicia sesión para ver tu progreso hacia cada nivel!</h2>
     <div id="progress" box="levels" class="leaderboardBox lbBox" style="display: none"><div class="lbCardGrid" id="levelGrid"></div></div>
@@ -482,26 +482,26 @@
                 <p id="selectedusername" style="margin: 0px 0px"></p>
                 <p id="selectedid" style="margin: 0px 0px"></p>
                 <select id="addtype" style="font-size: 22px; height: 50px; text-align: center; width: 200px; margin-top: 30px">
-                    <option value="addxp">Add XP</option>
-                    <option value="setxp">Set XP to</option>
-                    <option value="addlevel">Add levels</option>
-                    <option value="setlevel">Set level to</option>
+                    <option value="addxp">Añadir XP</option>
+                    <option value="setxp">Establecer XP en</option>
+                    <option value="addlevel">Añadir niveles</option>
+                    <option value="setlevel">Establecer nivel en</option>
                 </select>
                 <br>
                 <input id="addamount" class="lineinput" type="number" value="42069" style="margin-top: 20px; margin-bottom: 20px; font-size: 22px; width: 300px">
 
                 <div class="middleflex">
-                    <p style="width: 100px; text-align: right; margin-right: 8px; font-size: 22px"><b>Old XP: </b></p>
+                    <p style="width: 160px; text-align: right; margin-right: 8px; font-size: 22px"><b>XP anterior: </b></p>
                     <p id="oldxp" style="text-align: left; font-size: 22px"></p>
                 </div>
 
                 <div class="middleflex">
-                    <p style="color: aqua; width: 100px; text-align: right; margin-right: 8px; font-size: 22px"><b>New XP: </b></p>
+                    <p style="color: aqua; width: 160px; text-align: right; margin-right: 8px; font-size: 22px"><b>XP nueva: </b></p>
                     <p id="newxp" style="color: aqua; text-align: left; font-size: 22px"></p>
                 </div>
 
-                <button class="popupConfirm" style="background-color: var(--lightestfg)" onclick="$('.popup').hide()">Cancel</button>
-                <button id="savexp" class="popupConfirm">Save</button>
+                <button class="popupConfirm" style="background-color: var(--lightestfg)" onclick="$('.popup').hide()">Cancelar</button>
+                <button id="savexp" class="popupConfirm">Guardar</button>
 
             </div>
         </div>
@@ -524,8 +524,6 @@
 
 <script type="text/javascript" src="/polaris.js"></script>
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.js"></script>
-<script async src="https://www.googletagmanager.com/gtag/js?id=UA-135255146-1"></script>
-<script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag('js', new Date()); gtag('config', 'UA-135255146-1');</script>
 
 <script>
 const tabInfo = {
@@ -761,7 +759,7 @@ Fetch(lbURL(1)).then(data => {
     if (!data.moderator) $('#addxp').remove()
 
     else if (data.moderator && data.settings.leaderboard.disabled) {
-        $('#notInServerWarning').html('The leaderboard is currently disabled!<br><span style="font-size: 18px; font-weight: normal">Only moderators can view this page.</span>')
+        $('#notInServerWarning').html('¡La clasificación está desactivada!<br><span style="font-size: 18px; font-weight: normal">Solo los moderadores pueden ver esta página.</span>')
         $('#notInServerWarning').show()
     }
 
@@ -843,10 +841,6 @@ Fetch(lbURL(1)).then(data => {
             },
             function() {
                 $(this).find('.editIcon').hide()
-            })
-
-            $(document).on('keydown', '.canManage', function(e) {
-                if (["Enter", "Space"].includes(e.code)) $(this).click()
             })
         }
 
@@ -1020,7 +1014,7 @@ Fetch(lbURL(1)).then(data => {
     else {
         $('#roleList').remove()
         if (data.settings.leaderboard.hideRoles) {
-            $('#noRewardRoles').text("Reward roles are hidden for this server!")
+            $('#noRewardRoles').text("¡Los roles de recompensa están ocultos en este servidor!")
             $('.lbSidebar').find("button[box='roles']").hide()
         }
     }
@@ -1141,7 +1135,9 @@ Fetch(lbURL(1)).then(data => {
         document.activeElement.blur();
         if (!force && page == oldPage) return loadingPage = false
 
-        let res = (!force && pageCache[`${statSort}|${page}`]) ? pageCache[`${statSort}|${page}`] : await Fetch(lbURL(page))
+        let res
+        try { res = (!force && pageCache[`${statSort}|${page}`]) ? pageCache[`${statSort}|${page}`] : await Fetch(lbURL(page)) }
+        catch (e) { console.error(e); alert("¡Error al cargar la clasificación!"); loadingPage = false; return }
         pageCache[`${statSort}|${res.pageInfo.page}`] = { leaderboard: res.leaderboard, pageInfo: res.pageInfo }
         $('html').scrollTop(savedScroll)
         appendLeaderboard(res.leaderboard)
@@ -1150,6 +1146,11 @@ Fetch(lbURL(1)).then(data => {
 
         loadingPage = false
     }
+
+    /* teclado: una sola vez */
+    $(document).on('keydown', '.canManage', function(e) {
+        if (["Enter", "Space"].includes(e.code)) $(this).click()
+    })
 
     $(document).on('click', '.leaderboardSlot.canManage', function() {
         if (!data.moderator) return
@@ -1162,7 +1163,7 @@ Fetch(lbURL(1)).then(data => {
         let newLevel = getLevel(foundUser.xp + defaultAdd, data.settings)
         let newXP = foundUser.xp + defaultAdd
 
-        $('#selecteduser').text(foundUser.missing ? "Missing user" : `${foundUser.displayName}`)
+        $('#selecteduser').text(foundUser.missing ? "Usuario ausente" : `${foundUser.displayName}`)
         $('#selectedusername').text(`@${foundUser.username}`)
         $('#selectedid').text(`(ID: ${foundUser.id})`)
         $('#addtype').val("addxp")
@@ -1229,7 +1230,7 @@ Fetch(lbURL(1)).then(data => {
                 isUpdating = false
             })
             .fail(function (e) {
-                alert(`Error! ${e.responseText}`);
+                alert(`¡Error! ${e.responseText}`);
                 console.error(e)
                 $('.popup').hide()
                 isUpdating = false

@@ -144,6 +144,7 @@ const schema = {
         monthlyMessagesPeriod: { type: String, default: "" },
         dailyMessagesPeriod: { type: String, default: "" },
         monthlyTop: { type: Object, default: {} },
+        monthlyStaffVote: { type: Object, default: {} },
     }
 }
 

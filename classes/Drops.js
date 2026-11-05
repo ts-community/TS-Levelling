@@ -119,6 +119,24 @@ function kindEmoji(kind) {
     return "🆙"
 }
 
+// Frase de la página de reclamo según dónde acabó el premio. Vive aquí
+// (y no en web_app.js) para que no se quede sin definir al tocar la web.
+function claimOutcomeNote(drop) {
+    if (drop?.kind === "coins") return "Las monedas ya están en tu banco de UnbelievaBoat."
+    if (drop?.kind === "item") return "El objeto ya está en tu inventario de UnbelievaBoat."
+    if (drop?.kind === "role") return "El rol ya está en tu cuenta."
+    if (drop?.kind === "bundle") {
+        const p = drop.prizes || {}
+        const parts = []
+        if (Number(p.xp) > 0) parts.push("el XP")
+        if (Number(p.coins) > 0) parts.push("las monedas")
+        if ((Array.isArray(p.roles) ? p.roles : []).length) parts.push("el rol")
+        if ((Array.isArray(p.items) ? p.items : []).length) parts.push("los objetos")
+        return parts.length ? `Ya tienes ${parts.join(", ")}.` : "La recompensa ya está entregada."
+    }
+    return "El XP ya está sumado a tu XP en el servidor."
+}
+
 // Permisos que un rol de drop NUNCA puede tener (raid): ni al crear el drop
 // ni al reclamarlo (el rol pudo cambiar entre medias y se re-verifica).
 // Se comprueba por nombre (PermissionsBitField lo resuelve) para no
@@ -211,6 +229,16 @@ function dropPath(guildId, code) {
 // Servidor principal de la instalación (Ts Community). Su enlace aún más
 // corto: drops.tscomunity.es/CODE, sin ID de servidor.
 const MAIN_GUILD_ID = "1093864130030612521"
+
+// ¿Esta ruta interna es un drop? Acepta la completa (/drop/<guild>/<CODE>)
+// y la corta del subdominio (/<CODE>). Se usa tras el login para volver al
+// dominio correcto (el /auth vive en la web principal).
+function isDropWebPath(next) {
+    const value = String(next || "")
+    if (/^\/(support|changelog|servers|logout|discord|auth|easteregg|api)$/i.test(value)) return false
+    return /^\/(drop\/)?\d{10,30}\/[A-Z0-9]{6,12}$/.test(value)
+        || /^\/[A-Z0-9]{8,12}$/.test(value)
+}
 
 // URL completa y lista para copiar de un drop. base = web fallback.
 function dropUrl(guildId, code, fallback = "") {
@@ -362,8 +390,9 @@ function boatHeaders() {
     return { Authorization: String(process.env.UNBELIEVABOAT_TOKEN || "").trim(), "Content-Type": "application/json" }
 }
 
-// Suma `amount` al cash del usuario. Lanza si la API falla (el reclamo NO
-// se registra y se puede reintentar). Sin dependencias: fetch nativo.
+// Suma `amount` al BANCO del usuario (antes iba al cash). Con un importe
+// negativo resta (así se reembolsa si hace falta). Lanza si la API falla (el
+// reclamo NO se registra y se puede reintentar). Sin dependencias: fetch nativo.
 async function addBoatCoins(guildId, userId, amount, reason = "Drop", fetchImpl = fetch) {
     if (!boatEnabled()) throw new Error("boat-disabled")
     const res = await fetchImpl(
@@ -371,7 +400,7 @@ async function addBoatCoins(guildId, userId, amount, reason = "Drop", fetchImpl 
         {
             method: "PATCH",
             headers: boatHeaders(),
-            body: JSON.stringify({ cash: Math.round(Number(amount) || 0), reason: String(reason).slice(0, 64) }),
+            body: JSON.stringify({ bank: Math.round(Number(amount) || 0), reason: String(reason).slice(0, 64) }),
             signal: AbortSignal.timeout(10000),
         },
     )
@@ -819,6 +848,7 @@ module.exports = {
     CODE_LENGTH,
     CODE_ALPHABET,
     MAIN_GUILD_ID,
+    isDropWebPath,
     AMOUNT_PRESETS,
     CUSTOM_AMOUNT,
     DURATION_PRESETS,
@@ -826,6 +856,7 @@ module.exports = {
     DROP_KINDS,
     kindName,
     kindEmoji,
+    claimOutcomeNote,
     balanceHint,
     presetEquiv,
     dropsHostname,

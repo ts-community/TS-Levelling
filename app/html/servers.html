@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="/css/polaris.css?v=10" type="text/css" rel="stylesheet">
+    <meta name="robots" content="noindex">
+    <link href="/css/polaris.css?v=11" type="text/css" rel="stylesheet">
     <link rel="icon" href="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless">
     <title>TS Community</title>
     <meta property="og:title" content="TS Community">
@@ -167,8 +168,6 @@
 
 <script type="text/javascript" src="./polaris.js"></script>
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.js"></script>
-<script async src="https://www.googletagmanager.com/gtag/js?id=UA-135255146-1"></script>
-<script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag('js', new Date()); gtag('config', 'UA-135255146-1');</script>
 
 <script>
 
@@ -298,14 +297,14 @@ Fetch(`./api/guilds`).then(data => {
 
 let downloading = false
 function downloadServerData(server) {
-    if (!server || !confirm(`Would you like to download all Polaris data from ${server.name}? (it can be imported into other bots)`)) return
+    if (!server || !confirm(`¿Descargar todos los datos de ${server.name}? (se pueden importar en otros bots)`)) return
 
     fetch(`./api/xp/${server.id}?format=everything`).then(res => {
         if (!res.ok) {
             downloading = false
             return res.json().then(x => {
-                alert(`Error! ${x.message}`);
-            }).catch(e => alert("Error downloading data!"))
+                alert(`¡Error! ${x.message}`);
+            }).catch(e => alert("¡Error al descargar los datos!"))
         }
 
         else res.blob().then(blob => {
@@ -319,7 +318,7 @@ function downloadServerData(server) {
         })
     }).catch((e) => {
         downloading = false
-        alert(`Error! ${e.responseText}`);
+        alert(`¡Error! ${e.message}`);
         console.error(e)
     })
 }

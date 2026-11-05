@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="/css/polaris.css?v=10" type="text/css" rel="stylesheet">
+    <link href="/css/polaris.css?v=11" type="text/css" rel="stylesheet">
     <link rel="icon" href="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless">
     <title>Página no encontrada</title>
     <meta property="og:title" content="TS Community">
@@ -136,6 +136,22 @@
         .gradientButton:active {
             transform: translateY(0px);
         }
+
+        /* ── Responsive: móvil y pantallas bajas ── */
+        body { height: auto; min-height: 100vh; min-height: 100dvh; overflow-x: hidden; overflow-y: auto; }
+        .heroWrap { height: auto; min-height: 100vh; min-height: 100dvh; padding: 24px 0; box-sizing: border-box; }
+
+        @media (max-width: 600px) {
+            .heroCard { width: calc(100% - 28px); max-width: none; padding: 36px 22px 30px; border-radius: 22px; box-sizing: border-box; }
+            .heroLogoWrap img { height: 96px; width: 96px; }
+            .heroTitle { font-size: 34px; }
+            .heroSubtitle { font-size: 17px; line-height: 26px; margin-bottom: 26px; }
+            .heroButtons { flex-direction: column; width: 100%; gap: 12px; }
+            .heroButtons a, .heroCard > a { display: block; width: 100%; }
+            .gradientButton { width: 100%; min-width: 0; height: 56px; font-size: 18px; }
+            .heroBgLogo { width: 560px; height: 560px; }
+            .errorCode { font-size: 64px; }
+        }
     </style>
 </head>
 <body>
@@ -154,10 +170,5 @@
         </div>
     </div>
 </body>
-
-<script type="text/javascript" src="/polaris.js"></script>
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.js"></script>
-<script async src="https://www.googletagmanager.com/gtag/js?id=UA-135255146-1"></script>
-<script>window.dataLayer = window.dataLayer || []; function gtag() { dataLayer.push(arguments); } gtag('js', new Date()); gtag('config', 'UA-135255146-1');</script>
 
 </html>
