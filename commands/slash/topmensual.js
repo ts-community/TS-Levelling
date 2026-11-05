@@ -24,10 +24,22 @@ module.exports = {
         if (!tools.canManageServer(int.member)) return tools.warn("*notMod")
         if (int.guild.id !== MonthlyTop.MAIN_GUILD_ID) return tools.warn("Este comando solo funciona en el servidor principal.")
 
+        await int.deferReply({ flags: 64 })
+
+        // Si el bot estuvo apagado durante el cambio de mes, el rollover no
+        // pudo ejecutarse desde el scheduler. Fuerza aquí el mantenimiento
+        // antes de leer el snapshot para que el comando use el último mes
+        // cerrado disponible.
+        if (typeof client.monthlyMaintenance === "function") {
+            await client.monthlyMaintenance(int.guild)
+        }
+
         const db = await tools.fetchAll()
         const snapshot = db?.info?.monthlyTop
         if (!snapshot?.period || (!snapshot.members?.length && !snapshot.staff?.length)) {
-            return tools.warn("Todavía no hay un top mensual cerrado. Espera al cambio de mes o usa /top para forzar el mantenimiento.")
+            return int.editReply({
+                content: "Todavía no hay un top mensual cerrado. Espera al cambio de mes o usa /top para forzar el mantenimiento."
+            })
         }
 
         const channel = int.options.getChannel("canal")
@@ -37,8 +49,6 @@ module.exports = {
         const opening = int.options.getString("apertura") || undefined
         const closing = int.options.getString("cierre") || undefined
         const simulate = !!int.options.getBoolean("simular")
-
-        await int.deferReply({ flags: 64 })
 
         const results = []
         const hasSavedRewards = !!snapshot.rewards && ["members", "staff"].some(kind =>

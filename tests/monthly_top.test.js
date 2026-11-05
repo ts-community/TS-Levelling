@@ -48,32 +48,32 @@ test("el top 4 y 5 sigue el mismo estilo pero solo con mensajes", () => {
 test("las recompensas de miembros se ven en el cierre y el staff no cobra", () => {
     const rewards = MonthlyTop.buildRewardView(snapshot)
     for (const reward of rewards.members) reward.delivered = true
-    assert.deepEqual(MonthlyTop.REWARD_COINS, [250000, 150000, 100000, 50000, 50000])
-    assert.equal(rewards.members[0].coins, 250000)
-    assert.equal(rewards.members[2].coins, 100000)
-    assert.equal(rewards.members[3].coins, 50000)
-    assert.equal(rewards.members[4].coins, 50000)
+    assert.deepEqual(MonthlyTop.REWARD_COINS, [500000, 300000, 200000, 100000, 100000])
+    assert.equal(rewards.members[0].coins, 500000)
+    assert.equal(rewards.members[2].coins, 200000)
+    assert.equal(rewards.members[3].coins, 100000)
+    assert.equal(rewards.members[4].coins, 100000)
     assert.equal(rewards.staff.length, 0)
 
     const publicText = MonthlyTop.buildTopText("2026-11", snapshot, emojis, { rewards })
     assert.match(publicText, /### 🎁  RECOMPENSAS DEL MES/)
-    assert.match(publicText, /🥇 <@m1> \*\*250\.000 monedas\*\*/)
-    assert.match(publicText, /🥉 <@m3> \*\*100\.000 monedas\*\*/)
-    assert.match(publicText, /🎖️ <@m4> \*\*50\.000 monedas\*\*/)
-    assert.match(publicText, /🎖️ <@m5> \*\*50\.000 monedas\*\*/)
+    assert.match(publicText, /🥇 <@m1> \*\*500\.000 monedas\*\*/)
+    assert.match(publicText, /🥉 <@m3> \*\*200\.000 monedas\*\*/)
+    assert.match(publicText, /🎖️ <@m4> \*\*100\.000 monedas\*\*/)
+    assert.match(publicText, /🎖️ <@m5> \*\*100\.000 monedas\*\*/)
     assert.doesNotMatch(publicText, /-# 🛠️.*monedas/)
 
     const adminText = MonthlyTop.buildAnnouncementTemplate("2026-11", snapshot, emojis, { rewards })
-    assert.match(adminText, /🥇 <@m1> \*\*250\.000 monedas\*\*/)
-    assert.doesNotMatch(adminText, /🥇 <@s1> \*\*\+250\.000 monedas\*\*/)
+    assert.match(adminText, /🥇 <@m1> \*\*500\.000 monedas\*\*/)
+    assert.doesNotMatch(adminText, /🥇 <@s1> \*\*\+500\.000 monedas\*\*/)
     assert.doesNotMatch(adminText, /ENLACES DE DROPS|Reclamar recompensa/)
 })
 
 test("el mensaje muestra la recompensa prevista aunque aún no se haya entregado", () => {
     const rewards = MonthlyTop.buildRewardView(snapshot)
     const text = MonthlyTop.buildTopText("2026-11", snapshot, emojis, { rewards })
-    assert.match(text, /🥇 <@m1> \*\*250\.000 monedas\*\*/)
-    assert.match(text, /🎖️ <@m5> \*\*50\.000 monedas\*\*/)
+    assert.match(text, /🥇 <@m1> \*\*500\.000 monedas\*\*/)
+    assert.match(text, /🎖️ <@m5> \*\*100\.000 monedas\*\*/)
 })
 
 test("la vista de recompensas reutiliza las monedas guardadas", () => {
@@ -82,6 +82,48 @@ test("la vista de recompensas reutiliza las monedas guardadas", () => {
     })
     assert.equal(rewards.members[0].coins, 123)
     assert.equal(rewards.members[0].delivered, true)
+})
+
+test("/topmensual difiere antes de mantener y consultar el snapshot", async () => {
+    const command = require("../commands/slash/topmensual.js")
+    const originalSendPublicTop = MonthlyTop.sendPublicTop
+    const order = []
+    const replies = []
+    MonthlyTop.sendPublicTop = async () => {
+        order.push("send")
+        return true
+    }
+
+    const int = {
+        guild: { id: MonthlyTop.MAIN_GUILD_ID },
+        member: {},
+        options: {
+            getChannel: () => ({}),
+            getString: name => name === "tipo" ? "publico" : null,
+            getBoolean: () => false,
+        },
+        deferReply: async () => { order.push("defer") },
+        editReply: async data => { replies.push(data) },
+    }
+    const tools = {
+        canManageServer: () => true,
+        fetchAll: async () => {
+            order.push("fetch")
+            return { info: { monthlyTop: snapshot } }
+        },
+    }
+    const client = {
+        monthlyMaintenance: async () => { order.push("maintenance") },
+    }
+
+    try {
+        await command.run(client, int, tools)
+        assert.deepEqual(order, ["defer", "maintenance", "fetch", "send"])
+        assert.equal(replies.length, 1)
+        assert.equal(replies[0].content, "✅ Top público enviado.")
+    } finally {
+        MonthlyTop.sendPublicTop = originalSendPublicTop
+    }
 })
 
 test("entrega las monedas directamente a los ganadores", async () => {
@@ -109,7 +151,7 @@ test("entrega las monedas directamente a los ganadores", async () => {
         assert.deepEqual(calls[0], {
             guildId: "g1",
             userId: "m1",
-            amount: 250000,
+            amount: 500000,
             reason: "Top Noviembre de 2026 - Miembro #1",
         })
         assert.equal(summary.rewards.members[0].delivered, true)

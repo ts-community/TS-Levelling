@@ -25,11 +25,11 @@ const AMOUNT_PRESETS = [
 // Las monedas llevan otra escala (la pone cada economía): 5 niveles como
 // en XP pero empezando en 5.000, que es "muy poco".
 const COIN_PRESETS = [
-    { coins: 5000, name: "Muy bajo" },
-    { coins: 10000, name: "Bajo" },
-    { coins: 25000, name: "Medio" },
-    { coins: 50000, name: "Alto" },
-    { coins: 100000, name: "Muy alto" },
+    { coins: 25000, name: "Muy bajo" },
+    { coins: 50000, name: "Bajo" },
+    { coins: 100000, name: "Medio" },
+    { coins: 150000, name: "Alto" },
+    { coins: 200000, name: "Muy alto" },
 ]
 
 // Texto "≈13 min de chat, nivel 3" con los valores por defecto de la

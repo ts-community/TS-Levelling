@@ -860,7 +860,7 @@ test("asistente de crear: objeto con modal de cantidad", () => {
 })
 
 test("COIN_PRESETS suben la escala y validan rangos propios", () => {
-    assert.deepEqual(Drops.COIN_PRESETS.map(p => p.coins), [5000, 10000, 25000, 50000, 100000])
+    assert.deepEqual(Drops.COIN_PRESETS.map(p => p.coins), [25000, 50000, 100000, 150000, 200000])
     assert.equal(Drops.validateDropInput({ amount: 500000, maxClaims: 5, durationMin: 60, kind: "coins", boatAvailable: true }).length, 0)
     assert.ok(Drops.validateDropInput({ amount: 0, maxClaims: 5, durationMin: 60, kind: "coins", boatAvailable: true }).length > 0, "tas de monedas mínimo")
     assert.ok(Drops.validateDropInput({ amount: 1, maxClaims: 5, durationMin: 60, kind: "coins", boatAvailable: true }).length === 0, "ya 1 moneda vale")
