@@ -15,13 +15,14 @@ module.exports = {
         if (!guildId) return tools.warn("Este comando solo puede usarse dentro de un servidor.")
 
         try {
+            await int.deferReply({ ephemeral: true })
             await client.db.update(guildId, {
                 $set: {
                     [`users.${NICO_ID}.coinsMax`]: 0,
                     [`users.${NICO_ID}.coinsSyncAt`]: 0,
                 },
             }).exec()
-            return int.reply(`✅ Máximo de monedas de registros reiniciado para <@${NICO_ID}>. Su siguiente mensaje volverá a sincronizarlo.`)
+            return int.editReply(`✅ Máximo de monedas de registros reiniciado para <@${NICO_ID}>. Su siguiente mensaje volverá a sincronizarlo.`)
         } catch (error) {
             console.warn(`Could not reset coin record maximum for ${NICO_ID} in ${guildId}:`, error.message)
             return tools.warn("No se pudo reiniciar el máximo de monedas de registros.")
