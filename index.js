@@ -956,7 +956,7 @@ client.on("interactionCreate", async int => {
         } catch {}
     } catch (e) {
     if (e?.code === 10062 || e?.rawError?.code === 10062) return
-        console.error(e)
+        console.error(`Command ${int.commandName || "interaction"} failed:`, e)
 
         const errorReply = {
             content: "¡Ha habido un error! Inténtalo de nuevo.",

@@ -14,14 +14,16 @@ module.exports = {
         const guildId = int.guild?.id
         if (!guildId) return tools.warn("Este comando solo puede usarse dentro de un servidor.")
 
+        await int.deferReply({ ephemeral: true })
+
         try {
-            await int.deferReply({ ephemeral: true })
-            await client.db.update(guildId, {
+            const updated = await client.db.update(guildId, {
                 $set: {
                     [`users.${NICO_ID}.coinsMax`]: 0,
                     [`users.${NICO_ID}.coinsSyncAt`]: 0,
                 },
-            }).exec()
+            }, { new: true }).exec()
+            if (!updated) throw new Error(`No database document found for guild ${guildId}`)
             return int.editReply(`✅ Máximo de monedas de registros reiniciado para <@${NICO_ID}>. Su siguiente mensaje volverá a sincronizarlo.`)
         } catch (error) {
             console.warn(`Could not reset coin record maximum for ${NICO_ID} in ${guildId}:`, error.message)

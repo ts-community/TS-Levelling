@@ -583,7 +583,9 @@ class Tools {
         this.warn = function(msg) {
             if (msg.startsWith("*")) msg = this.errors[msg.slice(1)] || msg
             const data = { content: this.errors[msg] || msg }
-            if (int.deferred) return int.editReply(data)
+            if (int.deferred) {
+                return int.deleteReply().then(() => int.followUp({ ...data, ephemeral: true }))
+            }
             if (int.replied) return int.followUp({ ...data, ephemeral: true })
             return int.reply({ ...data, ephemeral: true })
         }
