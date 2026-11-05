@@ -956,7 +956,7 @@ client.on("interactionCreate", async int => {
         } catch {}
     } catch (e) {
     if (e?.code === 10062 || e?.rawError?.code === 10062) return
-        console.error(`Command ${int.commandName || "interaction"} failed:`, e)
+        console.error(e)
 
         const errorReply = {
             content: "¡Ha habido un error! Inténtalo de nuevo.",
@@ -964,10 +964,7 @@ client.on("interactionCreate", async int => {
         }
 
         try {
-            if (int.deferred) {
-                await int.deleteReply()
-                await int.followUp(errorReply)
-            }
+            if (int.deferred) await int.editReply(errorReply)
             else if (int.replied) await int.followUp(errorReply)
             else await int.reply(errorReply)
         } catch (replyError) {
