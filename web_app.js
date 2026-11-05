@@ -242,9 +242,11 @@ async function handleDropClaim(req, res) {
     const code = String(req.params.code || "").toUpperCase()
     const validPath = /^\d{10,30}$/.test(guildId) && /^[A-Z0-9]{6,12}$/.test(code)
 
-    const user = await getDiscordInfo(req, true)
-    const doc = validPath ? await client.db.fetch(guildId, ["drops"]).exec().catch(() => null) : null
-    const drop = validPath ? (doc?.drops || {})[code] : null
+    const [user, doc] = await Promise.all([
+        validPath ? getDiscordInfo(req, true) : null,
+        validPath ? client.db.fetch(guildId, ["drops"]).exec().catch(() => null) : null,
+    ])
+    const drop = (doc?.drops || {})[code] || null
     const guildName = escapeDropHtml(client.guilds.cache.get(guildId)?.name || guildId || "el servidor")
 
     // Fechas siempre en hora de Madrid (el VPS suele estar en UTC).

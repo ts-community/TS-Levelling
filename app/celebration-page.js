@@ -281,9 +281,9 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                 .detail > strong img { height: 1.3em; width: auto; vertical-align: -0.25em; margin-right: 0.15em; }
                 .detail > small { color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
                 /* Filas sueltas dentro de un apartado (lista de recompensas). */
-                .rewardRow { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding: 0.25rem 0; }
-                .rewardRow b { font-size: 1rem; color: var(--text); }
-                .rewardRow small { color: var(--muted); font-size: 0.85rem; text-align: right; max-width: 60%; }
+                .rewardRow { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; min-width: 0; padding: 0.25rem 0; }
+                .rewardRow b { min-width: 0; font-size: 1rem; color: var(--text); overflow-wrap: anywhere; }
+                .rewardRow small { min-width: 0; color: var(--muted); font-size: 0.85rem; text-align: right; max-width: 60%; overflow-wrap: anywhere; }
                 .rewardRow + .rewardRow { border-top: 1px solid rgba(255,255,255,0.06); }
                 .claimBar { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.1); overflow: hidden; margin-top: 0.35rem; }
                 .claimBar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.8s ease; }
@@ -336,12 +336,17 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                     *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
                 }
                 @media (max-width: 520px) {
-                    .card { width: min(94vw, 560px); padding: 1.1rem 0.9rem 0.85rem; }
+                    body { min-height: 100svh; padding: 16px 12px; background-size: 100% 100%; animation: none; }
+                    .glow { filter: none; opacity: 0.18; animation: none; }
+                    .card { width: min(100%, 560px); padding: 1.1rem 0.9rem 0.85rem; backdrop-filter: none; animation: none; transition: none; }
                     .badgeWrap { width: 74px; height: 74px; }
                     .badge svg { width: 2rem; height: 2rem; }
+                    .badgeWrap, .badge { animation: none !important; }
                     h1 { font-size: 1.45rem; }
                     p { font-size: .92rem; line-height: 1.5; }
                     .detail { padding: .55rem .7rem; }
+                    .rewardRow { flex-direction: column; align-items: flex-start; gap: 0.15rem; }
+                    .rewardRow small { max-width: 100%; text-align: left; }
                     .actions { flex-direction: column; align-items: stretch; }
                     .actions a { width: 100%; }
                 }
@@ -421,14 +426,16 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                         const colors = ['#7ef0bc', '#87f3ff', '#f5d76e', '#f78fb3', '#a78bfa', '#ffb86c'];
                         const mode = '${mode}';
                         const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                        const compact = window.matchMedia('(max-width: 520px), (pointer: coarse)').matches;
                         let loopActive = false;
 
                         function resizeCanvas() {
-                            canvas.width = window.innerWidth * window.devicePixelRatio;
-                            canvas.height = window.innerHeight * window.devicePixelRatio;
+                            const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+                            canvas.width = window.innerWidth * pixelRatio;
+                            canvas.height = window.innerHeight * pixelRatio;
                             canvas.style.width = window.innerWidth + 'px';
                             canvas.style.height = window.innerHeight + 'px';
-                            ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+                            ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
                         }
 
                         function spawnBurst(count, spread) {
@@ -512,11 +519,9 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                         window.addEventListener('resize', resizeCanvas);
                         if (!reduceMotion) {
                             if (mode === "full") {
-                                // Un solo estallido al entrar; la lluvia suave
-                                // acompaña después, con retardo.
-                                setTimeout(() => spawnBurst(120, 0.16), 100);
-                                setTimeout(() => spawnRain(55), 1900);
-                            } else {
+                                setTimeout(() => spawnBurst(compact ? 42 : 120, 0.16), 100);
+                                if (!compact) setTimeout(() => spawnRain(55), 1900);
+                            } else if (!compact) {
                                 // "Ya lo tienes": lluvia suave, empezando tarde
                                 // para que primero se lea la tarjeta.
                                 setTimeout(() => spawnRain(55), 2300);
