@@ -121,6 +121,7 @@ a { color: var(--c-accent) !important; }
 /* ---------- Contenido ---------- */
 #everything { max-width: none !important; }
 .configboxes {
+    box-sizing: border-box;
     margin-left: var(--sidebar-w);
     padding: 28px 32px 90px;
     gap: 16px;
@@ -134,6 +135,7 @@ a { color: var(--c-accent) !important; }
     border-radius: 16px;
     padding: 22px 26px 26px;
     margin: 0;
+    box-sizing: border-box;
     box-shadow: none;
 }
 .settingBox { width: calc(50% - 8px); }
@@ -317,7 +319,7 @@ input:checked + .sliderspan:before { background: #fff !important; }
 
 /* ---------- Móvil ---------- */
 @media (max-width: 900px) {
-    .configboxes { margin-left: 0; padding: 18px 16px 90px; }
+    .configboxes { width: 100%; margin-left: 0; padding: 18px 16px 90px; }
     .settingBox { width: 100%; }
     #serverInfo { grid-template-columns: 1fr; }
     #sidebar { top: 64px; height: calc(100% - 64px); }
@@ -658,6 +660,15 @@ input[type="number"] { min-width: 96px; width: 96px; }
     #serverInfo { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 }
 .settingBox .centerflex > select, .settingBox .spacedflex > select { flex: 0 1 380px; width: auto; min-width: 160px; }
+
+/* La pestaña Datos contiene controles destructivos y archivos largos: mantener
+   los paneles dentro del área disponible y dejar que cada grupo de acciones envuelva. */
+.configboxes[tab="data"] > .settingBox { min-width: 0; }
+.configboxes[tab="data"] .exportXP { margin: 4px 8px 4px 0 !important; }
+.configboxes[tab="data"] #importBotSection .centerflex,
+.configboxes[tab="data"] #importBotSection .spacedflex { max-width: 100%; }
+.configboxes[tab="data"] #importBotSection input[type="file"] { flex: 1 1 320px; min-width: 0; }
+.configboxes[tab="data"] #botimporting { height: auto !important; min-height: 60px; }
 
 /* ================= v3: tablas como listas modernas ================= */
 .flexTable {
