@@ -582,10 +582,10 @@ class Tools {
         // sends an ephemeral reply, usually when the user did something wrong
         this.warn = function(msg) {
             if (msg.startsWith("*")) msg = this.errors[msg.slice(1)] || msg
-            const data = { content: this.errors[msg] || msg, ephemeral: true }
+            const data = { content: this.errors[msg] || msg }
             if (int.deferred) return int.editReply(data)
-            if (int.replied) return int.followUp(data)
-            return int.reply(data)
+            if (int.replied) return int.followUp({ ...data, ephemeral: true })
+            return int.reply({ ...data, ephemeral: true })
         }
 
         // get detailed position info on a channel, for sorting

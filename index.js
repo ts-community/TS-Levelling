@@ -964,7 +964,16 @@ client.on("interactionCreate", async int => {
         }
 
         try {
-            if (int.deferred) await int.editReply(errorReply)
+            if (int.deferred) {
+                const errorContainer = new Discord.ContainerBuilder()
+                    .addTextDisplayComponents(new Discord.TextDisplayBuilder().setContent(errorReply.content))
+                const flags = Discord.MessageFlags.IsComponentsV2
+                    | (int.ephemeral ? Discord.MessageFlags.Ephemeral : 0)
+                await int.editReply({
+                    components: [errorContainer],
+                    flags,
+                })
+            }
             else if (int.replied) await int.followUp(errorReply)
             else await int.reply(errorReply)
         } catch (replyError) {
