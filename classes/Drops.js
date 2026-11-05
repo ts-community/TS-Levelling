@@ -721,7 +721,7 @@ async function claimDrop(client, guildId, code, userId, now = Date.now(), deps =
     const removeItem = deps.removeItem || removeBoatItem
 
     return withDropLock(guildId, code, async () => {
-        const doc = await fetchDoc(client, guildId)
+        const doc = await fetchDoc(client, guildId, [`drops.${code}`])
         if (!doc) return { ok: false, reason: "missing" }
         const drop = (doc.drops || {})[code]
         const check = validateClaim(drop, userId, now)

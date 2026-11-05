@@ -329,7 +329,7 @@ async function grantRecord(client, guild, guildId, userId, recordId, threshold) 
 
     while (inflightGrants.has(lockKey)) {
         try { await inflightGrants.get(lockKey) } catch {}
-        const check = await client.db.fetch(resolvedGuildId).exec().catch(() => null)
+        const check = await client.db.fetch(resolvedGuildId, [`users.${String(userId)}.records`]).exec().catch(() => null)
         if (check?.users?.[String(userId)]?.records?.[key]) return null
     }
 
@@ -347,7 +347,7 @@ async function grantRecordInner(client, guild, resolvedGuildId, userId, found, t
     const recordId = found.record.id
     const threshold = tier.threshold
 
-    const fresh = await client.db.fetch(resolvedGuildId).exec().catch(() => null)
+    const fresh = await client.db.fetch(resolvedGuildId, ["settings", `users.${String(userId)}`]).exec().catch(() => null)
     if (fresh?.users?.[String(userId)]?.records?.[key]) return null
 
     const settings = fresh?.settings
@@ -389,7 +389,7 @@ async function grantRecordInner(client, guild, resolvedGuildId, userId, found, t
     }
     await client.db.update(resolvedGuildId, updates).exec().catch(() => null)
 
-    const after = await client.db.fetch(resolvedGuildId).exec().catch(() => null)
+    const after = await client.db.fetch(resolvedGuildId, [`users.${String(userId)}`]).exec().catch(() => null)
     const afterUser = after?.users?.[String(userId)] || {}
     const newXP = Number(afterUser.xp) || 0
     const newLevel = settings ? Tools.global.getLevel(newXP, settings) : 0
@@ -466,7 +466,7 @@ async function grantRecordInner(client, guild, resolvedGuildId, userId, found, t
             if (!useMultiple || (newLevel % settings.levelUp.multiple == 0)) {
                 const lvlMessage = new LevelUpMessage(settings, pseudoMessage, {
                     oldLevel, level: newLevel, userData: leveledUserData,
-                    allUsers: after?.users || null, client,
+                    allUsers: (await client.db.fetch(resolvedGuildId, ["users"]).exec().catch(() => null))?.users || null, client,
                 })
                 await lvlMessage.send()
             }

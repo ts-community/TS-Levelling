@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="/css/polaris.css?v=11" type="text/css" rel="stylesheet">
+    <link href="/css/theme.css?v=40" type="text/css" rel="stylesheet">
     <link rel="icon" href="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless">
     <title>TS Community</title>
 
@@ -28,22 +29,29 @@
                 <span>TS Community Brawl</span>
             </a>
         </div>
-        <a class="leaderboardLink previewToggleBtn" tabindex="-1">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-            <span>Vista de miembro</span>
-        </a>
     </div>
     <div class="sidebarBackdrop" id="sidebarBackdrop"></div>
 
-    <h2 style="margin-top: 75px; width: 100%; position: absolute;" class="middleflex" id="loading">Cargando...</h2>
+    <div class="tsLoader" id="loading" role="status" aria-live="polite">
+        <div class="tsLoaderRing"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" class="trk"/><circle cx="60" cy="60" r="54" class="arc"/></svg><img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt=""></div>
+        <p class="tsLoaderTxt">Cargando el panel</p>
+        <div class="tsLoaderDots"><i></i><i></i><i></i></div>
+    </div>
 
     <div id="everything" style="display: none; width: 100%; max-width: 1600px; box-sizing: border-box">
 
     <div id="sidebar">
         <div class="categoryList">
+        <p class="navSection">Niveles</p>
+        <a class="category memberLink" data-path="leaderboard"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="12" width="5" height="9" rx="1.5"></rect><rect x="9.5" y="7" width="5" height="14" rx="1.5"></rect><rect x="16" y="3" width="5" height="18" rx="1.5"></rect></svg><p>Clasificación</p></a>
+        <a class="category memberLink" data-path="rank"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1c0-4.4 3.6-8 8-8s8 3.6 8 8v1H4z"></path></svg><p>Tu Rango</p></a>
+        <a class="category memberLink" data-path="records"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a5 5 0 0 1 5 5v1h2a1 1 0 0 1 1 1c0 2.4-1.6 4.4-3.8 4.9A5.03 5.03 0 0 1 13 16.9V19h3a1 1 0 0 1 0 2H8a1 1 0 0 1 0-2h3v-2.1a5.03 5.03 0 0 1-3.2-3 5.5 5.5 0 0 1-3.8-4.9 1 1 0 0 1 1-1h2V7a5 5 0 0 1 5-5zM5 9c.2 1.1.9 2 1.9 2.5A7 7 0 0 1 6.5 9H5zm12.5 0h-1.4a7 7 0 0 1-.4 2.5C16.6 11 17.3 10.1 17.5 9z"></path></svg><p>Tus Records</p></a>
+        <a class="category memberLink" data-path="roles"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z"></path></svg><p>Recompensas</p></a>
+        <a class="category memberLink" data-path="levels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" stroke="none"></path><path d="M2 12l10 5 10-5"></path><path d="M2 17l10 5 10-5"></path></svg><p>Todos los Niveles</p></a>
+        <p class="navSection">Administración</p>
         <div tabindex="0" category="server" class="category" title="Información de cada pestaña, además de datos generales del servidor.">
-            <img class="serverIcon" style="border-radius: 420px">
-            <p>Inicio</p>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
+            <p>Resumen</p>
         </div>
 
         <div tabindex="0" category="xp" class="category" title="Ajustes generales de niveles, como la XP por mensaje y el escalado de niveles.">
@@ -87,13 +95,14 @@
         </div>
         </div>
 
+            <div class="sidebarWeb"><a class="category memberLink webLink" href="https://tscomunity.es" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><p>Web Global</p><svg class="extIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div>
         <div class="lbSidebarUser">
             <div class="userMenu" id="userMenu">
                 <button class="sidebarUserButton" id="userMenuButton" type="button">
                     <img id="userAvatar" src="" alt="">
                     <div class="sidebarUserInfo">
                         <span id="username"></span>
-                        <span class="userRole">Administrador</span>
+                        <span class="userRole" id="cfgUserRole">Administrador</span>
                     </div>
                 </button>
                 <div class="userDropdown sidebarUserDropdown" id="userDropdown">
@@ -118,25 +127,6 @@
     </div>
 
     <div class="configboxes" tab="server" style="display: none" id="serverInfo">
-        <div class="settingBox box fulllength" style="padding: 15px 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; box-sizing: border-box">
-            <div class="centerflex" style="min-width: 0px">
-                <img class="serverIcon" style="border-radius: 420px; height: 75px; flex-shrink: 0">
-                <div style="margin-left: 18px; overflow: hidden;">
-                    <h1 class="serverName" style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; margin-bottom: 0px"></h1>
-                    <p class="serverMembers" style="margin-top: 0px"></p>
-                </div>
-            </div>
-            <div class="middleflex" style="flex-wrap: wrap; gap: 16px">
-                <a tabindex=-1 href="/servers?showall">
-                    <button class="serverSwitchButton" style="font-size: 19px; height: 50px; width: 200px; white-space: nowrap">Cambiar servidor</button>
-                </a>
-
-                <a class="leaderboardLink" tabindex=-1 target="_blank" id="mainlbbutton">
-                    <button class="rankingButton" style="font-size: 19px; height: 50px; width: 200px; white-space: nowrap">Clasificación</button>
-                </a>
-            </div>
-        </div>
-
         <div class="settingBox box categoryBox canfocus" tabindex=0>
             <div class="centerflex">
                 <div cat="icon" class="categoryIcon"></div>
@@ -240,7 +230,7 @@
 
                 <div style="margin-left: 40px; margin-top: 68px">
                     <div id="xpGraph" class="desmos"></div>
-                    <p class="details" id="desmosJumpscare" style="font-size: 10px; opacity: 25%">desmos jumpscare</p>
+                    <p class="details" id="desmosJumpscare" style="display: none"></p>
                 </div>
             </div>
 
@@ -544,7 +534,7 @@
                 <select id="roleMultiplierSelect"></select>
                 <p>otorga</p>
                 <input id="roleMultiplierAmount" type="number" decimals="4" style="width: 70px; margin-right: 2px" min="0" max="100">
-                <p>⨯ XP</p>
+                <p style="white-space: nowrap; margin-left: 6px">⨯ XP</p>
             </div>
 
             <button style="margin-top: 10px" id="addRoleMultiplier">Añadir</button>
@@ -573,10 +563,10 @@
                 <select id="channelMultiplierSelect"></select>
                 <p>otorga</p>
                 <input id="channelMultiplierAmount" type="number" decimals="4" style="width: 70px; margin-right: 2px" min="0" max="100">
-                <p>⨯ XP</p>
+                <p style="white-space: nowrap; margin-left: 6px">⨯ XP</p>
             </div>
 
-            <button style="background-color: var(--emojipurple); margin-top: 10px" id="addChannelMultiplier">Añadir</button>
+            <button style="margin-top: 10px" id="addChannelMultiplier">Añadir</button>
 
             <h2 style="margin-top: 50px; margin-bottom: 15px">Multiplicadores de canal (<span id="channelMultiplierCount">0</span>)</h2>
 
@@ -649,7 +639,7 @@
 
         <div class="settingBox box ifrankenabled">
             <h2>Personalización de la tarjeta de rango</h2>
-            <p class="details">Ya no es mi problema jaja</p>
+            <p class="details">El diseño de la tarjeta de rango es fijo para todo el servidor y no se puede personalizar desde aquí.</p>
         </div>
 
     </div>
@@ -895,9 +885,17 @@
 
 <script type="text/javascript" src="/polaris.js"></script>
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.js"></script>
-<script src="https://www.desmos.com/api/v1.7/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
 
 <script>
+    // Desmos pesa ~2,7 MB: se carga en segundo plano para no bloquear el panel
+    const desmosReady = new Promise(resolve => {
+        let sc = document.createElement("script")
+        sc.src = "https://www.desmos.com/api/v1.7/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"
+        sc.async = true
+        sc.onload = () => resolve(true)
+        sc.onerror = () => resolve(false)
+        document.head.appendChild(sc)
+    })
     addUhOh()
 
     // Escapa texto de Discord (nombres de roles, canales, servidor) antes de meterlo en HTML.
@@ -967,7 +965,7 @@
             restrictGridToFirstQuadrant: true,
             xAxisLabel: "Nivel",
             yAxisLabel: "XP necesaria",
-            backgroundColor: "#202020",
+            backgroundColor: "#12141c",
         }
 
         let desmosBounds = {
@@ -978,12 +976,14 @@
         }
 
         // failsafe in case the desmos api breaks
-        let desmosGraph = typeof Desmos != "undefined" ? Desmos.GraphingCalculator(document.getElementById('xpGraph'), desmosConfig) : null
-        if (desmosGraph) {
+        let desmosGraph = null
+        desmosReady.then(ok => {
+            if (!ok || typeof Desmos == "undefined") return $('#desmosJumpscare').removeAttr("style").text("No se ha podido cargar la gráfica")
+            desmosGraph = Desmos.GraphingCalculator(document.getElementById('xpGraph'), desmosConfig)
             desmosGraph.setMathBounds(desmosBounds)
             desmosGraph.setDefaultState(desmosGraph.getState())
-        }
-        else $('#desmosJumpscare').removeAttr("style").text("Parece que Desmos no ha podido cargar ¯\\_(ツ)_/¯")
+            if (typeof updateCurveTable == "function") updateCurveTable()
+        })
 
         $('.serverName').text(data.guild.name)
         $('.serverMembers').text(commafy(data.guild.members || "?") + " miembro" + (data.guild.members == 1 ? "" : "s"))
@@ -995,6 +995,7 @@
                 ? `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.png?size=128`
                 : `https://cdn.discordapp.com/embed/avatars/${Number((BigInt(data.user.id) >> 22n) % 6n)}.png`
             $('#username').text(data.user.displayName)
+            $('#cfgUserRole').text(((u, mod) => (u && u.topRole) ? u.topRole : (u && u.isOwner) ? "Owner" : mod ? "Administrador" : "Miembro")(data.user, true))
             $('#userAvatar').attr("src", avatarURL)
         }
         
@@ -1164,7 +1165,7 @@
             })
 
             if (desmosGraph) {
-                desmosGraph.setExpression({ id: 'xp', color: "#0080FF", latex: `y = ${curve[3]}x^3 + ${curve[2]}x^2 + ${curve[1]}x \\{x>=0\\}` })
+                desmosGraph.setExpression({ id: 'xp', color: "#d22b40", latex: `y = ${curve[3]}x^3 + ${curve[2]}x^2 + ${curve[1]}x \\{x>=0\\}` })
                 // desmosGraph.setExpression({ id: 'required', color: "#FF0080", latex: `y = ${curve[3] * 3}x^2 + ${curve[2] * 2}x + ${curve[1]} \\{x>=0\\}` })
             }
 
@@ -1177,7 +1178,7 @@
         let categorySlot = $('.categoryBox').clone()
         $('.categoryBox').remove()
         $('.category').each(function(index) {
-            if (index == 0 || $(this).hasClass("unlisted")) return
+            if ($(this).hasClass("memberLink") || $(this).attr('category') == 'server' || $(this).hasClass("unlisted")) return
             let cSlot = categorySlot.clone()
             cSlot.find('h2[cat=name]').text($(this).find('p').text())
             cSlot.find('p[cat=info]').text($(this).attr('title'))
@@ -1188,15 +1189,19 @@
         })
         
         // on category change
-        $('.category').on("click keydown", function(e) {
+        $('.category:not(.memberLink)').on("click keydown", function(e) {
             if (ignoreTabPress(e)) return
             $('.current').removeClass('current')
             $(this).addClass('current')
             $('.configboxes').hide()
             $(`.configboxes[tab="${$(this).attr('category')}"]`).show()
             $('.hideOnLoad').hide()
+            window.scrollTo({ top: 0 })
+            try { history.replaceState({}, "", location.pathname + ($(this).attr('category') == 'server' ? '' : '?tab=' + $(this).attr('category'))) } catch {}
         })
-        $('.category[category="server"]').trigger('click') // default category
+        $('.memberLink:not(.webLink)').each(function() { $(this).attr('href', `/${$(this).attr('data-path')}/${guildID}`) })
+        let startTab = new URLSearchParams(location.search).get('tab')
+        $(`.category[category="${startTab && $(`.category[category="${startTab}"]`).length ? startTab : "server"}"]`).trigger('click') // default category
 
         $('.categoryShortcut').on("click keydown", function(e) {
             if (ignoreTabPress(e)) return
@@ -1208,10 +1213,11 @@
             $('p[cat="extra"][category="xp"]').text(data.enabled ? `¡Activado! ${commafy(data["gain.min"])}${data["gain.min"] == data["gain.max"] ? "" : `-${commafy(data["gain.max"])}`} XP cada ${commafy(data["gain.time"])}s` : "¡XP desactivada!").css("color", data.enabled ? "var(--polarisgreen)" : "#ff6666")
             $('p[cat="extra"][category="rewardroles"]').text(data.rewards.length ? addEs(data.rewards.length, "rol de recompensa", "roles de recompensa") : "Sin roles de recompensa")
             $('p[cat="extra"][category="levelup"]').text(data["levelUp.enabled"] && data["levelUp.message"] ? `¡Activado!${data["levelUp.embed"] ? " (embed)" : ""}` : "Desactivado")
-            $('p[cat="extra"][category="multipliers"]').text(`${addEs(data["multipliers.roles"].length, "rol", "roles")}, ${addEs(data["multipliers.channels"].length, "canal", "canales")}`)
             $('p[cat="extra"][category="rankcard"]').text(`${data["rankCard.disabled"] ? "Desactivada" : data["rankCard.ephemeral"] ? "Invisible" : "¡Activada!"}`)
             $('p[cat="extra"][category="leaderboard"]').text(`${data["leaderboard.disabled"] ? "Desactivada" : data["leaderboard.private"] ? "Privada" : "¡Activada!"}${data["leaderboard.maxEntries"] ? ` (máx. ${commafy(data["leaderboard.maxEntries"])})` : ""}`)
             $('p[cat="extra"][category="data"]').text(`Últ. guardado: ${lastUpdated ? `${new Date(lastUpdated).toLocaleString([], {year: '2-digit', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'})}` : "Nunca"}`)
+            $('p[cat="extra"][category="multipliers"]').text(`${addEs(data["multipliers.roles"].length, "rol", "roles")}, ${addEs(data["multipliers.channels"].length, "canal", "canales")}`)
+            $('p[cat="extra"]').each(function() { let t = $(this).text().toLowerCase(); let off = /desactiv|sin |^0 roles, 0 canales|invisible/.test(t); $(this).toggleClass("off", off).toggleClass("on", !off && /activ/.test(t)) })
             $('#mainlbbutton').toggle(!data['leaderboard.disabled'])
         }
 
@@ -1243,7 +1249,7 @@
                 $('#rewards div[col="role"]').append(`<p class="longname" style="color: ${foundRole.color == "#000000" ? "var(--defaultrolecol)" : foundRole.color}">${esc(foundRole.name)}</p>`)
                 $('#rewards div[col="keep"]').append(`<p class="toggleRow" tr="keep" tabindex="0" roleID="${reward.id}" style="color: ${reward.keep ? "lime" : "nah"}">${reward.keep ? "Sí" : "No"}${reward.noSync && !excludeEnabled ? "*" : ""}</p>`)
                 $('#rewards div[col="exclude"]').append(`<p class="toggleRow" tr="noSync" tabindex="0" roleID="${reward.id}" style="color: ${reward.noSync ? "red" : "lime"}">${reward.noSync ? "No" : "Sí"}</p>`)
-                $('#rewards div[col="delete"]').append(`<p class="deleteRow deleteReward" tabindex="0" roleID="${reward.id}">🗑️</p>`)
+                $('#rewards div[col="delete"]').append(`<p class="deleteRow deleteReward" tabindex="0" roleID="${reward.id}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Eliminar"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></p>`)
             })
             $('#rewardCount').html(rewards.length)
             checkUnsavedChanges()
@@ -1363,7 +1369,7 @@
 
                 $('#roleMultipliers div[col="boost"]').append(`<p class="roleMultiplierAmount numberinput" roleID="${boost.id}" min="0" max="100" decimals="4" default="1" tabindex="-1" contenteditable>${+boost.boost}x</p>`)
                 $('#roleMultipliers div[col="role"]').append(`<p class="longname" style="color: ${foundRole.color == "#000000" ? "var(--defaultrolecol)" : foundRole.color}">${esc(foundRole.name)}</p>`)
-                $('#roleMultipliers div[col="delete"]').append(`<p class="deleteRow deleteRoleMultiplier" tabindex="0" roleID="${boost.id}">🗑️</p>`)
+                $('#roleMultipliers div[col="delete"]').append(`<p class="deleteRow deleteRoleMultiplier" tabindex="0" roleID="${boost.id}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Eliminar"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></p>`)
             })
             $('#roleMultiplierCount').html(roleMultipliers.length)
             checkUnsavedChanges()
@@ -1422,7 +1428,7 @@
 
                 $('#channelMultipliers div[col="boost"]').append(`<p class="channelMultiplierAmount numberinput" channelID="${boost.id}" min="0" max="100" decimals="4" default="1" tabindex="-1" contenteditable>${+boost.boost}x</p>`)
                 $('#channelMultipliers div[col="channel"]').append(`<p class="longname">${channelPrefixes[foundChannel.type] || "* "}${esc(foundChannel.name)}</p>`)
-                $('#channelMultipliers div[col="delete"]').append(`<p class="deleteRow deleteChannelMultiplier" tabindex="0" channelID="${boost.id}">🗑️</p>`)
+                $('#channelMultipliers div[col="delete"]').append(`<p class="deleteRow deleteChannelMultiplier" tabindex="0" channelID="${boost.id}"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Eliminar"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg></p>`)
             })
             $('#channelMultiplierCount').html(channelMultipliers.length)
             checkUnsavedChanges()

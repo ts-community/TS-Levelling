@@ -185,17 +185,20 @@
             .errorCode { font-size: 64px; }
         }
     </style>
+    <link href="/css/theme.css?v=40" type="text/css" rel="stylesheet">
 </head>
 <body>
     <div class="heroWrap middleflex">
         <img class="heroBgLogo" src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt="">
-        <div class="heroCard">
-            <div class="heroLogoWrap">
-                <img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt="Logo de TS Community">
-            </div>
-            <h1 class="heroTitle">TS Community</h1>
-            <p class="heroSubtitle">Panel de niveles de TS Community.</p>
-            <div id="buttonList" class="heroButtons">
+        <div class="homeGrid">
+            <section class="homeIntro">
+                <span class="homeEyebrow"><span class="dot"></span>Sistema de niveles</span>
+                <div class="homeBrand">
+                    <img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt="Logo de TS Community">
+                    <h1 class="heroTitle">TS Community</h1>
+                </div>
+                <p class="heroSubtitle">Gana XP hablando en el servidor, sube de nivel y desbloquea rangos desde Bronce hasta Leyenda. Consulta tu progreso y la clasificación en tiempo real.</p>
+                <div id="buttonList" class="heroButtons">
                 <a style="display: none" href="./invite" tabindex="-1" target="_blank" id="addLink"> <button class="gradientButton primary">Añadir a Discord</button> </a>
                 <a style="display: none" href="./servers" tabindex="-1" id="manageLink">
                     <button class="gradientButton secondary" id="manageButton" disabled>
@@ -204,6 +207,24 @@
                     </button>
                 </a>
             </div>
+                <a class="homeGhostLink" href="/leaderboard/1093864130030612521">Ver la clasificación sin iniciar sesión →</a>
+                <ul class="homeFeatures">
+                    <li><b>XP por mensaje</b><span>y por tiempo en voz</span></li>
+                    <li><b>Roles automáticos</b><span>al alcanzar cada rango</span></li>
+                    <li><b>Records y rachas</b><span>con recompensas extra</span></li>
+                </ul>
+            </section>
+            <aside class="homeTop" id="homeTop" aria-label="Top de la clasificación">
+                <div class="homeTopHead">
+                    <h2>Top del servidor</h2>
+                    <a href="/leaderboard/1093864130030612521">Ver todo</a>
+                </div>
+                <ol id="homeTopList"><li class="sk"></li><li class="sk"></li><li class="sk"></li><li class="sk"></li><li class="sk"></li></ol>
+                <div class="homeStats">
+                    <div><b id="statMembers">—</b><span>miembros</span></div>
+                    <div><b id="statRanked">—</b><span>en el top</span></div>
+                </div>
+            </aside>
         </div>
     </div>
 </body>
@@ -221,7 +242,7 @@ if (window.location.search.includes("authorized")) {
 delete localStorage.polaris_url
 
 Fetch("./api/loggedin").then(data => {
-    if (data && data.login && data.login.id) $('#manageButtonText').text("Gestionar servidores");
+    if (data && data.login && data.login.id) $('#manageButtonText').text("Iniciar sesión");
     else $('#manageButtonText').text("Iniciar sesión");
     $('#manageButton').prop('disabled', false);
     if (data && data.botPublic) $("#addLink").show();
@@ -231,6 +252,22 @@ Fetch("./api/loggedin").then(data => {
     $('#manageButton').prop('disabled', false);
     $('#manageLink').show()
 })
+
+
+// Top en directo para la portada (API pública de la clasificación)
+const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))
+fetch("/api/leaderboard/1093864130030612521?page=1&pageSize=5").then(r => r.json()).then(d => {
+    if (!d || !d.leaderboard) throw 0
+    $('#statMembers').text((d.guild.members || 0).toLocaleString("es-ES"))
+    $('#statRanked').text((d.guild.totalRanked || 0).toLocaleString("es-ES"))
+    $('#homeTopList').html(d.leaderboard.slice(0, 5).map((u, i) => `
+        <li class="pos-${i + 1}">
+            <span class="rk">${i + 1}</span>
+            <img src="${esc(u.avatar || "https://cdn.discordapp.com/embed/avatars/0.png")}" alt="" loading="lazy" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+            <span class="nm">${esc(u.nickname || u.displayName || u.username || "Miembro")}</span>
+            <span class="lv">${new Intl.NumberFormat("es-ES", { notation: "compact", maximumFractionDigits: 1 }).format(u.xp || 0)} XP</span>
+        </li>`).join(""))
+}).catch(() => $('#homeTop').hide())
 
 $(document).ready(function(){
     $(this).scrollTop(0);

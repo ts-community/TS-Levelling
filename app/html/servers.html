@@ -112,6 +112,7 @@
             height: 20px !important;
         }
     </style>
+    <link href="/css/theme.css?v=40" type="text/css" rel="stylesheet">
 </head>
 <body>
     <div class="topbar">
@@ -134,9 +135,10 @@
         </div>
     </div>
 
-    <div class="loadingWrap" id="loading">
-        <div class="spinner"></div>
-        <p style="margin: 0px 0px; opacity: 70%">Cargando...</p>
+    <div class="tsLoader" id="loading" role="status" aria-live="polite">
+        <div class="tsLoaderRing"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" class="trk"/><circle cx="60" cy="60" r="54" class="arc"/></svg><img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt=""></div>
+        <p class="tsLoaderTxt">Cargando tus servidores</p>
+        <div class="tsLoaderDots"><i></i><i></i><i></i></div>
     </div>
 
     <div id="everything" style="display: none">
@@ -208,7 +210,7 @@ Fetch(`./api/guilds`).then(data => {
     if (!window.location.search.includes("showall")) {
         let mainGuild = sortedGuilds.find(x => x.id == mainGuildID && x.inServer)
         if (mainGuild) {
-            let dest = mainGuild.permissions.server ? `./settings/${mainGuild.id}` : `./leaderboard/${mainGuild.id}`
+            let dest = `./leaderboard/${mainGuild.id}`
             return window.location.replace(dest)
         }
 
@@ -216,7 +218,7 @@ Fetch(`./api/guilds`).then(data => {
         let manageable = sortedGuilds.filter(x => x.inServer && (x.permissions.server || x.leaderboard))
         if (manageable.length == 1) {
             let target = manageable[0]
-            let dest = target.permissions.server ? `./settings/${target.id}` : `./leaderboard/${target.id}`
+            let dest = target.leaderboard ? `./leaderboard/${target.id}` : `./settings/${target.id}`
             return window.location.replace(dest)
         }
     }
@@ -225,7 +227,7 @@ Fetch(`./api/guilds`).then(data => {
     sortedGuilds.forEach((x, y) => {
         let slot = serverSlot.clone()
         slot.find('[sv=icon]').attr("src", x.icon ? `https://cdn.discordapp.com/icons/${x.id}/${x.icon}.png` : "./assets/avatar.png")
-        slot.find('b[sv=name]').text(x.name).attr("title", x.name).css("color", x.xp ? "#00ff80" : "white")
+        slot.find('b[sv=name]').text(x.name).attr("title", x.name).css("color", x.xp ? "var(--c-accent)" : "var(--c-fg)")
 
         let status = x.permissions.owner ? { text: "Propietario", cls: "pill-owner" }
             : x.permissions.server ? { text: "Moderador", cls: "pill-mod" }
