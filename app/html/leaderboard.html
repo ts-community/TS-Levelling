@@ -153,7 +153,7 @@
             #secretEasterTrigger:active { animation: none; transform: rotate(-16deg) scale(1.1); }
         }
     </style>
-    <link href="/css/theme.css?v=40" type="text/css" rel="stylesheet">
+    <link href="/css/theme.css?v=41" type="text/css" rel="stylesheet">
 </head>
 <body>
     <div id="bgBlur"></div>
@@ -253,10 +253,6 @@
                         </div>
                     </button>
                     <div class="userDropdown sidebarUserDropdown" id="userDropdown">
-                        <a href="/servers?showall" id="serverPickerLink" style="display: none">
-                            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.5"></rect><rect x="13" y="3" width="8" height="8" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="13" y="13" width="8" height="8" rx="1.5"></rect></svg>
-                            <span>Selector de servidores</span>
-                        </a>
                         <a href="/logout">
                             <svg viewBox="0 0 512 512" fill="currentColor"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"/></svg>
                             <span>Cerrar sesión</span>
@@ -570,7 +566,7 @@ const TOP_VIEWS = [
     { key: "monthlyMessages", label: "Mensajes este mes", emoji: "📅" },
     { key: "dailyMessages", label: "Mensajes de hoy", emoji: "☀️" },
     { key: "pokemonCaught", label: "Poketwo", emoji: "💥" },
-    { key: "coinsMax", label: "Monedas", emoji: "🪙" },
+    { key: "coinsMax", label: "Monedas máximas", emoji: "🪙" },
     { key: "reactionsSent", label: "Reacciones enviadas", emoji: "💌" },
     { key: "reactionsReceived", label: "Reacciones recibidas", emoji: "💘" },
     { key: "countingSent", label: "Counting", emoji: "🔢" },
@@ -623,13 +619,22 @@ function buildStatPicker() {
         let cur = statView()
         let groups = STAT_GROUPS.map(g => `<div class="sGroup"><p class="sGroupName">${g.name}</p>${g.keys.map(k => TOP_VIEWS.find(v => v.key == k)).filter(Boolean).map(v => `<button type="button" role="option" aria-selected="${v.key == statSort}" class="statMenuBtn sOpt ${v.key == statSort ? "activeStat" : ""}" data-sort="${v.key}">${statIcon(v.key, g.tone)}<span>${v.label}</span><svg class="sCheck" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`).join("")}</div>`).join("")
         $('#statChips').html(`<div class="sSelect">
-            <button type="button" class="sTrigger" aria-haspopup="listbox" aria-expanded="false">${statIcon(cur.key, statTone(cur.key))}<span class="sTxt"><small>Ordenar por</small><b>${cur.label}</b></span><svg class="sChev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <button type="button" class="sTrigger" aria-haspopup="listbox" aria-expanded="false">${statIcon(cur.key, statTone(cur.key))}<span class="sTxt"><small>Ordenar por</small><b aria-live="polite">${cur.label}</b></span><svg class="sChev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             <div class="sMenu" role="listbox">${groups}</div>
         </div>`)
     }
     $('#statMenu').html(TOP_VIEWS.map(v => `<button type="button" class="statMenuBtn ${v.key == statSort ? "activeStat" : ""}" data-sort="${v.key}">${v.emoji} ${v.label}</button>`).join(""))
     $('#statPickerEmoji').text(statView().emoji)
     $('#statPickerLabel').text(statView().label)
+}
+
+function setSortPending(pending) {
+    const trigger = $('#statChips .sTrigger')
+    trigger.toggleClass('isLoading', pending)
+        .prop('disabled', pending)
+        .attr('aria-busy', String(pending))
+    trigger.find('.sTxt b').text(pending ? "Cargando..." : statView().label)
+    $('#statChips .statMenuBtn').prop('disabled', pending)
 }
 
 addUhOh()
@@ -777,7 +782,6 @@ Fetch(lbURL(1)).then(data => {
         $('#username').text(data.user.nickname || data.user.displayName || data.user.username || "Tu cuenta")
         $('#userAvatar').attr("src", avatarURL)
         $('#userRole').text(((u, mod) => (u && u.topRole) ? u.topRole : (u && u.isOwner) ? "Owner" : mod ? "Administrador" : "Miembro")(data.user, data.moderator))
-        if (data.moderator) $('#serverPickerLink').show()
         if (data.moderator) { $('.adminNav a').each(function() { $(this).attr('href', `/settings/${guildID}?tab=${$(this).attr('data-tab')}`) }); $('.adminNav').show() }
         $('#userMenu').show()
     }
@@ -1223,31 +1227,45 @@ Fetch(lbURL(1)).then(data => {
 
     // hehe global function hack
     let loadingPage = false
+    let loadSequence = 0
     setPage = async function(pg, force) {
         if (!force && loadingPage) return
-        loadingPage = true
         let oldPage = page
         let savedScroll = 0
         if (page == pg && $('#leaderboard').is(":visible")) savedScroll = $('html').scrollTop()   // keep scroll
         page = (pg || 1)
         if (page > totalPages) page = totalPages
         else if (page < 1) page = 1
+        if (!force && page == oldPage) return
+        loadingPage = true
+        const requestId = ++loadSequence
+        const requestedSort = statSort
         $('#pageNumber').val(page)
         $('#pageDown').prop('disabled', page <= 1)
         $('#pageUp').prop('disabled', page >= totalPages)
         document.activeElement.blur();
-        if (!force && page == oldPage) return loadingPage = false
 
-        let res
-        try { res = (!force && pageCache[`${statSort}|${page}`]) ? pageCache[`${statSort}|${page}`] : await Fetch(lbURL(page)) }
-        catch (e) { console.error(e); alert("¡Error al cargar la clasificación!"); loadingPage = false; return }
-        pageCache[`${statSort}|${res.pageInfo.page}`] = { leaderboard: res.leaderboard, pageInfo: res.pageInfo }
-        $('html').scrollTop(savedScroll)
-        appendLeaderboard(res.leaderboard)
+        try {
+            let res = (!force && pageCache[`${requestedSort}|${page}`])
+                ? pageCache[`${requestedSort}|${page}`]
+                : await Fetch(`/api/leaderboard/${guildID}?page=${page}&sort=${requestedSort}`)
+            if (requestId !== loadSequence || requestedSort !== statSort) return
+            pageCache[`${requestedSort}|${res.pageInfo.page}`] = { leaderboard: res.leaderboard, pageInfo: res.pageInfo }
+            $('html').scrollTop(savedScroll)
+            appendLeaderboard(res.leaderboard)
 
-        if (res.guild) updateRankedCount(res)
-
-        loadingPage = false
+            if (res.guild) updateRankedCount(res)
+        } catch (e) {
+            if (requestId === loadSequence) {
+                console.error(e)
+                alert("¡Error al cargar la clasificación!")
+            }
+        } finally {
+            if (requestId === loadSequence) {
+                loadingPage = false
+                setSortPending(false)
+            }
+        }
     }
 
     /* teclado: una sola vez */
@@ -1420,7 +1438,10 @@ $(document).on('click', '.statMenuBtn', function() {
         let nextURL = statSort === "xp" ? `/leaderboard/${guildID}` : `/leaderboard/${guildID}?sort=${key}`
         history.replaceState({}, "", nextURL)
     } catch {}
-    if (typeof setPage === "function") setPage(1, true)
+    if (typeof setPage === "function") {
+        setSortPending(true)
+        setPage(1, true)
+    }
 })
 
 $('.lbNavItem:not(.adminLink):not(.webLink)').click(function() {

@@ -976,8 +976,8 @@ app.post("/api/importfrombot", async function(req, res) {
 // (marcador por usuario manda, fallback el marcador global del server).
 const TOP_VIEWS = {
     xp: { label: "XP total", get: user => Number(user?.xp) || 0 },
-    monthly: { label: "XP este mes", get: user => Number(user?.monthlyXP) || 0 },
-    daily: { label: "XP de hoy", get: user => Number(user?.dailyXP) || 0 },
+    monthly: { label: "XP este mes", get: (user, ctx) => Tools.global.getMonthlyXP(user, ctx.info) },
+    daily: { label: "XP de hoy", get: (user, ctx) => Tools.global.getDailyXP(user, ctx.info) },
     messages: { label: "Mensajes", get: user => Number(user?.messages) || 0 },
     monthlyMessages: { label: "Mensajes este mes", get: (user, ctx) => effectiveMessages(user, "monthly", ctx) },
     dailyMessages: { label: "Mensajes de hoy", get: (user, ctx) => effectiveMessages(user, "daily", ctx) },

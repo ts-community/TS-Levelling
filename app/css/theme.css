@@ -568,6 +568,10 @@ code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .9em; 
 .statMenuBtn { background: transparent !important; color: var(--c-fg) !important; box-shadow: none !important; border-radius: 8px !important; transform: none !important; }
 .statMenuBtn:hover { background: var(--c-surface-2) !important; }
 .statMenuBtn.activeStat { color: var(--c-accent) !important; background: rgb(45 212 191 / .1) !important; }
+.sTrigger.isLoading { cursor: wait; }
+.sTrigger.isLoading .sChev { display: none; }
+.sTrigger.isLoading::after { content: ""; width: 14px; height: 14px; flex: none; border: 2px solid var(--c-line-strong); border-top-color: var(--c-accent); border-radius: 50%; animation: tsSpin .8s linear infinite; }
+.statMenuBtn:disabled { cursor: wait; opacity: .6; }
 .sidebarUserButton, .topbarLoginBtn {
     background: var(--c-surface) !important;
     border: 1px solid var(--c-line-strong) !important;
@@ -892,17 +896,13 @@ input[type="number"] { min-width: 96px; width: 96px; }
 }
 .homeIntro { display: flex; flex-direction: column; align-items: flex-start; }
 .homeEyebrow {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 6px 12px;
-    border-radius: 999px;
-    border: 1px solid rgb(45 212 191 / .3);
-    background: rgb(45 212 191 / .08);
+    display: inline-flex; align-items: center; gap: 10px;
     color: var(--c-accent);
-    font: 600 12.5px/1 var(--lato);
-    letter-spacing: .04em;
+    font: 700 11px/1.2 var(--lato);
+    letter-spacing: .16em;
+    text-transform: uppercase;
 }
-.homeEyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c-accent); box-shadow: 0 0 0 4px rgb(45 212 191 / .2); animation: homePulse 2s infinite; }
-@keyframes homePulse { 50% { box-shadow: 0 0 0 7px rgb(45 212 191 / 0); } }
+.homeEyebrow::before { content: ''; width: 24px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--c-accent), rgb(45 212 191 / .25)); }
 .homeBrand { display: flex; align-items: center; gap: 18px; margin: 22px 0 10px; }
 .homeBrand img { width: 72px; height: 72px; border-radius: 20px; box-shadow: 0 0 0 2px rgb(45 212 191 / .5), 0 12px 40px rgb(45 212 191 / .25); }
 .homeIntro .heroTitle { font-size: clamp(40px, 6vw, 64px) !important; line-height: 1 !important; margin: 0 !important; text-align: left !important; }
