@@ -666,9 +666,26 @@ input[type="number"] { min-width: 96px; width: 96px; }
 .configboxes[tab="data"] > .settingBox { min-width: 0; }
 .configboxes[tab="data"] .exportXP { margin: 4px 8px 4px 0 !important; }
 .configboxes[tab="data"] #importBotSection .centerflex,
-.configboxes[tab="data"] #importBotSection .spacedflex { max-width: 100%; }
-.configboxes[tab="data"] #importBotSection input[type="file"] { flex: 1 1 320px; min-width: 0; }
+.configboxes[tab="data"] #importBotSection .spacedflex {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.configboxes[tab="data"] #importBotSection input[type="file"] {
+    flex: 0 1 500px;
+    width: min(500px, 100%) !important;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
 .configboxes[tab="data"] #botimporting { height: auto !important; min-height: 60px; }
+@media (max-width: 900px) {
+    .configboxes[tab="data"] #importBotSection input[type="file"] {
+        flex-basis: 100%;
+        width: 100% !important;
+    }
+}
 
 /* ================= v3: tablas como listas modernas ================= */
 .flexTable {
