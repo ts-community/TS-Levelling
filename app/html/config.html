@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="/css/polaris.css?v=11" type="text/css" rel="stylesheet">
-    <link href="/css/theme.css?v=44" type="text/css" rel="stylesheet">
+    <link href="/css/theme.css?v=45" type="text/css" rel="stylesheet">
     <link rel="icon" href="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless">
     <title>TS Community</title>
 
@@ -737,17 +737,17 @@
         <div class="settingBox box">
             <h2>Podar miembros</h2>
             <p class="details">Elimina los datos de todos los que tengan menos de cierta cantidad de XP. Puede acelerar los tiempos de carga. <b>¡Esto no se puede deshacer!</b></p>
-            <div class="centerflex spacedflex">
-                <p>Menos de: </p>
+            <div class="centerflex spacedflex dataPruneControls">
+                <label for="prune_amt">Menos de:</label>
                 <input id="prune_amt" style="width: 150px" type="number" min="1" default="100" value="100">
                 <button id="confirmPrune" style="background-color: var(--emojired)">¡Podar!</button>
             </div>
         </div>
 
         <div class="settingBox box fulllength" id="importBotSection">
-            <div class="spacedflex centerflex" style="margin-top: 15px; margin-bottom: 5px">
-                <h2 style="margin: 0px 0px">Importar ajustes y XP de</h2>
-                <select id="importfrom" style="margin-left: 8px; width: 250px; font-weight: bold;" onchange="$('.importdiv').hide(); $(`.importdiv[importtype='${$(this).val()}']`).show()">
+            <div class="importHeader">
+                <h2><label for="importfrom">Importar ajustes y XP</label></h2>
+                <select id="importfrom"  onchange="$('.importdiv').hide(); $(`.importdiv[importtype='${$(this).val()}']`).show()">
                     <option value="json">archivo .json</option>
                     <option value="polaris">Otro servidor</option>
                 </select>
@@ -755,24 +755,24 @@
 
             <div class="importdiv" importtype="json">
                 <p class="details">Copia la XP y los ajustes de otro servidor que use este bot. <b>Requiere ser el propietario del servidor</b></p>
-                <p class="details">El formato .json esperado es el mismo que al pulsar "descargar todos los datos" al principio de esto</p>
+                <p class="details">El formato .json esperado es el mismo que al pulsar "descargar todos los datos" al principio de esta sección</p>
 
-                <div class="centerflex spacedflex">
-                    <p>Importar de:</p>
-                    <input type="file" id="importJSONFile" accept="application/json" style="padding-top: 15px; width: 500px; max-width: 100%; box-sizing: border-box; margin: 10px 0px">
+                <div class="importField">
+                    <label for="importJSONFile">Archivo de datos</label>
+                    <input type="file" id="importJSONFile" accept="application/json">
                 </div>
 
-                <div class="centerflex spacedflex">
+                <div class="importOption">
                     <label class="slider">
-                        <input class="importSetting" option="xp" type="checkbox" checked>
+                        <input class="importSetting" option="xp" aria-label="Importar XP" type="checkbox" checked>
                         <span class="sliderspan"></span>
                     </label>
                     <p>Importar XP (¡sobrescribe a los miembros existentes!)</p>
                 </div>
 
-                <div class="centerflex spacedflex">
+                <div class="importOption">
                     <label class="slider">
-                        <input class="importSetting forDevs" option="settings" type="checkbox" disabled>
+                        <input class="importSetting forDevs" option="settings" aria-label="Importar ajustes" type="checkbox" disabled>
                         <span class="sliderspan"></span>
                     </label>
                     <p>Importar ajustes (cooldown, curva, mensaje de subida de nivel, etc) <b>[requiere ser el propietario del bot por seguridad]</b></p>
@@ -782,29 +782,29 @@
             <div class="importdiv" importtype="polaris" style="display: none">
                 <p class="details">Copia la XP y los ajustes de otro servidor que use este bot. <b>Requiere ser el propietario del servidor</b></p>
                 <p class="details"><b>Nota:</b> Al transferir desde otro servidor, los roles de recompensa y multiplicadores no se pueden copiar</p>
-                <div class="centerflex spacedflex">
-                    <p>Importar de:</p>
+                <div class="importField">
+                    <label for="otherServers">Servidor de origen</label>
                     <select class="importSetting" option="serverID" id="otherServers"></select>
                 </div>
 
-                <div class="centerflex spacedflex">
+                <div class="importOption">
                     <label class="slider">
-                        <input class="importSetting" option="xp" type="checkbox" checked>
+                        <input class="importSetting" option="xp" aria-label="Importar XP" type="checkbox" checked>
                         <span class="sliderspan"></span>
                     </label>
                     <p>Importar XP (¡sobrescribe a los miembros existentes!)</p>
                 </div>
 
-                <div class="centerflex spacedflex">
+                <div class="importOption">
                     <label class="slider">
-                        <input class="importSetting" option="settings" type="checkbox" checked>
+                        <input class="importSetting" option="settings" aria-label="Importar ajustes" type="checkbox" checked>
                         <span class="sliderspan"></span>
                     </label>
                     <p>Importar ajustes (cooldown, curva, mensaje de subida de nivel, etc)</p>
                 </div>
             </div>
 
-            <div style="height: 60px" id="botimporting">
+            <div id="botimporting">
                 <button style="margin-top: 15px; background-color: var(--emojigreen)" onclick="$('#confirmBotImport').toggle()">¡Importar!</button>
                 <button class="hideOnLoad" style="margin-left: 10px; background-color: var(--emojiblue); display: none;" id="confirmBotImport">¿Estás seguro?</button>
             </div>

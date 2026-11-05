@@ -1776,3 +1776,43 @@ a.lbNavItem:hover, a.category:hover { color: var(--c-fg) !important; }
 .sidebarWeb .webLink:hover { background: var(--c-surface) !important; }
 .sidebarWeb .webLink > svg:first-child { width: 18px; height: 18px; flex: none; }
 .sidebarWeb + .lbSidebarUser { border-top: none !important; }
+
+/* Datos: campos y acciones adaptables, sin recortar el selector de archivo. */
+.configboxes[tab="data"] { width: calc(100% - var(--sidebar-w)); }
+.dataPruneControls { gap: 10px; margin-top: 16px; }
+.dataPruneControls > * { margin: 0; }
+#importBotSection .importHeader {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px 24px; margin-bottom: 16px;
+}
+#importBotSection .importHeader h2 { margin: 0; }
+#importBotSection #importfrom { width: 250px; max-width: 100%; margin: 0; box-sizing: border-box; }
+#importBotSection .importField {
+    display: flex; flex-direction: column; gap: 8px;
+    max-width: 560px; min-width: 0; margin: 20px 0;
+}
+.configboxes[tab="data"] #importBotSection input[type="file"] {
+    width: 100% !important; height: auto; min-height: 48px;
+    padding: 7px; margin: 0; line-height: 32px; font-size: 14px;
+}
+#importBotSection input[type="file"]::file-selector-button {
+    height: 32px; margin: 0 12px 0 0; border-radius: 6px;
+}
+#importBotSection #otherServers { width: 100%; min-width: 0; box-sizing: border-box; }
+#importBotSection .importOption {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px 0; border-top: 1px solid var(--c-line);
+}
+#importBotSection .importOption .slider { flex: 0 0 var(--sliderwidth); margin: 0; }
+#importBotSection .importOption p { flex: 1; min-width: 0; margin: 4px 0 0; line-height: 1.6; }
+.configboxes[tab="data"] #botimporting {
+    display: flex; flex-wrap: wrap; gap: 10px; min-height: 0; margin-top: 16px;
+}
+#importBotSection #botimporting button { margin: 0 !important; }
+@media (max-width: 900px) {
+    .configboxes[tab="data"] { width: 100%; }
+}
+@media (max-width: 540px) {
+    #importBotSection #importfrom { width: 100%; }
+    .dataPruneControls label { flex-basis: 100%; }
+}
