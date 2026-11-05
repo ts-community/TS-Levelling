@@ -418,7 +418,12 @@ function buildStatEntryLine({ emoji, position, mention, shownName, endMarkers, v
     // más estricto para que no salte en móvil estrecho. La marca de
     // "fuera del server" (solo icono) no necesita margen extra.
     const markerText = String(endMarkers || "").replace(/<a?:\w+:\d+>/g, "")
-    const lineLimit = markerText.trim() ? TOP_STAT_LINE_WIDTH - 3 : TOP_STAT_LINE_WIDTH
+    const compactMode = viewKey === "mensajes_mes_max" || viewKey === "mensajes_dia_max"
+    const lineLimit = markerText.trim()
+        ? TOP_STAT_LINE_WIDTH - 3
+        : compactMode
+            ? TOP_STAT_LINE_WIDTH - 2
+            : TOP_STAT_LINE_WIDTH
     let valueText
     if (viewKey === "antiguedad") {
         valueText = displayValueShort || "0 d"
@@ -438,7 +443,7 @@ function buildStatEntryLine({ emoji, position, mention, shownName, endMarkers, v
         // mínima cabe con nombres muy largos.
         const one = Number(value) === 1
         const full = `${commafied} ${one && mode.one ? mode.one : mode.unit}`
-        const candidates = [full]
+        const candidates = compactMode ? [] : [full]
         if (mode.midUnit) {
             const mid = `${commafied} ${one ? (mode.midOne || mode.midUnit) : mode.midUnit}`
             if (!candidates.includes(mid)) candidates.push(mid)
@@ -451,6 +456,7 @@ function buildStatEntryLine({ emoji, position, mention, shownName, endMarkers, v
             const tiny = `${commafied} ${one ? (mode.tinyOne || mode.tinyUnit) : mode.tinyUnit}`
             if (!candidates.includes(tiny)) candidates.push(tiny)
         }
+        if (compactMode && !candidates.includes(full)) candidates.push(full)
         candidates.push(commafied)
         valueText = candidates.find(text => probeWidth(text) <= lineLimit) ?? commafied
     }

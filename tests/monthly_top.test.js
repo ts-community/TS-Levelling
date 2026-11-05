@@ -30,7 +30,7 @@ const snapshot = {
 test("el top público muestra primero miembros y luego staff", () => {
     const text = MonthlyTop.buildTopText("2026-11", snapshot, emojis)
     assert.match(text, /DESTACADOS DE NOVIEMBRE DE 2026/)
-    assert.ok(text.indexOf("### 👥  MIEMBROS DEL MES") < text.indexOf("### 🛡️  STAFF DEL MES"))
+    assert.ok(text.indexOf("### 👥  MIEMBROS DEL MES") < text.indexOf("### 🛠️  STAFF DEL MES"))
 })
 
 test("el top 3 lleva emoji delante, XP, mensajes y su rol", () => {
@@ -61,7 +61,7 @@ test("las recompensas de miembros se ven en el cierre y el staff no cobra", () =
     assert.match(publicText, /🥉 <@m3> \*\*100\.000 monedas\*\*/)
     assert.match(publicText, /🎖️ <@m4> \*\*50\.000 monedas\*\*/)
     assert.match(publicText, /🎖️ <@m5> \*\*50\.000 monedas\*\*/)
-    assert.doesNotMatch(publicText, /-# 🛡️.*monedas/)
+    assert.doesNotMatch(publicText, /-# 🛠️.*monedas/)
 
     const adminText = MonthlyTop.buildAnnouncementTemplate("2026-11", snapshot, emojis, { rewards })
     assert.match(adminText, /🥇 <@m1> \*\*250\.000 monedas\*\*/)
@@ -184,7 +184,7 @@ test("la plantilla de anuncio tiene título, apertura, secciones, cierre y @ever
     assert.match(text, /\[MENSAJE DE APERTURA - personalízalo antes de publicar\]/)
     assert.match(text, /\[MENSAJE DE CIERRE - personalízalo antes de publicar\]/)
     assert.match(text, /### 👥  MIEMBROS DEL MES/)
-    assert.match(text, /### 🛡️  STAFF DEL MES/)
+    assert.match(text, /### 🛠️  STAFF DEL MES/)
     assert.ok(text.endsWith("@everyone"))
 })
 
@@ -251,9 +251,8 @@ test("la votación explica cierre, desempate y que el staff no cobra", () => {
     )
     assert.match(text, /^@everyone/)
     assert.match(text, /STAFF DEL MES - NOVIEMBRE DE 2026/)
-    assert.match(text, /más XP mensual/)
-    assert.match(text, /no incluye monedas/)
-    assert.match(text, /Un solo voto por persona/)
+    assert.match(text, /XP mensual/)
+    assert.match(text, /seleccionar varios candidatos/)
 })
 
 test("el ganador de la votación se decide sin empates", async () => {
@@ -307,14 +306,14 @@ test("la encuesta se publica con ping, respuestas y guarda el mensaje", async ()
     ])
     const server = { info: {}, users: {} }
     const updates = []
-    let sent = null
+    const sent = []
     const channel = {
         id: MonthlyTop.STAFF_VOTE_CHANNEL_ID,
         guild: { id: "g1" },
         isTextBased: () => true,
         send: async payload => {
-            sent = payload
-            return { id: "poll-message" }
+            sent.push(payload)
+            return { id: `message-${sent.length}` }
         },
     }
     const client = {
@@ -331,10 +330,15 @@ test("la encuesta se publica con ping, respuestas y guarda el mensaje", async ()
         new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
     )
 
-    assert.equal(result.vote.messageId, "poll-message")
-    assert.equal(sent.poll.allowMultiselect, true)
-    assert.equal(sent.poll.answers.length, 2)
-    assert.ok(sent.allowedMentions.parse.includes("everyone"))
-    assert.match(sent.content, /@everyone/)
+    assert.equal(result.vote.messageId, "message-1")
+    assert.deepEqual(result.vote.pollMessageIds, ["message-2"])
+    assert.equal(sent.length, 2)
+    assert.equal(sent[0].flags, 32768)
+    assert.ok(sent[0].components?.length)
+    assert.ok(sent[0].allowedMentions.parse.includes("everyone"))
+    assert.match(JSON.stringify(sent[0].components), /STAFF DEL MES/)
+    assert.ok(sent[1].poll)
+    assert.equal(sent[1].poll.allowMultiselect, true)
+    assert.equal(sent[1].poll.answers.length, 2)
     assert.equal(updates[0].data.$set["info.monthlyStaffVote"].period, "2026-11")
 })

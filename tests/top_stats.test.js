@@ -197,7 +197,7 @@ test("stat entry lines keep monthly/daily markers when shrinking", () => {
     // ambiguo ni salto directo al número).
     assert.equal(
         top.buildStatEntryLine({ emoji: "🏆", position: 1, mention: "<@1>", shownName: "Ana", endMarkers: "", viewKey: "mensajes_mes_max", commafied: "9", value: 9 }),
-        "🏆 **#1 - 9 mensajes máx. en un mes** - <@1>",
+        "🏆 **#1 - 9 msgs máx. mes** - <@1>",
     )
     assert.equal(
         top.buildStatEntryLine({ emoji: "🏆", position: 1, mention: "<@1>", shownName: "Lucía Fernández", endMarkers: "", viewKey: "mensajes_mes_max", commafied: "1.234", value: 1234 }),

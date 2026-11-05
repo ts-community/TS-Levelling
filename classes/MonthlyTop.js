@@ -137,7 +137,7 @@ function buildRewardSection(rewards) {
             const medal = MEDALS[reward.position - 1] || "🎖️"
             return `${medal} <@${reward.userId}> **${commafy(reward.coins)} monedas**`
         })
-        lines.push(`-# ${kind === "members" ? "👥" : "🛡️"} ${parts.join(" - ")}`)
+        lines.push(`-# ${kind === "members" ? "👥" : "🛠️"} ${parts.join(" - ")}`)
     }
     return lines.length ? `### 🎁  RECOMPENSAS DEL MES\n${lines.join("\n")}` : ""
 }
@@ -226,26 +226,23 @@ function formatVoteClose(closeAt) {
     }).format(closeAt)
 }
 
-function buildStaffVoteContent(period, closeAt, candidateCount, totalCandidates) {
+function buildStaffVoteContent(period, closeAt, candidateCount, totalCandidates, groupLabel = "") {
     const monthName = capitalize(getSpanishMonthName(period))
     const lines = [
         "@everyone",
         "",
-        `# 🛡️  STAFF DEL MES - ${monthName.toUpperCase()}`,
+        `# 🛠️  STAFF DEL MES - ${monthName.toUpperCase()}${groupLabel}`,
         "",
-        "Ha llegado el momento de elegir al **Staff del Mes**.",
-        "",
-        "El equipo ha estado ayudando, moderando y manteniendo la comunidad durante todo el mes. Ahora os toca votar quién ha destacado más.",
+        "Elegid al **Staff del Mes** entre quienes más hayan destacado este mes.",
         "",
         "**Cómo funciona**",
-        '- Podéis votar a varios candidatos; no se aplica "Un solo voto por persona".',
-        `- La encuesta termina el **${formatVoteClose(closeAt)}** (hora peninsular).`,
-        "- Solo puede haber un ganador. Si hay empate, gana quien tenga más XP mensual; después, más mensajes; después, más XP total; y si sigue empatado, quien lleve más tiempo en el staff.",
-        "- El ganador aparecerá como **Staff del Mes** en los destacados.",
-        "- Este premio **no incluye monedas**.",
+        "- Podéis seleccionar varios candidatos.",
+        `- Podéis votar hasta el **${formatVoteClose(closeAt)}** (hora peninsular).`,
+        "- Ganará quien tenga más votos. En caso de empate, decidirán el **XP mensual**, los mensajes y la antigüedad.",
+        `- El ganador aparecerá en los destacados y recibirá el rol <@&${TOP_ROLES.staff[0]}>.`,
     ]
 
-    lines.push("", "Elegid a vuestro favorito en la encuesta:")
+    lines.push("", `Votad en la encuesta${totalCandidates > candidateCount ? " de este grupo" : ""}:`)
     return lines.join("\n")
 }
 
@@ -287,25 +284,46 @@ async function startStaffVote(client, guild, server, members, period, closeAt) {
         return { error: "no se encontró el canal de la votación" }
     }
 
-    const monthName = capitalize(getSpanishMonthName(period))
-    const duration = Math.max(1, Math.ceil((closeAt.getTime() + 60 * 1000 - Date.now()) / (60 * 60 * 1000)))
-    const poll = {
-        question: { text: truncatePollText(`¿Quién debe ser el Staff del Mes de ${monthName}?`, 300) },
-        answers: candidates.map(candidate => ({ text: candidate.label })),
-        duration,
-        allowMultiselect: true,
-    }
-
     try {
-        const message = await channel.send({
-            content: buildStaffVoteContent(period, closeAt, candidates.length, allCandidates.length),
-            poll,
-            allowedMentions: { parse: ["everyone"] },
+        const groups = []
+        for (let index = 0; index < candidates.length; index += 10) {
+            groups.push(candidates.slice(index, index + 10))
+        }
+        const monthName = capitalize(getSpanishMonthName(period))
+        const infoMessage = await channel.send({
+            components: [
+                new ContainerBuilder()
+                    .setAccentColor(0x8a8f98)
+                    .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+                        buildStaffVoteContent(period, closeAt, candidates.length, candidates.length)
+                    )),
+            ],
+            flags: MessageFlags.IsComponentsV2,
+            allowedMentions: { parse: ["everyone"], roles: [] },
         })
+        const pollMessages = []
+        for (let index = 0; index < groups.length; index++) {
+            const group = groups[index]
+            const groupLabel = groups.length > 1 ? ` (grupo ${index + 1}/${groups.length})` : ""
+            const pollMessage = await channel.send({
+                content: groups.length > 1
+                    ? `🛠️ **Votación del Staff del Mes — grupo ${index + 1}/${groups.length}**\nPodéis marcar a varias personas de este grupo. Los votos de todos los grupos se sumarán.`
+                    : "🛠️ **Votación del Staff del Mes**\nPodéis marcar a varias personas.",
+                poll: {
+                    question: { text: truncatePollText(`¿Quién debe ser el Staff del Mes de ${monthName}?${groupLabel}`, 300) },
+                    answers: group.map(candidate => ({ text: candidate.label })),
+                    duration: Math.max(1, Math.ceil((closeAt.getTime() + 60 * 1000 - Date.now()) / (60 * 60 * 1000))),
+                    allowMultiselect: true,
+                },
+                allowedMentions: { parse: [] },
+            })
+            pollMessages.push(pollMessage)
+        }
         const vote = {
             period,
             channelId: channel.id,
-            messageId: message.id,
+            messageId: infoMessage.id,
+            pollMessageIds: pollMessages.map(message => message.id),
             candidates,
             openedAt: Date.now(),
             closesAt: closeAt.getTime(),
@@ -320,9 +338,9 @@ async function startStaffVote(client, guild, server, members, period, closeAt) {
                 $set: { "info.monthlyStaffVote": vote }
             }).exec()
         } catch (error) {
-            return { error: error.message, vote, message }
+            return { error: error.message, vote, message: infoMessage, pollMessages }
         }
-        return { vote, message }
+        return { vote, message: infoMessage, pollMessages }
     } catch (error) {
         return { error: error.message }
     }
@@ -339,21 +357,30 @@ async function resolveStaffVote(client, guild, server, period) {
         return { ...vote, error: "no se encontró el canal de la votación" }
     }
 
-    let message = await channel.messages.fetch(vote.messageId).catch(() => null)
-    if (!message?.poll) return { ...vote, error: "no se encontró la encuesta" }
-
-    if (!message.poll.resultsFinalized) {
-        const ended = await message.poll.end().catch(() => null)
-        if (ended) message = ended
-        if (!message.poll?.resultsFinalized) await message.poll?.fetch().catch(() => null)
+    const messageIds = Array.isArray(vote.pollMessageIds) && vote.pollMessageIds.length
+        ? vote.pollMessageIds
+        : Array.isArray(vote.messageIds) && vote.messageIds.length
+            ? vote.messageIds
+        : [vote.messageId]
+    const results = []
+    let resultsFinalized = true
+    for (let groupIndex = 0; groupIndex < messageIds.length; groupIndex++) {
+        let message = await channel.messages.fetch(messageIds[groupIndex]).catch(() => null)
+        if (!message?.poll) return { ...vote, error: "no se encontró una encuesta" }
+        if (!message.poll.resultsFinalized) {
+            const ended = await message.poll.end().catch(() => null)
+            if (ended) message = ended
+            if (!message.poll?.resultsFinalized) await message.poll?.fetch().catch(() => null)
+        }
+        resultsFinalized = resultsFinalized && message.poll?.resultsFinalized === true
+        const groupCandidates = vote.candidates.slice(groupIndex * 10, groupIndex * 10 + 10)
+        const answers = [...(message.poll?.answers?.values?.() || [])].sort((a, b) => a.id - b.id)
+        results.push(...answers.map((answer, index) => ({
+            id: groupCandidates[index]?.id || null,
+            label: groupCandidates[index]?.label || truncatePollText(answer.text || ""),
+            votes: Number(answer.voteCount) || 0,
+        })).filter(item => item.id))
     }
-
-    const answers = [...(message.poll?.answers?.values?.() || [])].sort((a, b) => a.id - b.id)
-    const results = answers.map((answer, index) => ({
-        id: vote.candidates?.[index]?.id || null,
-        label: vote.candidates?.[index]?.label || truncatePollText(answer.text || ""),
-        votes: Number(answer.voteCount) || 0,
-    })).filter(item => item.id)
 
     if (!results.length) return { ...vote, error: "la encuesta no tiene resultados" }
 
@@ -380,7 +407,7 @@ async function resolveStaffVote(client, guild, server, period) {
         winnerLabel: winner.label,
         winnerVotes: winner.votes,
         tieBreak: tied,
-        resultsFinalized: message.poll?.resultsFinalized === true,
+        resultsFinalized,
         closedAt: Date.now(),
     }
 
@@ -414,7 +441,7 @@ function buildTopText(period, snapshot, emojis, options = {}) {
         "",
         formatCategory("👥  MIEMBROS DEL MES", snapshot?.members, emojis, TOP_ROLES.members),
         "",
-        formatCategory("🛡️  STAFF DEL MES", snapshot?.staff, emojis, TOP_ROLES.staff),
+        formatCategory("🛠️  STAFF DEL MES", snapshot?.staff, emojis, TOP_ROLES.staff),
         "",
         buildRewardSection(rewards),
         "",
@@ -434,7 +461,7 @@ function buildAnnouncementTemplate(period, snapshot, emojis, options = {}) {
         "",
         formatCategory("👥  MIEMBROS DEL MES", snapshot?.members, emojis, TOP_ROLES.members),
         "",
-        formatCategory("🛡️  STAFF DEL MES", snapshot?.staff, emojis, TOP_ROLES.staff),
+        formatCategory("🛠️  STAFF DEL MES", snapshot?.staff, emojis, TOP_ROLES.staff),
         "",
         buildRewardSection(rewards),
         "",
@@ -462,7 +489,7 @@ function buildTopContainer(period, snapshot, emojis, options = {}) {
         .addSeparatorComponents(separator())
         .addTextDisplayComponents(text(formatCategory("👥  MIEMBROS DEL MES", snapshot?.members, emojis, TOP_ROLES.members)))
         .addSeparatorComponents(separator())
-        .addTextDisplayComponents(text(formatCategory("🛡️  STAFF DEL MES", snapshot?.staff, emojis, TOP_ROLES.staff)))
+        .addTextDisplayComponents(text(formatCategory("🛠️  STAFF DEL MES", snapshot?.staff, emojis, TOP_ROLES.staff)))
 
     const rewardSection = buildRewardSection(rewards)
     if (rewardSection) {
