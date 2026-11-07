@@ -20,6 +20,8 @@ const version = require("./json/auto/version.json")
 
 const startTime = Date.now()
 
+const RESTART_NOTIFY_CHANNEL_ID = "1235177703045599304"
+
 const memberCleanupInterval = 6 * 60 * 60 * 1000
 const memberCleanupBatchSize = 500
 const staffRoleIds = new Set(MonthlyTop.STAFF_ROLE_IDS)
@@ -603,6 +605,21 @@ client.on("clientReady", () => {
 
     // run the web server
     if (client.shard.id == 0 && config.enableWebServer) require("./web_app.js")(client)
+
+    // aviso de reinicio
+    if (client.shard.id == 0) {
+        client.channels.fetch(RESTART_NOTIFY_CHANNEL_ID)
+            .then(channel => {
+                if (channel?.isSendable()) {
+                    return channel.send(`🔄 Bot reiniciado correctamente - <t:${Math.floor(Date.now() / 1000)}:F>`)
+                }
+            })
+            .catch(error => {
+                console.warn('No se pudo enviar el aviso de reinicio', {
+                    reason: error instanceof Error ? error.message : 'Unknown error'
+                })
+            })
+    }
 })
 
 // Records: sesiones de voz en memoria (sin DB hasta salir/cambiar de canal).
