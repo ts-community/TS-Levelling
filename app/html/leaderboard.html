@@ -153,6 +153,7 @@
             #secretEasterTrigger:active { animation: none; transform: rotate(-16deg) scale(1.1); }
         }
     </style>
+    <link href="/css/theme.css?v=44" type="text/css" rel="stylesheet">
 </head>
 <body>
     <div id="bgBlur"></div>
@@ -166,14 +167,14 @@
                 <span>TS Community Brawl</span>
             </a>
         </div>
-        <a id="previewToggle" class="previewToggleBtn" style="display: none">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-            <span>Vista administrador</span>
-        </a>
     </div>
     <div class="sidebarBackdrop" id="sidebarBackdrop"></div>
 
-    <h2 class="middleflex" id="loading">Cargando...</h2>
+    <div class="tsLoader" id="loading" role="status" aria-live="polite">
+        <div class="tsLoaderRing"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" class="trk"/><circle cx="60" cy="60" r="54" class="arc"/></svg><img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt=""></div>
+        <p class="tsLoaderTxt">Cargando la clasificación</p>
+        <div class="tsLoaderDots"><i></i><i></i><i></i></div>
+    </div>
 
     <div id="everything" style="display: none">
 
@@ -205,6 +206,7 @@
     <div class="lbLayout">
         <div class="lbSidebar">
         <div class="lbSidebarNav">
+            <p class="navSection">Niveles</p>
             <button class="lbNavItem selectedlb" box="leaderboard">
                 <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="12" width="5" height="9" rx="1.5"></rect><rect x="9.5" y="7" width="5" height="14" rx="1.5"></rect><rect x="16" y="3" width="5" height="18" rx="1.5"></rect></svg>
                 <span>Clasificación</span>
@@ -226,8 +228,21 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" stroke="none"></path><path d="M2 12l10 5 10-5"></path><path d="M2 17l10 5 10-5"></path></svg>
                 <span>Todos los Niveles</span>
             </button>
+            <div class="adminNav" style="display: none">
+                <p class="navSection">Administración</p>
+                <a class="lbNavItem adminLink" data-tab="server"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg><span>Resumen</span></a>
+                <a class="lbNavItem adminLink" data-tab="xp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 11-14h-7z"></path></svg><span>Ganancia de XP</span></a>
+                <a class="lbNavItem adminLink" data-tab="rewardroles"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.3l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z"></path></svg><span>Recompensas</span></a>
+                <a class="lbNavItem adminLink" data-tab="levelup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4.5V17H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path></svg><span>Mensajes</span></a>
+                <a class="lbNavItem adminLink" data-tab="multipliers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg><span>Multiplicadores</span></a>
+                <a class="lbNavItem adminLink" data-tab="rankcard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="2"></rect><circle cx="8.5" cy="12" r="2"></circle><path d="M14 10h4M14 14h2.5"></path></svg><span>Tarjeta de rango</span></a>
+                <a class="lbNavItem adminLink" data-tab="leaderboard"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="12" width="5" height="9" rx="1.5"></rect><rect x="9.5" y="7" width="5" height="14" rx="1.5"></rect><rect x="16" y="3" width="5" height="18" rx="1.5"></rect></svg><span>Clasificación</span></a>
+                <a class="lbNavItem adminLink" data-tab="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11M8 10l4 4 4-4"></path><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path></svg><span>Datos</span></a>
+                <a class="lbNavItem adminLink" data-tab="advanced"><svg viewBox="0 0 512 512" fill="currentColor" fill-rule="evenodd"><path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"></path></svg><span>Avanzado</span></a>
+            </div>
         </div>
 
+            <div class="sidebarWeb"><a class="lbNavItem webLink" href="https://tscomunity.es" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span>Web Global</span><svg class="extIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div>
             <div class="lbSidebarUser">
                 <div class="userMenu" id="userMenu" style="display: none">
                     <button class="sidebarUserButton" id="userMenuButton" type="button">
@@ -238,10 +253,6 @@
                         </div>
                     </button>
                     <div class="userDropdown sidebarUserDropdown" id="userDropdown">
-                        <a href="/servers?showall" id="serverPickerLink" style="display: none">
-                            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.5"></rect><rect x="13" y="3" width="8" height="8" rx="1.5"></rect><rect x="3" y="13" width="8" height="8" rx="1.5"></rect><rect x="13" y="13" width="8" height="8" rx="1.5"></rect></svg>
-                            <span>Selector de servidores</span>
-                        </a>
                         <a href="/logout">
                             <svg viewBox="0 0 512 512" fill="currentColor"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"/></svg>
                             <span>Cerrar sesión</span>
@@ -256,14 +267,16 @@
         </div>
 
         <div class="lbContent">
-        <div class="centerflex" id="lbPageHeader" style="flex-direction: column;">
-            <h1 id="serverName" style="text-align: center"></h1>
-            <p id="serverMembers" style="margin-top: 2px"></p>
+        <div id="lbPageHeader">
+            <div class="lbHeadText"><h1 id="serverName"></h1>
+            <p id="serverMembers"></p></div>
 
             <h2 style="color: #ff5555; margin: 0px 0px 15px 0px; text-align: center; display: none" id="notInServerWarning">¡No estás en este servidor!</h2>
             <button id="bigLoginBtn" onclick="loginButton()" style="display: none; background: linear-gradient(135deg, var(--polarisgreen), var(--emojiblue)); color: #0b1210; width: 350px; margin-bottom: 30px; margin-top: 10px; font-size: 20px; height: 50px; border-radius: 999px;">Inicia sesión para ver tus estadísticas</button>
         </div>
 
+    <div id="statChips" box="leaderboard" class="lbBox"></div>
+    <div id="lbPodium" box="leaderboard" class="lbBox" style="display: none"></div>
     <div id="leaderboard" box="leaderboard" class="leaderboardBox lbBox"></div>
     <h2 id="noXPYet" box="leaderboard" style="text-align: center; display: none" class="lbBox">¡Nadie en este servidor tiene XP todavía!</h2>
 
@@ -287,9 +300,10 @@
     <h2 id="noRewardRoles" box="roles" style="text-align: center; display: none" class="lbBox">¡Este servidor no tiene roles de recompensa!</h2>
 
     <h2 box="levels" class="lbBox plsLogIn">¡Inicia sesión para ver tu progreso hacia cada nivel!</h2>
+    <div id="levelSummary" box="levels" class="lbBox empty" style="display: none"></div>
     <div id="progress" box="levels" class="leaderboardBox lbBox" style="display: none"><div class="lbCardGrid" id="levelGrid"></div></div>
 
-    <div box="records" class="lbBox" style="display: none; min-width: 0; max-width: 100%;">
+    <div box="records" id="recordsBox" class="lbBox" style="display: none; min-width: 0; max-width: 100%;">
         <div id="recordStats"></div>
         <div id="recordsList"></div>
     </div>
@@ -314,20 +328,27 @@
                 <img lb="pfp" class="discordAvatar">
                 <div class="discordHeader">
                     <div class="generalInfo">
-                        <p lb="name" class="discordName"></p>
-                        <div class="discordStatusRow">
-                            <div class="discordStatusPill">
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm0 5.5L18.5 19h-13L12 7.5z"></path></svg>
-                                <p lb="level"></p>
-                            </div>
-                            <div class="discordInlineXP">
-                                <div class="progressBar">
-                                    <div class="progress" lb="progress"></div>
-                                </div>
-                                <span lb="percent"></span>
+                        <div class="rkTop">
+                            <p lb="name" class="discordName"></p>
+                            <div class="rkChips">
+                                <span class="rkChip rkLevel">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></svg>
+                                    <span lb="level"></span>
+                                </span>
+                                <span class="rkChip rkPos" id="rkPosChip" style="display: none">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>
+                                    <span lb="rankPos"></span>
+                                </span>
                             </div>
                         </div>
-                        <p lb="xp" class="discordXPLine"></p>
+                        <div class="rkProgress">
+                            <div class="rkProgressHead">
+                                <p lb="xp" class="discordXPLine"></p>
+                                <span lb="percent" class="rkPercent"></span>
+                            </div>
+                            <div class="progressBar"><div class="progress" lb="progress"></div></div>
+                            <div class="rkProgressFoot"><span lb="curLvl"></span><span lb="nextLvl"></span></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -338,6 +359,7 @@
 
             <div class="statGrid">
                 <div class="statBox" stat="level">
+                    <div class="statHead"><span class="statIco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></svg></span><h3>Progreso</h3></div>
                     <div class="statRow">
                         <p class="statLabel">Nivel anterior</p>
                         <p class="statValue accent-green" lb="prev"></p>
@@ -353,6 +375,7 @@
                 </div>
 
                 <div class="statBox" stat="roles">
+                    <div class="statHead"><span class="statIco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5l-8-3z"/><path d="m9 12 2 2 4-4"/></svg></span><h3>Recompensas</h3></div>
                     <div class="statRow">
                         <p class="statLabel">Mejor rol de recompensa</p>
                         <p class="statValue" lb="toprole"></p>
@@ -368,6 +391,7 @@
                 </div>
 
                 <div class="statBox" stat="xp">
+                    <div class="statHead"><span class="statIco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span><h3>Ganancia de XP</h3></div>
                     <div class="statRow">
                         <p class="statLabel">XP por mensaje</p>
                         <p class="statValue accent-blue" lb="xppermessage"></p>
@@ -383,6 +407,7 @@
                 </div>
 
                 <div class="statBox" stat="messages">
+                    <div class="statHead"><span class="statIco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><h3>Actividad</h3></div>
                     <div class="statRow">
                         <p class="statLabel">Mensajes totales</p>
                         <p class="statValue accent-blue" lb="totalmessages"></p>
@@ -422,7 +447,6 @@
                 <p><span lb="xp"></span><span lb="percent"></span></p>
                 <div class="xpLabelRight">
                     <p lb="multiplier" style="display: none"></p>
-                    <img src="/assets/icons/pencil.svg" class="editIcon">
                 </div>
             </div>
             <div class="progressBar">
@@ -475,36 +499,6 @@
     </div>
 
     <!-- popups -->
-    <div class="popup" id="addxp">
-        <div class="popupbox">
-            <div class="box">
-                <h2 style="font-size: 36px" id="selecteduser"></h2>
-                <p id="selectedusername" style="margin: 0px 0px"></p>
-                <p id="selectedid" style="margin: 0px 0px"></p>
-                <select id="addtype" style="font-size: 22px; height: 50px; text-align: center; width: 200px; margin-top: 30px">
-                    <option value="addxp">Añadir XP</option>
-                    <option value="setxp">Establecer XP en</option>
-                    <option value="addlevel">Añadir niveles</option>
-                    <option value="setlevel">Establecer nivel en</option>
-                </select>
-                <br>
-                <input id="addamount" class="lineinput" type="number" value="42069" style="margin-top: 20px; margin-bottom: 20px; font-size: 22px; width: 300px">
-
-                <div class="middleflex">
-                    <p style="width: 160px; text-align: right; margin-right: 8px; font-size: 22px"><b>XP anterior: </b></p>
-                    <p id="oldxp" style="text-align: left; font-size: 22px"></p>
-                </div>
-
-                <div class="middleflex">
-                    <p style="color: aqua; width: 160px; text-align: right; margin-right: 8px; font-size: 22px"><b>XP nueva: </b></p>
-                    <p id="newxp" style="color: aqua; text-align: left; font-size: 22px"></p>
-                </div>
-
-                <button class="popupConfirm" style="background-color: var(--lightestfg)" onclick="$('.popup').hide()">Cancelar</button>
-                <button id="savexp" class="popupConfirm">Guardar</button>
-
-            </div>
-        </div>
     </div>
 
     </div>
@@ -571,7 +565,6 @@ const TOP_VIEWS = [
     { key: "messages", label: "Mensajes", emoji: "💬" },
     { key: "monthlyMessages", label: "Mensajes este mes", emoji: "📅" },
     { key: "dailyMessages", label: "Mensajes de hoy", emoji: "☀️" },
-    { key: "voiceMinutes", label: "Tiempo en voz", emoji: "🎙️" },
     { key: "pokemonCaught", label: "Poketwo", emoji: "💥" },
     { key: "coinsMax", label: "Monedas máximas", emoji: "🪙" },
     { key: "reactionsSent", label: "Reacciones enviadas", emoji: "💌" },
@@ -579,6 +572,34 @@ const TOP_VIEWS = [
     { key: "countingSent", label: "Counting", emoji: "🔢" },
     { key: "streak", label: "Racha de actividad", emoji: "🔥" },
 ]
+
+// Iconos propios (duotono: capa de relleno suave + trazo) para el selector de orden
+const STAT_GROUPS = [
+    { name: "Experiencia", tone: "#2dd4bf", keys: ["xp", "monthly", "daily"] },
+    { name: "Mensajes", tone: "#60a5fa", keys: ["messages", "monthlyMessages", "dailyMessages"] },
+    { name: "Actividad", tone: "#c084fc", keys: ["streak", "reactionsSent", "reactionsReceived"] },
+    { name: "Minijuegos", tone: "#fbbf24", keys: ["coinsMax", "pokemonCaught", "countingSent"] },
+]
+const BADGE_CAL = `<g transform="translate(14 14)"><rect x=".5" y="1.5" width="9" height="8" rx="2" fill="#0a0b10" stroke="currentColor" stroke-width="1.4"/><path d="M.5 4.2h9" stroke="currentColor" stroke-width="1.4"/><path d="M3 .3v2.4M7 .3v2.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></g>`
+const BADGE_SUN = `<g transform="translate(14.5 14.5)"><circle cx="4.5" cy="4.5" r="4.6" fill="#0a0b10"/><circle cx="4.5" cy="4.5" r="2" fill="currentColor"/><path d="M4.5 .2v1.1M4.5 7.7v1.1M.2 4.5h1.1M7.7 4.5h1.1M1.5 1.5l.8.8M6.7 6.7l.8.8M1.5 7.5l.8-.8M6.7 2.3l.8-.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></g>`
+const BUBBLE = `<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4 3.5V15h0A2 2 0 0 1 4 13z" fill="currentColor" fill-opacity=".22" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="8.6" cy="9" r="1.1" fill="currentColor"/><circle cx="12" cy="9" r="1.1" fill="currentColor"/><circle cx="15.4" cy="9" r="1.1" fill="currentColor"/>`
+const STAT_ICONS = {
+    xp: `<path d="M7 3.5h10v5.2a5 5 0 0 1-10 0z" fill="currentColor" fill-opacity=".25" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 5H4.5v1.3A3.2 3.2 0 0 0 7.4 9.5M17 5h2.5v1.3a3.2 3.2 0 0 1-2.9 3.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12 13.7v3.3M8.5 20.5h7l-.8-3.5H9.3z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="m12 5.2.9 1.8 2 .3-1.45 1.4.35 2-1.8-.95-1.8.95.35-2L9.1 7.3l2-.3z" fill="currentColor"/>`,
+    monthly: `<path d="M12 2.8 14.4 8l5.6.5-4.2 3.8 1.3 5.5L12 15l-5.1 2.8 1.3-5.5L4 8.5 9.6 8z" fill="currentColor" fill-opacity=".22" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>` + BADGE_CAL,
+    daily: `<path d="M12 2.8 14.4 8l5.6.5-4.2 3.8 1.3 5.5L12 15l-5.1 2.8 1.3-5.5L4 8.5 9.6 8z" fill="currentColor" fill-opacity=".22" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>` + BADGE_SUN,
+    messages: `<path d="M8.5 16.5v.5a2 2 0 0 0 2 2h6.2l3.3 2.6V19a2 2 0 0 0 1.5-1.9v-5.2a2 2 0 0 0-2-2h-.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" opacity=".55"/>` + BUBBLE,
+    monthlyMessages: BUBBLE + BADGE_CAL,
+    dailyMessages: BUBBLE + BADGE_SUN,
+    voiceMinutes: `<rect x="8.5" y="2.8" width="7" height="11.4" rx="3.5" fill="currentColor" fill-opacity=".25" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 7h2.3M8.5 10h2.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5v3.2M9 20.7h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M2.8 8.5v4M21.2 8.5v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>`,
+    streak: `<path d="M12 2.5c.6 3.3 4.9 5.6 4.9 10.6A4.9 4.9 0 0 1 12 18a4.9 4.9 0 0 1-4.9-4.9c0-2.1.9-3.4 2-4.6.2 1.4.9 2.4 1.9 2.8-.4-3.2.4-6.3 1-8.8z" fill="currentColor" fill-opacity=".25" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 18a2.4 2.4 0 0 1-2.4-2.4c0-1.6 1.4-2.3 2.4-3.9 1 1.6 2.4 2.3 2.4 3.9A2.4 2.4 0 0 1 12 18z" fill="currentColor"/><path d="M5 21h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="2.2 2"/>`,
+    reactionsSent: `<path d="M12 19.5s-7.5-4.3-7.5-9.6A4.1 4.1 0 0 1 12 7.5a4.1 4.1 0 0 1 7.5 2.4c0 5.3-7.5 9.6-7.5 9.6z" fill="currentColor" fill-opacity=".25" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15.5 3.2h5.3v5.3M20.8 3.2l-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`,
+    reactionsReceived: `<path d="M12 20.5s-7.5-4.3-7.5-9.6A4.1 4.1 0 0 1 12 8.5a4.1 4.1 0 0 1 7.5 2.4c0 5.3-7.5 9.6-7.5 9.6z" fill="currentColor" fill-opacity=".25" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 1.8v4.4M9.8 4.2 12 6.4l2.2-2.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="m5 3 .6 1.4L7 5l-1.4.6L5 7l-.6-1.4L3 5l1.4-.6zM19 2.5l.5 1 1 .5-1 .5-.5 1-.5-1-1-.5 1-.5z" fill="currentColor"/>`,
+    countingSent: `<rect x="3" y="3" width="18" height="18" rx="5" fill="currentColor" fill-opacity=".2" stroke="currentColor" stroke-width="1.6"/><path d="M9.6 7 8.4 17M15.6 7l-1.2 10M6.8 10h11M6.2 14h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>`,
+    pokemonCaught: `<circle cx="12" cy="12" r="8.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.2 12a8.8 8.8 0 0 1 17.6 0z" fill="currentColor" fill-opacity=".3"/><path d="M3.2 12h5.6M15.2 12h5.6" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" fill="#0a0b10" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/>`,
+    coinsMax: `<ellipse cx="9.5" cy="16.5" rx="6.5" ry="2.8" fill="currentColor" fill-opacity=".2" stroke="currentColor" stroke-width="1.5"/><path d="M3 16.5v-3M16 16.5v-3" stroke="currentColor" stroke-width="1.5"/><ellipse cx="9.5" cy="13.3" rx="6.5" ry="2.8" fill="#0a0b10" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="8" r="5.2" fill="currentColor" fill-opacity=".3" stroke="currentColor" stroke-width="1.5"/><path d="M16 5.6v4.8M14.4 7.2h2.4a1 1 0 0 1 0 2h-1.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>`,
+}
+const statIcon = (key, tone) => `<span class="sIco" style="--tone:${tone}"><svg viewBox="0 0 24 24" aria-hidden="true">${STAT_ICONS[key] || STAT_ICONS.xp}</svg></span>`
+const statTone = key => (STAT_GROUPS.find(g => g.keys.includes(key)) || STAT_GROUPS[0]).tone
 const statView = () => TOP_VIEWS.find(v => v.key == statSort) || TOP_VIEWS[0]
 function statDisplayText(view, value) {
     value = Number(value) || 0
@@ -593,9 +614,27 @@ let statSort = TOP_VIEWS.some(v => v.key === requestedSort) ? requestedSort : "x
 const lbURL = pg => `/api/leaderboard/${guildID}?page=${pg}&sort=${statSort}`
 
 function buildStatPicker() {
+    if (!$('#lbPageHeader #statChips').length) $('#statChips').appendTo('#lbPageHeader')
+    {
+        let cur = statView()
+        let groups = STAT_GROUPS.map(g => `<div class="sGroup"><p class="sGroupName">${g.name}</p>${g.keys.map(k => TOP_VIEWS.find(v => v.key == k)).filter(Boolean).map(v => `<button type="button" role="option" aria-selected="${v.key == statSort}" class="statMenuBtn sOpt ${v.key == statSort ? "activeStat" : ""}" data-sort="${v.key}">${statIcon(v.key, g.tone)}<span>${v.label}</span><svg class="sCheck" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`).join("")}</div>`).join("")
+        $('#statChips').html(`<div class="sSelect">
+            <button type="button" class="sTrigger" aria-haspopup="listbox" aria-expanded="false">${statIcon(cur.key, statTone(cur.key))}<span class="sTxt"><small>Ordenar por</small><b aria-live="polite">${cur.label}</b></span><svg class="sChev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <div class="sMenu" role="listbox">${groups}</div>
+        </div>`)
+    }
     $('#statMenu').html(TOP_VIEWS.map(v => `<button type="button" class="statMenuBtn ${v.key == statSort ? "activeStat" : ""}" data-sort="${v.key}">${v.emoji} ${v.label}</button>`).join(""))
     $('#statPickerEmoji').text(statView().emoji)
     $('#statPickerLabel').text(statView().label)
+}
+
+function setSortPending(pending) {
+    const trigger = $('#statChips .sTrigger')
+    trigger.toggleClass('isLoading', pending)
+        .prop('disabled', pending)
+        .attr('aria-busy', String(pending))
+    trigger.find('.sTxt b').text(pending ? "Cargando..." : statView().label)
+    $('#statChips .statMenuBtn').prop('disabled', pending)
 }
 
 addUhOh()
@@ -742,9 +781,8 @@ Fetch(lbURL(1)).then(data => {
         let avatarURL = data.user.avatar || `https://cdn.discordapp.com/embed/avatars/0.png`
         $('#username').text(data.user.nickname || data.user.displayName || data.user.username || "Tu cuenta")
         $('#userAvatar').attr("src", avatarURL)
-        $('#userRole').text(data.moderator ? "Administrador" : "Miembro")
-        if (data.moderator) $('#serverPickerLink').show()
-        if (data.moderator) $('#previewToggle').attr('href', `/settings/${guildID}`).show()
+        $('#userRole').text(((u, mod) => (u && u.topRole) ? u.topRole : (u && u.isOwner) ? "Owner" : mod ? "Administrador" : "Miembro")(data.user, data.moderator))
+        if (data.moderator) { $('.adminNav a').each(function() { $(this).attr('href', `/settings/${guildID}?tab=${$(this).attr('data-tab')}`) }); $('.adminNav').show() }
         $('#userMenu').show()
     }
     else $('#topbarLogin').show()
@@ -791,11 +829,6 @@ Fetch(lbURL(1)).then(data => {
                 userSlot.addClass('notInServer')
                 userSlot.find("[lb=warning]").show()
             }
-            if (data.moderator) {
-                userSlot.addClass('canManage')
-                userSlot.attr("userID", x.id)
-                userSlot.attr("tabindex", 0)
-            }
             if (x.id == data.user.id) userSlot.addClass('isSelf')
             userSlot.find("[lb=rank]").text("#" + commafy(x.rank)).css("font-size", x.rank > 999 ? "18px" : x.rank > 99 ? "20px" : "22px")
             userSlot.find("[lb=name]").text(x.nickname || x.displayName || `<@${x.id}>`).attr("title", x.missing ? "No está en el servidor" : `${x.displayName} (@${x.username})`)
@@ -807,7 +840,7 @@ Fetch(lbURL(1)).then(data => {
                 // XP y sobra todo lo que habla del nivel original
                 userSlot.find("[lb=level]").hide()
                 userSlot.find("[lb=multiplier]").hide()
-                userSlot.find("[lb=progress]").hide()
+                userSlot.find(".progressBar").hide()
                 userSlot.find("[lb=percent]").hide()
                 userSlot.find("[lb=xp]").text(statDisplayText(statView(), x.statValue))
             } else {
@@ -834,6 +867,29 @@ Fetch(lbURL(1)).then(data => {
 
             $('#leaderboard').append(userSlot)
         })
+
+        // Podio: los tres primeros en tarjetas grandes (2º · 1º · 3º)
+        let top3 = leaderboard.filter(x => x.rank <= 3).sort((a, b) => a.rank - b.rank)
+        let esc2 = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))
+        if (top3.length == 3) {
+            let medal = ["", "Oro", "Plata", "Bronce"]
+            $('#lbPodium').html([top3[1], top3[0], top3[2]].map(x => {
+                let lv = getLevel(x.xp, data.settings)
+                let val = statSort !== "xp" ? statDisplayText(statView(), x.statValue) : `${commafy(x.xp)} XP`
+                return `<div class="podiumCard p${x.rank}${x.id == data.user.id ? " isSelf" : ""}" >
+                    <div class="podiumMedal" title="${medal[x.rank]}">${x.rank}</div>
+                    <img class="podiumAvatar" src="${esc2(x.avatar || "/assets/avatar.png")}" alt="" onerror="this.src='/assets/avatar.png'">
+                    <p class="podiumName">${esc2(x.nickname || x.displayName || "Miembro")}</p>
+                    <span class="podiumLevel">Nivel ${commafy(lv.level)}</span>
+                    <p class="podiumValue">${esc2(val)}</p>
+                    ${statSort === "xp" ? `<div class="progressBar"><div class="progress" style="width: ${lv.percentage}%"></div></div>` : ""}
+                    <div class="podiumBase"></div>
+                </div>`
+            }).join("")).removeClass('empty')
+            if (currentBox == 'leaderboard') $('#lbPodium').show()
+            $('#leaderboard').addClass('hasPodium')
+        }
+        else { $('#lbPodium').addClass('empty').html(""); $('#leaderboard').removeClass('hasPodium') }
 
         if (data.moderator) {
             $('.canManage').hover(function() {
@@ -961,27 +1017,27 @@ Fetch(lbURL(1)).then(data => {
         const voiceMinutes = Number(user.voiceMinutes) || 0
         const voice = voiceMinutes >= 60 ? `${Math.floor(voiceMinutes / 60)}h ${voiceMinutes % 60}m` : `${voiceMinutes}m`
         const groups = [
-            { icon: "messages", name: "Actividad", rows: [
+            { tone: "#60a5fa", icon: "messages", name: "Actividad", rows: [
                 ["Mensajes totales", commafy(user.messages || 0)],
                 ["Mensajes este mes", commafy(user.monthlyMessages || 0)],
                 ["Mensajes hoy", commafy(user.dailyMessages || 0)],
             ]},
-            { icon: "comunidad", name: "Comunidad", rows: [
+            { tone: "#c084fc", icon: "comunidad", name: "Comunidad", rows: [
                 ["Racha actual", `${commafy(streakDays)} ${streakDays === 1 ? "día" : "días"}`],
                 ["Mejor racha", `${commafy(streakMax)} ${streakMax === 1 ? "día" : "días"}`],
                 ["Reacciones enviadas", commafy(user.reactionsSent || 0)],
                 ["Reacciones recibidas", commafy(user.reactionsReceived || 0)],
             ]},
-            { icon: "minigame_participation", name: "Minijuegos", rows: [
+            { tone: "#fbbf24", icon: "minigame_participation", name: "Minijuegos", rows: [
                 ["Monedas máximas", commafy(user.coinsMax || 0)],
                 ["Pokemons capturados", commafy(user.pokemonCaught || 0)],
                 ["Números en counting", commafy(user.countingSent || 0)],
             ]},
-            { icon: "voice_general", name: "Voz", rows: [
+            { tone: "#2dd4bf", icon: "voice_general", name: "Voz", rows: [
                 ["Tiempo en voz", voice],
             ]},
         ]
-        $('#recordStats').html(groups.map(group => `<div class="recordStatsCard"><div class="recordStatsTitle">${svgIcon(RECORD_ICONS[group.icon] || RECORD_ICONS._trophy)}${group.name}</div>${group.rows.map(([label, value]) => `<p><span>${label}</span><b>${value}</b></p>`).join('')}</div>`).join(''))
+        $('#recordStats').html(groups.map(group => `<div class="recordStatsCard" style="--tone:${group.tone}"><div class="recordStatsTitle"><span class="rsIco">${svgIcon(RECORD_ICONS[group.icon] || RECORD_ICONS._trophy)}</span>${group.name}</div><div class="rsHero"><span>${group.rows[0][0]}</span><b>${group.rows[0][1]}</b></div>${group.rows.slice(1).map(([label, value]) => `<p><span>${label}</span><b>${value}</b></p>`).join('')}</div>`).join(''))
     }
     renderUserStats()
 
@@ -998,6 +1054,7 @@ Fetch(lbURL(1)).then(data => {
         let reachedRole = roleProgress >= 100
         let hasRole = loggedIn && data.user.id && data.user.roles.includes(r.id)
         rSlot.find("[lb=role]").text(role.name).css("color", roleColor)
+        rSlot[0].style.setProperty('--role', roleColor); rSlot.toggleClass('reached', reachedRole)
         rSlot.find("[lb=level]").text("Requiere nivel " + commafy(r.level)).css("color", reachedRole ? roleColor : "#bbbbbb")
         rSlot.find("[lb=icon]").css("color", getTierColor(role.name)).css("opacity", reachedRole ? "100%" : "45%")
         rSlot.find(".rewardLock").css("display", reachedRole ? "none" : "flex")
@@ -1010,6 +1067,31 @@ Fetch(lbURL(1)).then(data => {
         ).show()
         $('#roleGrid').append(rSlot)
     })
+    // Agrupar las recompensas por rango (Bronce, Plata, Oro...)
+    {
+        let groups = []
+        $('#roleGrid .rewardSlot').each(function() {
+            let name = $(this).find('[lb=role]').text().trim()
+            let tier = name.split(/[•\-|]/)[0].trim().split(/\s+/)[0] || name
+            let g = groups.find(x => x.tier == tier)
+            if (!g) groups.push(g = { tier, color: this.style.getPropertyValue('--role'), slots: [] })
+            g.slots.push(this)
+        })
+        let nextSet = false
+        $('#roleGrid').html("").addClass('tiered')
+        groups.forEach(g => {
+            let done = g.slots.filter(x => $(x).hasClass('reached')).length
+            let sec = $(`<section class="tierGroup"><header><h3></h3><span class="tierCount"></span></header><div class="lbCardGrid"></div></section>`)
+            sec[0].style.setProperty('--role', g.color)
+            sec.find('h3').text(g.tier)
+            sec.find('.tierCount').text(`${done} / ${g.slots.length}`).toggleClass('complete', done == g.slots.length)
+            g.slots.forEach(x => {
+                if (!nextSet && loggedIn && !$(x).hasClass('reached')) { $(x).addClass('nextReward'); nextSet = true }
+                sec.find('.lbCardGrid').append(x)
+            })
+            $('#roleGrid').append(sec)
+        })
+    }
     if (data.settings.rewards.length) $('#noRewardRoles').remove()
     else {
         $('#roleList').remove()
@@ -1030,13 +1112,14 @@ Fetch(lbURL(1)).then(data => {
             let lvlProgress = !loggedIn ? 0 : data.user.xp ? data.user.xp / lvlXP * 100 : 0
             let reached = userLevel.level >= i
             let isNext = i == userLevel.level + 1
-            let lvlColor = reached ? "var(--polarisgreen)" : isNext ? "var(--emojiblue)" : "rgba(255, 255, 255, 0.55)"
+            let lvlColor = reached ? "var(--c-accent)" : isNext ? "var(--c-fg)" : "var(--c-muted)"
 
             if (isNext) lvlSlot.addClass('highlightedSlot')
+            lvlSlot.toggleClass('reached', reached)
             lvlSlot.find("[lb=level]").text("Nivel " + commafy(i)).css("color", lvlColor)
             lvlSlot.find("[lb=xp]").text(commafy(lvlXP) + " XP").css("color", lvlColor)
             lvlSlot.find("[lb=percent]").text(`${Number(Math.min(100, lvlProgress).toFixed(2))}%`)
-            lvlSlot.find("[lb=progress]").css("background-color", reached ? "var(--polarisgreen)" : "var(--emojiblue)").css("width", Math.min(lvlProgress, 100) + "%")
+            lvlSlot.find("[lb=progress]").css("width", Math.min(lvlProgress, 100) + "%")
             $('#levelGrid').append(lvlSlot)
             shownLevels = i
         }
@@ -1053,7 +1136,28 @@ Fetch(lbURL(1)).then(data => {
         }
     }
 
-    appendLevels(Math.min(data.settings.maxLevel, loggedIn ? Math.max(20, userLevel.level + 5) : 20))
+    if (loggedIn && data.user.xp) {
+        // Resumen arriba + empezamos cerca del nivel actual (no 266 tarjetas ya conseguidas)
+        let nextXP = xpForLevel(userLevel.level + 1, data.settings)
+        let left = Math.max(0, nextXP - data.user.xp)
+        $('#levelSummary').html(`
+            <div class="lvSumMain">
+                <span class="lvSumLabel">Tu nivel</span>
+                <span class="lvSumLevel">${commafy(userLevel.level)}</span>
+            </div>
+            <div class="lvSumProgress">
+                <div class="lvSumTop"><span>Siguiente: <b>Nivel ${commafy(userLevel.level + 1)}</b></span><span class="lvSumPct">${+userLevel.percentage.toFixed(2)}%</span></div>
+                <div class="progressBar"><div class="progress" style="width: ${userLevel.percentage}%"></div></div>
+                <div class="lvSumBottom"><span>Te faltan <b>${commafy(left)} XP</b></span><span>Nivel máximo: ${commafy(data.settings.maxLevel)}</span></div>
+            </div>`)
+        $('#levelSummary').removeClass('empty'); if (currentBox == 'levels') $('#levelSummary').show()
+        shownLevels = Math.max(0, userLevel.level - 3)
+        if (shownLevels > 0) $('<button id="earlierLevels" box="levels" class="lbBox" type="button">Ver niveles anteriores (1 – ' + commafy(shownLevels) + ')</button>')
+            .on('click', function() { let end = shownLevels; shownLevels = 0; $('#levelGrid').html(""); appendLevels(end); $(this).remove() })
+            .toggle(currentBox == 'levels').insertBefore('#progress')
+        appendLevels(15)
+    }
+    else appendLevels(20)
 
     if (loggedIn && data.user.xp) {
         if (data.user.partial) {
@@ -1070,8 +1174,11 @@ Fetch(lbURL(1)).then(data => {
         $('#accountInfo [lb=name]').text(data.user.nickname || data.user.displayName)
         $('#accountInfo [lb=level]').text(`Nivel ${commafy(userLevel.level)}`)
         $('#accountInfo [lb=progress]').css('width', userLevel.percentage + "%")
-        $('#accountInfo [lb=xp]').text(`${commafy(data.user.xp)} / ${commafy(userLevel.xpRequired)} XP`).css("color", userColor)
-        $('#accountInfo [lb=percent]').text(`(${+userLevel.percentage.toFixed(2)}%)`).css("color", userColor)
+        $('#accountInfo [lb=xp]').html(`<b>${commafy(data.user.xp)}</b> / ${commafy(userLevel.xpRequired)} XP`)
+        $('#accountInfo [lb=percent]').text(`${+userLevel.percentage.toFixed(2)}%`)
+        $('#accountInfo [lb=curLvl]').text(`Nivel ${commafy(userLevel.level)}`)
+        $('#accountInfo [lb=nextLvl]').text(`Nivel ${commafy(userLevel.level + 1)}`)
+        if (data.user.rank) { $('#accountInfo [lb=rankPos]').text(`Puesto #${commafy(data.user.rank)}`); $('#rkPosChip').css('display', 'inline-flex') }
         if (data.user.hidden) {
             $('#accountInfo [lb=ranking]').text(`Oculto de la clasificación del servidor. ¡Gana XP para que se muestre automáticamente!`).css('display', 'block')
             $('#rankBadge').css('display', 'none')
@@ -1080,7 +1187,7 @@ Fetch(lbURL(1)).then(data => {
             $('#accountInfo [lb=ranking]').css('display', 'none')
             $('#rankBadge [lb=rankBadge]').text(`#${commafy(data.user.rank)}`)
             $('#rankBadge [lb=rankBadgePercent]').text(`${+userLevel.percentage.toFixed(2)}%`)
-            $('#rankBadge').css('display', 'flex')
+            $('#rankBadge').css('display', 'none')
         }
         $('#accountInfo [lb=prev]').text(commafy(userLevel.previousLevel) + " XP")
         $('#accountInfo [lb=sinceprev]').text(commafy(data.user.xp - userLevel.previousLevel) + " XP")
@@ -1120,31 +1227,45 @@ Fetch(lbURL(1)).then(data => {
 
     // hehe global function hack
     let loadingPage = false
+    let loadSequence = 0
     setPage = async function(pg, force) {
         if (!force && loadingPage) return
-        loadingPage = true
         let oldPage = page
         let savedScroll = 0
         if (page == pg && $('#leaderboard').is(":visible")) savedScroll = $('html').scrollTop()   // keep scroll
         page = (pg || 1)
         if (page > totalPages) page = totalPages
         else if (page < 1) page = 1
+        if (!force && page == oldPage) return
+        loadingPage = true
+        const requestId = ++loadSequence
+        const requestedSort = statSort
         $('#pageNumber').val(page)
         $('#pageDown').prop('disabled', page <= 1)
         $('#pageUp').prop('disabled', page >= totalPages)
         document.activeElement.blur();
-        if (!force && page == oldPage) return loadingPage = false
 
-        let res
-        try { res = (!force && pageCache[`${statSort}|${page}`]) ? pageCache[`${statSort}|${page}`] : await Fetch(lbURL(page)) }
-        catch (e) { console.error(e); alert("¡Error al cargar la clasificación!"); loadingPage = false; return }
-        pageCache[`${statSort}|${res.pageInfo.page}`] = { leaderboard: res.leaderboard, pageInfo: res.pageInfo }
-        $('html').scrollTop(savedScroll)
-        appendLeaderboard(res.leaderboard)
+        try {
+            let res = (!force && pageCache[`${requestedSort}|${page}`])
+                ? pageCache[`${requestedSort}|${page}`]
+                : await Fetch(`/api/leaderboard/${guildID}?page=${page}&sort=${requestedSort}`)
+            if (requestId !== loadSequence || requestedSort !== statSort) return
+            pageCache[`${requestedSort}|${res.pageInfo.page}`] = { leaderboard: res.leaderboard, pageInfo: res.pageInfo }
+            $('html').scrollTop(savedScroll)
+            appendLeaderboard(res.leaderboard)
 
-        if (res.guild) updateRankedCount(res)
-
-        loadingPage = false
+            if (res.guild) updateRankedCount(res)
+        } catch (e) {
+            if (requestId === loadSequence) {
+                console.error(e)
+                alert("¡Error al cargar la clasificación!")
+            }
+        } finally {
+            if (requestId === loadSequence) {
+                loadingPage = false
+                setSortPending(false)
+            }
+        }
     }
 
     /* teclado: una sola vez */
@@ -1167,6 +1288,8 @@ Fetch(lbURL(1)).then(data => {
         $('#selectedusername').text(`@${foundUser.username}`)
         $('#selectedid').text(`(ID: ${foundUser.id})`)
         $('#addtype').val("addxp")
+        $('#selectedavatar').attr('src', foundUser.avatar || '/assets/avatar.png')
+        $('#addtypeSeg button').removeClass('on').filter('[data-v=addxp]').addClass('on')
         $('#addamount').val(defaultAdd)
 
         $('#oldxp').text(`${commafy(foundUser.xp)} (Nivel ${commafy(oldLevel.level)})`)
@@ -1294,6 +1417,17 @@ $(document).on('click', function(e) {
 $(document).on('keydown', function(e) {
     if (e.code == "Escape") $('#statPickerWrap').removeClass('open')
 })
+$(document).on('click', '.sTrigger', function(e) {
+    e.stopPropagation()
+    let w = $(this).closest('.sSelect').toggleClass('open')
+    $(this).attr('aria-expanded', w.hasClass('open'))
+})
+$(document).on('click', function(e) { if (!$(e.target).closest('.sSelect').length) $('.sSelect').removeClass('open') })
+$(document).on('keydown', function(e) { if (e.key == "Escape") $('.sSelect').removeClass('open') })
+$(document).on('click', '#addtypeSeg button', function() {
+    $('#addtypeSeg button').removeClass('on'); $(this).addClass('on')
+    $('#addtype').val($(this).attr('data-v')).trigger('change')
+})
 $(document).on('click', '.statMenuBtn', function() {
     let key = $(this).attr('data-sort')
     $(`#statPickerWrap`).removeClass('open')
@@ -1304,10 +1438,13 @@ $(document).on('click', '.statMenuBtn', function() {
         let nextURL = statSort === "xp" ? `/leaderboard/${guildID}` : `/leaderboard/${guildID}?sort=${key}`
         history.replaceState({}, "", nextURL)
     } catch {}
-    if (typeof setPage === "function") setPage(1, true)
+    if (typeof setPage === "function") {
+        setSortPending(true)
+        setPage(1, true)
+    }
 })
 
-$('.lbNavItem').click(function() {
+$('.lbNavItem:not(.adminLink):not(.webLink)').click(function() {
     let box = $(this).attr('box')
     currentBox = box
     syncStatPicker()
@@ -1321,6 +1458,7 @@ $('.lbNavItem').click(function() {
     let navURL = `/${tabInfo[box].slug}/${guildID}`
     if (box === "leaderboard" && statSort !== "xp") navURL += `?sort=${statSort}`
     history.pushState({ box }, "", navURL)
+    window.scrollTo({ top: 0 })
 })
 
 window.addEventListener('popstate', function() {

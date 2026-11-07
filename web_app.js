@@ -146,7 +146,7 @@ app.get(["/settings", "/servers"], (req, res) => sendRedirect(res, "/servers"))
 app.get("/easteregg", async function(req, res) {
     res.set("Cache-Control", "no-store")
     const { renderCelebrationPage, escapeHtml } = require("./app/celebration-page.js")
-    const [user, guilds] = await getDiscordInfo(req)
+    const [user, guilds] = await getDiscordInfo(req, false, true)
     const guildId = resolveServerId({ guildId: req.query.guild || req.query.server || req.query.guildId, guilds, defaultGuildId: DEFAULT_EASTEREGG_GUILD_ID })
 
     const meta = getWebEasterMeta()
@@ -242,9 +242,11 @@ async function handleDropClaim(req, res) {
     const code = String(req.params.code || "").toUpperCase()
     const validPath = /^\d{10,30}$/.test(guildId) && /^[A-Z0-9]{6,12}$/.test(code)
 
-    const [user] = await getDiscordInfo(req)
-    const doc = validPath ? await client.db.fetch(guildId, ["drops"]).exec().catch(() => null) : null
-    const drop = validPath ? (doc?.drops || {})[code] : null
+    const [user, doc] = await Promise.all([
+        validPath ? getDiscordInfo(req, true) : null,
+        validPath ? client.db.fetch(guildId, ["drops"]).exec().catch(() => null) : null,
+    ])
+    const drop = (doc?.drops || {})[code] || null
     const guildName = escapeDropHtml(client.guilds.cache.get(guildId)?.name || guildId || "el servidor")
 
     // Fechas siempre en hora de Madrid (el VPS suele estar en UTC).
@@ -640,9 +642,13 @@ app.get("/api/settings/:id", async function(req, res) {
             threads: x.threads?.cache?.size || undefined
         }))
 
-        return { server, roles, channels }
+        let me = await guild.members.fetch(xd.userID).catch(() => null)
+        let top = me && (me.roles.hoist || me.roles.highest)
+        let viewer = me ? { topRole: top && top.id != guild.id ? top.name : null, isOwner: me.id == guild.ownerId } : null
 
-    }, { context: { guildID: serverID, dir: __dirname } })
+        return { server, roles, channels, viewer }
+
+    }, { context: { guildID: serverID, dir: __dirname, userID: user.id } })
     .then(x => x.find(r => r)) // filter out empty shards
     .catch(console.error)
 
@@ -666,7 +672,7 @@ app.get("/api/settings/:id", async function(req, res) {
 
     let ownedServers = guilds.filter(x => x.owner && x.id != serverID).map(x => ({ name: x.name, id: x.id }))
 
-    let userData = { id: user.id, username: user.username, displayName: user.global_name, avatar: user.avatar, color: user.banner_color }
+    let userData = { id: user.id, username: user.username, displayName: user.global_name, avatar: user.avatar, color: user.banner_color, topRole: guildData.viewer?.topRole || null, isOwner: !!guildData.viewer?.isOwner }
 
     return res.send({ guild: guildInfo, settings: serverData.settings, roles: guildData.roles, channels: guildData.channels, ownedServers, curvePresets, user: userData })
 })
@@ -972,8 +978,8 @@ app.post("/api/importfrombot", async function(req, res) {
 // (marcador por usuario manda, fallback el marcador global del server).
 const TOP_VIEWS = {
     xp: { label: "XP total", get: user => Number(user?.xp) || 0 },
-    monthly: { label: "XP este mes", get: user => Number(user?.monthlyXP) || 0 },
-    daily: { label: "XP de hoy", get: user => Number(user?.dailyXP) || 0 },
+    monthly: { label: "XP este mes", get: (user, ctx) => Tools.global.getMonthlyXP(user, ctx.info) },
+    daily: { label: "XP de hoy", get: (user, ctx) => Tools.global.getDailyXP(user, ctx.info) },
     messages: { label: "Mensajes", get: user => Number(user?.messages) || 0 },
     monthlyMessages: { label: "Mensajes este mes", get: (user, ctx) => effectiveMessages(user, "monthly", ctx) },
     dailyMessages: { label: "Mensajes de hoy", get: (user, ctx) => effectiveMessages(user, "daily", ctx) },
@@ -1023,13 +1029,44 @@ function effectiveMessages(userData, kind, ctx) {
     } catch { return 0 }
 }
 
+
+// ---- Caché de la clasificación ----
+// El documento de un servidor grande pesa ~1 MB y la BD remota tarda ~9 s en enviarlo.
+// Guardamos una copia en memoria y la refrescamos en segundo plano (como mucho cada 60 s),
+// así las páginas de clasificación cargan al instante con datos de hace menos de un minuto.
+const LB_CACHE_TTL = 60 * 1000
+const lbCache = new Map() // guildID -> { data, at, pending }
+
+function loadLbData(guildID) {
+    let entry = lbCache.get(guildID) || {}
+    if (entry.pending) return entry.pending
+    entry.pending = client.db.fetch(guildID).then(doc => {
+        let data = doc ? doc.toObject() : null
+        lbCache.set(guildID, { data, at: Date.now(), pending: null })
+        return data
+    }).catch(e => { entry.pending = null; throw e })
+    lbCache.set(guildID, entry)
+    return entry.pending
+}
+
+async function getLbData(guildID) {
+    let entry = lbCache.get(guildID)
+    if (entry && entry.data !== undefined && entry.at) {
+        if (Date.now() - entry.at > LB_CACHE_TTL) loadLbData(guildID).catch(console.error) // refresco en segundo plano
+        return entry.data
+    }
+    return loadLbData(guildID)
+}
+
+setTimeout(() => loadLbData(DEFAULT_EASTEREGG_GUILD_ID).catch(() => {}), 15000) // precarga del servidor principal
+
 app.get("/api/leaderboard/:id", cors(), async function(req, res) {
     let guildID = req.params.id
 
-    let data = await client.db.fetch(guildID)
+    let data = await getLbData(guildID)
     if (!data) return res.apiError("Invalid server!", "invalidServer");
 
-    let settings = data.settings
+    let settings = JSON.parse(JSON.stringify(data.settings)) // copia: más abajo se modifica
     if (!settings.enabled) return res.apiError("XP is disabled in this server!", "xpDisabled")
 
     let singleUser = (req.query.user && req.query.user.match(/^\d{10,30}$/) ? req.query.user : null)
@@ -1113,7 +1150,10 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
             color: x.hexColor
         }))
 
-        let members = await guild.members.fetch({user: xd.members}).then(list => list.map(x => ({
+        // Solo pedimos a Discord los miembros que no estén ya en caché (antes se pedían los 100 cada vez)
+        let missing = xd.members.filter(id => !guild.members.cache.has(id))
+        if (missing.length) await guild.members.fetch({ user: missing, time: 4000 }).catch(() => null)
+        let members = await Promise.resolve(xd.members.map(id => guild.members.cache.get(id)).filter(Boolean)).then(list => list.map(x => ({
             id: x.user.id,
             username: x.user.username,
             displayName: x.user.displayName,
@@ -1121,7 +1161,9 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
             nickname: x.nickname,
             avatar: x.displayAvatarURL({format: "png", dynamic: true}),
             color: x.displayHexColor,
-            roles: x.roles.cache.filter(r => xd.importantRoles.includes(r.id)).map(r => r.id)
+            roles: x.roles.cache.filter(r => xd.importantRoles.includes(r.id)).map(r => r.id),
+            topRole: (x.roles.hoist || x.roles.highest)?.id == guild.id ? null : (x.roles.hoist || x.roles.highest)?.name || null,
+            isOwner: x.id == guild.ownerId
         }) )).catch((() => []))
 
         return { server, roles, members }
@@ -1434,7 +1476,7 @@ setInterval(() => {
     for (const k of Object.keys(tokenCache)) if (tokenCache[k].expires < now) delete tokenCache[k]
 }, 60 * 1000).unref()
 
-async function getDiscordInfo(req, userOnly) {
+async function getDiscordInfo(req, userOnly, singleGuildLookup = false) {
     let token = await getDiscordToken(req.cookies.polaris) // get discord's tokens using the token in their cookies
     if (!token) return userOnly ? null : [null, null]
 
@@ -1442,28 +1484,31 @@ async function getDiscordInfo(req, userOnly) {
     // `token`, que como clave de un objeto se convierte en texto ("[object Object]").
     let cacheKey = token.access_token
     let foundData = discordCache[cacheKey] // check for cached data
-    if (foundData && Date.now() <= foundData.expires) return foundData.data // return cached data if it exists and hasn't expired
+    if (foundData && Date.now() <= foundData.expires) return userOnly ? foundData.data[0] : foundData.data
 
     // the two things the client authorized - user data and guilds. this is all we need
     let options = { auth: false, headers: { authorization: `Bearer ${token.access_token}` } };
-    let userData = await rest.get("/users/@me", options).catch(e => null)
-    if (userOnly) return userData || null
+    let userPromise = rest.get("/users/@me", options).catch(e => null)
+    if (userOnly) return await userPromise || null
 
     // /users/@me/guilds is paginated (200 max per request), so keep paging until we run out
     // otherwise users in 200+ servers can be missing from this list, breaking their mod/owner status
     let guilds = []
+    let guildLimit = singleGuildLookup ? 2 : 200
+    let pagePromise = rest.get(`/users/@me/guilds?limit=${guildLimit}`, options).catch(e => null)
+    let [userData, page] = await Promise.all([userPromise, pagePromise])
     let after = null
     while (true) {
-        let page = await rest.get(`/users/@me/guilds?limit=200${after ? `&after=${after}` : ""}`, options).catch(e => null)
         if (!page || page.message || !Array.isArray(page)) { guilds = page; break } // propagate error as-is
         guilds = guilds.concat(page)
-        if (page.length < 200 || guilds.length >= 2000) break // no more pages, or hit safety cap
+        if (singleGuildLookup || page.length < 200 || guilds.length >= 2000) break // one page is enough to know whether there is exactly one guild
         after = page[page.length - 1].id
+        page = await rest.get(`/users/@me/guilds?limit=200&after=${after}`, options).catch(e => null)
     }
 
     if (!userData || !guilds || userData.message || guilds.message || !userData.id) return [null, null] // if discord sends error
     let discordRes = [userData, guilds] // return this as an array, so we can do "let [userData, guilds]"
-    discordCache[cacheKey] = {data: discordRes, expires: Date.now() + 15000} // 15 second cache to prevent ratelimits uwu
+    if (!singleGuildLookup) discordCache[cacheKey] = {data: discordRes, expires: Date.now() + 15000} // 15 second cache to prevent ratelimits uwu
     return discordRes
 }
 

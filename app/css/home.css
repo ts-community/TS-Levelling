@@ -1,0 +1,76 @@
+/* Portada: tamaños fluidos y distribución independiente de la dashboard. */
+.homePage { min-height: 100svh; overflow-x: clip; background: var(--c-bg); }
+.homePage *, .homePage *::before, .homePage *::after { box-sizing: border-box; }
+.homePage .heroWrap { min-height: 100svh; display: grid; align-items: center; padding: clamp(32px, 7vh, 88px) clamp(20px, 5vw, 80px) !important; background: radial-gradient(ellipse at 15% 25%, rgb(45 212 191 / .07), transparent 55%); }
+.homePage .homeGrid { max-width: 1180px; margin: auto; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: clamp(32px, 5vw, 80px); }
+.homePage .homeIntro { min-width: 0; }
+.homePage .homeBrand { gap: 12px; margin: 0 0 28px; min-width: 0; }
+.homePage .homeBrand img { width: 48px; height: 48px; flex: none; border-radius: 14px; box-shadow: 0 0 0 1px var(--c-line-strong); }
+.homeBrandName { display: block; font-size: 15px; font-weight: 700; }
+.homeBrandCaption { display: block; margin-top: 4px; font-size: 12px; color: var(--c-muted); }
+.homePage .homeIntro .heroTitle { font-family: var(--lato) !important; font-weight: 700 !important; font-size: clamp(38px, 4.2vw, 62px) !important; letter-spacing: -.055em; line-height: 1.08 !important; }
+.homePage .heroTitle span { color: var(--c-accent); -webkit-text-fill-color: var(--c-accent); }
+.homePage .homeIntro .heroSubtitle { margin: 22px 0 28px !important; font-size: 16px !important; max-width: 460px; opacity: 1; }
+.homePage .heroButtons { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; width: 100%; }
+.homePage .heroButtons a { text-decoration: none; max-width: 100%; }
+.homePage #manageLink { order: -1; }
+.homePage .homeIntro .gradientButton, .homeRankingLink { display: inline-flex; justify-content: center; align-items: center; gap: 10px; min-height: 48px; height: auto !important; min-width: 0; padding: 13px 18px !important; font: 600 13px/1.4 var(--lato) !important; border-radius: 10px !important; cursor: pointer; white-space: normal; }
+.homePage .gradientButton svg { width: 20px; height: 20px; flex: none; }
+.homePage #manageButton { box-shadow: none !important; }
+.homeRankingLink { color: var(--c-fg) !important; border: 1px solid var(--c-line-strong); background: var(--c-surface); }
+.homePage a:focus-visible, .homePage button:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 4px; }
+.homeRankingLink:hover { border-color: var(--c-accent); }
+.homeAccessNote { margin: 12px 0 0; font-size: 12px; line-height: 1.6; color: var(--c-muted); }
+.homePage .homeFeatures { margin-top: 32px; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--c-line); padding-top: 22px; }
+.homePage .homeFeatures li { padding: 0; background: none; border: 0; border-radius: 0; min-width: 0; gap: 6px; }
+.homePage .homeFeatures .homeFeatureNumber { color: var(--c-accent); font-size: 11px; margin-bottom: 4px; }
+.homePage .homeFeatures b { font-size: 12px; }
+.homePage .homeFeatures span { font-size: 11px; line-height: 1.5; }
+.homePage .homeTop { min-width: 0; padding: 24px; border-radius: 20px; background: var(--c-surface); border-color: var(--c-line); box-shadow: 0 24px 64px rgb(0 0 0 / .18); backdrop-filter: none; }
+.homePage .homeTopHead { gap: 12px; margin-bottom: 22px; }
+.homeTopEyebrow { display: block; font-size: 9px; font-weight: 600; letter-spacing: .16em; color: var(--c-accent); margin-bottom: 8px; }
+.homePage .homeTopHead h2 { font: 700 23px/1.2 var(--lato) !important; letter-spacing: -.04em; }
+.homePage .homeTopHead a { flex: none; font-size: 12px; }
+.homePage #homeTopList { gap: 4px; }
+.homePage #homeTopList li { grid-template-columns: 26px 36px minmax(0, 1fr) auto; gap: 10px; padding: 12px 8px; border-radius: 10px; background: transparent; }
+.homePage #homeTopList .pos-1 { background: linear-gradient(90deg, rgb(45 212 191 / .10), rgb(45 212 191 / .02)); border-color: rgb(45 212 191 / .15); }
+.homePage #homeTopList .rk { width: 26px; height: 26px; font: 700 12px var(--lato); }
+.homePage #homeTopList img { width: 36px; height: 36px; }
+.homePage #homeTopList .nm { min-width: 0; font-size: 13px; }
+.homePage #homeTopList .lv { font-size: 11px; white-space: nowrap; }
+.homePage #homeTopList li.sk { height: 62px; background: var(--c-surface-2); animation: homeSk 1.2s infinite alternate; }
+.homeTopCaption { font-size: 11px; color: var(--c-muted); margin: 16px 0; }
+.homePage .homeStats { border-top: 1px solid var(--c-line); padding-top: 18px; gap: 16px; }
+.homePage .homeStats div { background: none; border: 0; padding: 0; border-radius: 0; }
+.homePage .homeStats div + div { border-left: 1px solid var(--c-line); padding-left: 20px; }
+.homePage .homeStats b { font: 700 24px var(--lato); letter-spacing: -.04em; }
+.homePage .homeStats span { display: block; margin-top: 6px; font-size: 11px; }
+.homePage #homeTopList .homeTopEmpty { display: block; font-size: 14px; line-height: 1.7; padding: 20px 0; }
+.homeTopEmpty a { display: block; }
+@media (max-width: 960px) {
+    .homePage .homeGrid { grid-template-columns: minmax(0, 1fr); max-width: 620px; gap: 32px; }
+    .homePage .heroWrap { padding: 40px 24px !important; }
+    .homePage .homeIntro .heroTitle { font-size: clamp(38px, 7vw, 56px) !important; }
+    .homePage .homeIntro .heroSubtitle { max-width: 520px; }
+}
+@media (max-width: 480px) {
+    .homePage .heroWrap { padding: 28px 16px !important; }
+    .homePage .homeBrand { margin: 0 0 24px; }
+    .homePage .homeIntro .heroTitle { font-size: clamp(34px, 9vw, 43px) !important; }
+    .homePage .homeIntro .heroSubtitle { font-size: 14px !important; margin: 18px 0 24px !important; }
+    .homePage .heroButtons { flex-direction: column; align-items: stretch; gap: 10px; }
+    .homePage .heroButtons a, .homePage .gradientButton { width: 100%; }
+    .homePage .homeFeatures { gap: 10px; margin-top: 24px; }
+    .homePage .homeFeatures b { font-size: 11px; }
+    .homePage .homeFeatures span { font-size: 10px; }
+    .homePage .homeTop { padding: 18px 14px; border-radius: 16px; }
+    .homePage .homeTopHead h2 { font-size: 21px !important; }
+    .homePage #homeTopList li { grid-template-columns: 22px 32px minmax(0, 1fr) auto; gap: 8px; padding: 12px 4px; }
+    .homePage #homeTopList img { width: 32px; height: 32px; }
+    .homePage #homeTopList .rk { width: 22px; height: 22px; font-size: 11px; }
+    .homePage #homeTopList .nm { font-size: 12px; }
+    .homePage #homeTopList .lv { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .homePage *, .homePage *::before { animation: none !important; transition: none !important; }
+}
