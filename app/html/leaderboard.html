@@ -153,7 +153,7 @@
             #secretEasterTrigger:active { animation: none; transform: rotate(-16deg) scale(1.1); }
         }
     </style>
-    <link href="/css/theme.css?v=47" type="text/css" rel="stylesheet">
+    <link href="/css/theme.css?v=48" type="text/css" rel="stylesheet">
 </head>
 <body>
     <div id="bgBlur"></div>
@@ -296,21 +296,22 @@
     </div>
 
     <h2 box="roles" class="lbBox plsLogIn">¡Inicia sesión para ver tu progreso hacia los roles de recompensa!</h2>
-    <div id="roleList" box="roles" class="leaderboardBox lbBox" style="display: none"><div class="lbCardGrid" id="roleGrid"></div></div>
-    <h2 id="noRewardRoles" box="roles" style="text-align: center; display: none" class="lbBox">¡Este servidor no tiene roles de recompensa!</h2>
+    <div id="roleList" box="roles" class="leaderboardBox lbBox guestHide" style="display: none"><div class="lbCardGrid" id="roleGrid"></div></div>
+    <h2 id="noRewardRoles" box="roles" style="text-align: center; display: none" class="lbBox guestHide">¡Este servidor no tiene roles de recompensa!</h2>
 
     <h2 box="levels" class="lbBox plsLogIn">¡Inicia sesión para ver tu progreso hacia cada nivel!</h2>
-    <div id="levelSummary" box="levels" class="lbBox empty" style="display: none"></div>
-    <div id="progress" box="levels" class="leaderboardBox lbBox" style="display: none"><div class="lbCardGrid" id="levelGrid"></div></div>
+    <div id="levelSummary" box="levels" class="lbBox empty guestHide" style="display: none"></div>
+    <div id="progress" box="levels" class="leaderboardBox lbBox guestHide" style="display: none"><div class="lbCardGrid" id="levelGrid"></div></div>
 
-    <div box="records" id="recordsBox" class="lbBox" style="display: none; min-width: 0; max-width: 100%;">
+    <h2 box="records" class="lbBox plsLogIn">¡Inicia sesión para ver tus records y estadísticas!</h2>
+    <div box="records" id="recordsBox" class="lbBox guestHide" style="display: none; min-width: 0; max-width: 100%;">
         <div id="recordStats"></div>
         <div id="recordsList"></div>
     </div>
 
     <h2 box="rank" class="lbBox plsLogIn">¡Inicia sesión para ver la información detallada de tu rango!</h2>
-    <h2 box="rank" class="lbBox" id="noRankInfo" style="text-align: center; display: none">¡Aún no tienes XP!</h2>
-    <div id="accountInfo" box="rank" class="leaderboardBox lbBox" style="display: none">
+    <h2 box="rank" class="lbBox guestHide" id="noRankInfo" style="text-align: center; display: none">¡Aún no tienes XP!</h2>
+    <div id="accountInfo" box="rank" class="leaderboardBox lbBox guestHide" style="display: none">
         <div id="accountPartial" style="display: none">
             <h2 style="text-align: center; color: rgb(255, 85, 85); margin-bottom: 0px">Hubo un error al obtener tu información del servidor</h2>
             <p style="text-align: center; color: rgb(255, 85, 85); margin-top: 2px">No se pudo obtener información sobre los roles.</p>
@@ -804,6 +805,7 @@ Fetch(lbURL(1)).then(data => {
     $('#statPickerWrap').toggle(currentBox === "leaderboard")
 
     let loggedIn = !data.user.noLogin
+    document.body.classList.toggle('guestSession', !loggedIn)
 
     if (loggedIn) {
         let avatarURL = data.user.avatar || `https://cdn.discordapp.com/embed/avatars/0.png`
@@ -819,7 +821,6 @@ Fetch(lbURL(1)).then(data => {
     else {
         $('#accountInfo').remove()
         $('#bigLoginBtn').show()
-        $('#yourrank').prop('disabled', true)
     }
 
     if (!data.moderator) $('#addxp').remove()

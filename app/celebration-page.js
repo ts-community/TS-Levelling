@@ -14,54 +14,56 @@ function escapeHtml(s) {
 
 // Iconos SVG (trazo), por nombre. Sin emojis.
 // egg · gift · trophy · check · search · hourglass · lock · login · soldout · shield · alert
+const GIFT_FILL = '<rect x="2.7" y="7.3" width="18.6" height="4" rx="1.3"/><path d="M4.4 11.3h15.2v8a2.4 2.4 0 0 1-2.4 2.4H6.8a2.4 2.4 0 0 1-2.4-2.4z"/>'
+const GIFT_STROKE = '<rect x="2.7" y="7.3" width="18.6" height="4" rx="1.3"/><path d="M4.4 11.3v8a2.4 2.4 0 0 0 2.4 2.4h10.4a2.4 2.4 0 0 0 2.4-2.4v-8"/><path d="M12 7.3v14.4"/><path d="M12 7.3c-1.3 0-4.7-.3-4.7-2.2 0-1.2.9-1.9 2-1.9 1.9 0 2.7 1.8 2.7 4.1zm0 0c1.3 0 4.7-.3 4.7-2.2 0-1.2-.9-1.9-2-1.9-1.9 0-2.7 1.8-2.7 4.1z"/>'
 const ICONS = {
     // f = relleno suave (duotono, del color del estado) · s = trazo
     egg: {
-        f: '<path d="M12 3.1c-3.6 0-6.4 5-6.4 9.8 0 4.8 2.9 8.1 6.4 8.1s6.4-3.3 6.4-8.1c0-4.8-2.8-9.8-6.4-9.8z"/>',
-        s: '<path d="M12 3.1c-3.6 0-6.4 5-6.4 9.8 0 4.8 2.9 8.1 6.4 8.1s6.4-3.3 6.4-8.1c0-4.8-2.8-9.8-6.4-9.8z"/><path d="M6.3 14.2c1.4-1.1 2.5-1.1 3.9 0s2.5 1.1 3.9 0 2.5-1.1 3.9 0"/><path d="M9 8.3c.4-1.2 1.1-2.1 2-2.8"/><path d="M20.4 2.6v3.2M18.8 4.2h3.2M3.6 6.4v2.4M2.4 7.6h2.4"/>',
+        f: '<path d="M12 2.9c-3.7 0-6.6 5.1-6.6 10 0 4.9 2.9 8.2 6.6 8.2s6.6-3.3 6.6-8.2c0-4.9-2.9-10-6.6-10z"/>',
+        s: '<path d="M12 2.9c-3.7 0-6.6 5.1-6.6 10 0 4.9 2.9 8.2 6.6 8.2s6.6-3.3 6.6-8.2c0-4.9-2.9-10-6.6-10z"/><path d="M6.2 14.2c1.3-1 2.5-1 3.8 0s2.5 1 3.8 0 2.5-1 3.8 0"/><path d="M9.2 8.1c.5-1.2 1.2-2.1 2.1-2.8"/><path d="M20.3 2.3c.18 1.05.63 1.5 1.68 1.68-1.05.18-1.5.63-1.68 1.68-.18-1.05-.63-1.5-1.68-1.68 1.05-.18 1.5-.63 1.68-1.68z"/><path d="M4.1 6.2c.13.75.45 1.07 1.2 1.2-.75.13-1.07.45-1.2 1.2-.13-.75-.45-1.07-1.2-1.2.75-.13 1.07-.45 1.2-1.2z"/>',
     },
     gift: {
-        f: '<path d="M4.4 10.9h15.2v8.3a2.4 2.4 0 0 1-2.4 2.4H6.8a2.4 2.4 0 0 1-2.4-2.4z"/>',
-        s: '<rect x="2.7" y="7.3" width="18.6" height="4" rx="1.3"/><path d="M4.4 11.3v8a2.4 2.4 0 0 0 2.4 2.4h10.4a2.4 2.4 0 0 0 2.4-2.4v-8"/><path d="M12 7.3v14.4"/><path d="M12 7.3c-1.4 0-4.6-.4-4.6-2.3 0-1.1.9-1.8 2-1.8 1.8 0 2.6 1.7 2.6 4.1zm0 0c1.4 0 4.6-.4 4.6-2.3 0-1.1-.9-1.8-2-1.8-1.8 0-2.6 1.7-2.6 4.1z"/>',
+        f: GIFT_FILL,
+        s: GIFT_STROKE,
     },
     trophy: {
-        f: '<path d="M7.5 3.5h9v6a4.5 4.5 0 0 1-9 0z"/>',
-        s: '<path d="M7.5 3.5h9v6a4.5 4.5 0 0 1-9 0z"/><path d="M16.5 5H20v1.6A3.4 3.4 0 0 1 16.6 10M7.5 5H4v1.6A3.4 3.4 0 0 0 7.4 10"/><path d="M12 14v4M8.5 21h7M9.5 18h5"/>',
+        f: '<path d="M7.2 3.2h9.6v6.1a4.8 4.8 0 0 1-9.6 0z"/><path d="M11.2 14h1.6v4.1h-1.6z"/><path d="M9.2 18.1h5.6v2.9H9.2z"/>',
+        s: '<path d="M7.2 3.2h9.6v6.1a4.8 4.8 0 0 1-9.6 0z"/><path d="M16.8 4.9h3.4v1.7a3.7 3.7 0 0 1-3.7 3.7M7.2 4.9H3.8v1.7a3.7 3.7 0 0 0 3.7 3.7"/><path d="M12 14.1v4.1"/><path d="M8.2 21h7.6M9.2 18.1h5.6v2.9H9.2z"/>',
     },
     check: {
-        f: '<circle cx="12" cy="12" r="9.5"/>',
-        s: '<circle cx="12" cy="12" r="9.5"/><path d="M7.6 12.4l3 3 5.8-6.2"/>',
+        f: '<circle cx="12" cy="12" r="9.2"/>',
+        s: '<circle cx="12" cy="12" r="9.2"/><path d="M7.5 12.3l3.1 3.1 6-6.4"/>',
     },
     search: {
-        f: '<circle cx="10.5" cy="10.5" r="7.1"/>',
-        s: '<circle cx="10.5" cy="10.5" r="7.1"/><path d="M21 21l-5.3-5.3"/>',
+        f: '<circle cx="10.6" cy="10.6" r="6.9"/>',
+        s: '<circle cx="10.6" cy="10.6" r="6.9"/><path d="M15.5 15.5 21 21"/>',
     },
     // Reloj de arena: arena arriba, chorrito y montón abajo.
     hourglass: {
-        f: '<path d="M9.1 4.6h5.8c-.2 1.8-1.4 3.3-2.9 4.3-1.5-1-2.7-2.5-2.9-4.3zM8 20.4c.4-2.7 2-4.4 4-4.4s3.6 1.7 4 4.4z"/>',
-        s: '<path d="M5.7 2.6h12.6M5.7 21.4h12.6"/><path d="M7.6 2.6v4c0 1.5.8 2.9 2 3.7L12 12l-2.4 1.7c-1.2.8-2 2.2-2 3.7v4"/><path d="M16.4 2.6v4c0 1.5-.8 2.9-2 3.7L12 12l2.4 1.7c1.2.8 2 2.2 2 3.7v4"/><path d="M12 11.7v3.5"/>',
+        f: '<path d="M9 5.1h6c-.18 1.65-1.28 3.05-2.8 4h-.4C10.28 8.15 9.18 6.75 9 5.1zM8.1 19.7c.35-2.5 1.9-4.2 3.9-4.2s3.55 1.7 3.9 4.2z"/>',
+        s: '<path d="M5.7 2.6h12.6M5.7 21.4h12.6"/><path d="M7.6 2.6v4c0 1.5.8 2.9 2 3.7L12 12l-2.4 1.7c-1.2.8-2 2.2-2 3.7v4"/><path d="M16.4 2.6v4c0 1.5-.8 2.9-2 3.7L12 12l2.4 1.7c1.2.8 2 2.2 2 3.7v4"/><path d="M12 11.6v3.8"/>',
     },
     lock: {
-        f: '<rect x="4.5" y="10.5" width="15" height="10.5" rx="2.5"/>',
-        s: '<rect x="4.5" y="10.5" width="15" height="10.5" rx="2.5"/><path d="M8 10.5v-3a4 4 0 0 1 8 0v3"/><path d="M12 14.8v2.6"/>',
+        f: '<rect x="4.6" y="10.2" width="14.8" height="10.8" rx="2.6"/>',
+        s: '<rect x="4.6" y="10.2" width="14.8" height="10.8" rx="2.6"/><path d="M8.1 10.2V7.4a3.9 3.9 0 0 1 7.8 0v2.8"/><circle cx="12" cy="14.7" r="1.15" fill="currentColor" stroke="none"/><path d="M12 15.6v1.8"/>',
     },
     // Sesión: persona dentro de un círculo (cuenta de Discord).
     login: {
-        f: '<circle cx="12" cy="12" r="9.5"/>',
-        s: '<circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="9.700" r="3.200"/><path d="M5.8 18.3c1.3-2.5 3.5-3.9 6.2-3.9s4.9 1.4 6.2 3.9"/>',
+        f: '<circle cx="12" cy="12" r="9.2"/>',
+        s: '<circle cx="12" cy="12" r="9.2"/><circle cx="12" cy="9.4" r="3.1"/><path d="M6.2 18.2c1.2-2.4 3.3-3.7 5.8-3.7s4.6 1.3 5.8 3.7"/>',
     },
     // Agotado: el mismo regalo del drop, tachado con una raya diagonal limpia.
     soldout: {
-        f: '<g mask="url(#soldMask)"><path d="M4.4 10.9h15.2v8.3a2.4 2.4 0 0 1-2.4 2.4H6.8a2.4 2.4 0 0 1-2.4-2.4z"/></g>',
-        s: '<defs><mask id="soldMask"><rect width="24" height="24" fill="#fff"/><path d="M4 4l16 16" stroke="#000" stroke-width="4.4" stroke-linecap="round" fill="none"/></mask></defs><g mask="url(#soldMask)"><rect x="2.7" y="7.3" width="18.6" height="4" rx="1.3"/><path d="M4.4 11.3v8a2.4 2.4 0 0 0 2.4 2.4h10.4a2.4 2.4 0 0 0 2.4-2.4v-8"/><path d="M12 7.3v14.4"/><path d="M12 7.3c-1.4 0-4.6-.4-4.6-2.3 0-1.1.9-1.8 2-1.8 1.8 0 2.6 1.7 2.6 4.1zm0 0c1.4 0 4.6-.4 4.6-2.3 0-1.1-.9-1.8-2-1.8-1.8 0-2.6 1.7-2.6 4.1z"/></g><path d="M4 4l16 16"/>',
+        f: `<g mask="url(#soldMask)">${GIFT_FILL}</g>`,
+        s: `<defs><mask id="soldMask"><rect width="24" height="24" fill="#fff"/><path d="M4 4l16 16" stroke="#000" stroke-width="4.6" stroke-linecap="round" fill="none"/></mask></defs><g mask="url(#soldMask)">${GIFT_STROKE}</g><path d="M4 4l16 16" stroke-width="1.8"/>`,
     },
     shield: {
-        f: '<path d="M12 21.5s8-3.8 8-9.8V5.2L12 2.5 4 5.2v6.5c0 6 8 9.8 8 9.8z"/>',
-        s: '<path d="M12 21.5s8-3.8 8-9.8V5.2L12 2.5 4 5.2v6.5c0 6 8 9.8 8 9.8z"/><path d="M12 8v4.4M12 16h.01"/>',
+        f: '<path d="M12 2.6 4.5 5.3v6.4c0 5.7 7.5 9.4 7.5 9.4s7.5-3.7 7.5-9.4V5.3z"/>',
+        s: '<path d="M12 2.6 4.5 5.3v6.4c0 5.7 7.5 9.4 7.5 9.4s7.5-3.7 7.5-9.4V5.3z"/><path d="M12 8.3v4.6"/><circle cx="12" cy="16.1" r=".95" fill="currentColor" stroke="none"/>',
     },
     alert: {
-        f: '<path d="M12 3.3L2.7 19.4a1.3 1.3 0 0 0 1.1 2h16.4a1.3 1.3 0 0 0 1.1-2z"/>',
-        s: '<path d="M12 3.3L2.7 19.4a1.3 1.3 0 0 0 1.1 2h16.4a1.3 1.3 0 0 0 1.1-2z"/><path d="M12 9.5v4.5M12 17.3h.01"/>',
+        f: '<path d="M10.9 3.1 2.6 18.1a2.2 2.2 0 0 0 1.9 3.3h15a2.2 2.2 0 0 0 1.9-3.3L13.1 3.1a1.3 1.3 0 0 0-2.2 0z"/>',
+        s: '<path d="M10.9 3.1 2.6 18.1a2.2 2.2 0 0 0 1.9 3.3h15a2.2 2.2 0 0 0 1.9-3.3L13.1 3.1a1.3 1.3 0 0 0-2.2 0z"/><path d="M12 9.2v4.7"/><circle cx="12" cy="17.3" r=".95" fill="currentColor" stroke="none"/>',
     },
 }
 

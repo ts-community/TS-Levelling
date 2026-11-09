@@ -518,7 +518,18 @@ code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .9em; 
     color: #04201c !important;
     white-space: nowrap;
 }
-.plsLogIn { color: var(--c-accent) !important; font-size: 16px !important; font-weight: 600; }
+.plsLogIn {
+    color: var(--c-accent) !important;
+    font-size: 16px !important;
+    font-weight: 600;
+    text-align: center;
+    padding: 30px 20px !important;
+    margin: 0 !important;
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: 18px;
+}
+body.guestSession .guestHide { display: none !important; }
 
 .leaderboardBox {
     background: var(--c-surface);
