@@ -1257,7 +1257,7 @@ input[type="number"] { min-width: 96px; width: 96px; }
     color: color-mix(in srgb, var(--medal) 85%, white);
     font: 700 12.5px var(--lato);
 }
-.podiumValue { margin: 12px 0 10px !important; font: 700 15px var(--lato) !important; color: var(--c-fg) !important; font-variant-numeric: tabular-nums; }
+.podiumValue { margin: 12px 0 10px !important; font: 700 15px var(--lato) !important; color: var(--c-fg) !important; font-variant-numeric: tabular-nums; max-width: 100%; overflow-wrap: anywhere; line-height: 1.3; }
 .podiumCard .progressBar { width: 100%; height: 6px; margin-bottom: 18px; }
 .podiumCard .progress { background: var(--medal) !important; }
 .podiumBase { width: calc(100% + 36px); height: 10px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--medal) 60%, transparent), transparent); }
@@ -1648,7 +1648,7 @@ input[type="number"] { min-width: 96px; width: 96px; }
 #accountInfo .statIco svg { width: 15px; height: 15px; }
 #accountInfo .statBox .statHead + .statRow { padding: 8px 16px 12px !important; }
 #accountInfo .statBox .statHead + .statRow .statLabel { font-size: 10.5px !important; margin-bottom: 2px !important; }
-#accountInfo .statBox .statHead + .statRow .statValue { font-size: 22px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#accountInfo .statBox .statHead + .statRow .statValue { font-size: 22px !important; white-space: normal; overflow-wrap: anywhere; }
 #accountInfo .statBox .statRow + .statRow { padding: 8px 16px !important; min-height: 0; }
 #accountInfo .statBox .statRow + .statRow .statLabel { font-size: 12px !important; line-height: 1.3; }
 #accountInfo .statBox .statRow + .statRow .statValue { font-size: 13.5px !important; }
@@ -1681,8 +1681,12 @@ input[type="number"] { min-width: 96px; width: 96px; }
 .rsHero span { display: block; font: 600 10.5px var(--lato); letter-spacing: .08em; text-transform: uppercase; color: var(--c-muted); margin-bottom: 2px; }
 .rsHero b { font: 700 24px var(--lato); color: var(--tone); font-variant-numeric: tabular-nums; }
 .recordStatsCard p { display: flex !important; justify-content: space-between; align-items: center; gap: 10px; margin: 0 !important; padding: 8px 16px !important; border-top: 1px solid var(--c-line); font-size: 12.5px !important; color: var(--c-muted) !important; }
-.recordStatsCard p b { font-size: 13.5px; color: var(--c-fg) !important; }
+.recordStatsCard p b { font-size: 13.5px; color: var(--c-fg) !important; white-space: nowrap; margin-left: auto; text-align: right; }
 .recordStatsCard p:last-child { padding-bottom: 11px !important; }
+.rsHero b { overflow-wrap: anywhere; line-height: 1.2; }
+@media (max-width: 420px) {
+    .recordStatsCard p { flex-wrap: wrap; row-gap: 2px; }
+}
 
 /* categorías y tarjetas de records */
 .recordsCategory { padding: 20px !important; border-radius: 20px !important; margin-bottom: 18px; }
@@ -1708,6 +1712,19 @@ input[type="number"] { min-width: 96px; width: 96px; }
 .recordBar i { background: linear-gradient(90deg, var(--c-accent-strong), var(--c-accent)) !important; }
 .recordProgress span { color: var(--c-muted); font-size: 11.5px; }
 .recordTier.complete .recordTierName { color: var(--c-accent); }
+
+/* Cada categoría usa su acento de config/records.js (el mismo del bot) */
+.recordsCategory { --tone: var(--c-accent); position: relative; overflow: hidden; border-color: color-mix(in srgb, var(--tone) 25%, var(--c-line)) !important; }
+.recordsCategory::before { content: ''; position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, var(--tone), transparent 70%); }
+.recordsCategory .recordsCategoryHeader h2 svg { color: var(--tone) !important; }
+.recordsCategory .recordsCount { background: color-mix(in srgb, var(--tone) 10%, var(--c-surface-2)) !important; border-color: color-mix(in srgb, var(--tone) 30%, var(--c-line)) !important; color: var(--tone) !important; }
+.recordsCategory .recordIcon { background: color-mix(in srgb, var(--tone) 15%, transparent) !important; color: var(--tone) !important; }
+.recordsCategory .recordCard.done { border-color: color-mix(in srgb, var(--tone) 45%, transparent) !important; background: linear-gradient(160deg, color-mix(in srgb, var(--tone) 8%, transparent), var(--c-bg) 60%) !important; }
+.recordsCategory .recordCard.done .recordBadge { background: color-mix(in srgb, var(--tone) 15%, transparent) !important; color: var(--tone) !important; border-color: color-mix(in srgb, var(--tone) 35%, transparent) !important; }
+.recordsCategory .recordTierReward { background: color-mix(in srgb, var(--tone) 10%, transparent) !important; color: var(--tone) !important; }
+.recordsCategory .recordTier.locked .recordTierReward { background: var(--c-surface-2) !important; color: rgba(255,255,255,.42) !important; }
+.recordsCategory .recordBar i { background: linear-gradient(90deg, color-mix(in srgb, var(--tone) 70%, black), var(--tone)) !important; }
+.recordsCategory .recordTier.complete .recordTierName { color: var(--tone) !important; }
 
 @media (max-width: 1100px) { #recordStats { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
 @media (max-width: 760px) { #recordsBox:not([style*="none"]) { width: 100%; } #recordStats { grid-template-columns: 1fr !important; } .recordsCategory { padding: 14px !important; } }

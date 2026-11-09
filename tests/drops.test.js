@@ -591,7 +591,7 @@ test("asistente de crear: draft y helpers", () => {
     // Borrador base: nombre del comando, usos y duración por defecto.
     const d = dropCmd.makeDraft("Fiesta")
     assert.equal(d.name, "Fiesta")
-    assert.equal(d.maxClaims, 3)
+    assert.equal(d.maxClaims, 1)
     assert.equal(d.durationMin, 1440)
     assert.deepEqual(d.items, [])
     assert.deepEqual(dropCmd.draftPrizes(d), { xp: 0, coins: 0, roles: [], items: [] })
@@ -645,7 +645,7 @@ test("asistente de crear: panel raíz con menús y botones", () => {
     assert.ok(rootFlat.text.includes("Crear drop: Fiesta"), rootFlat.text)
     assert.ok(rootFlat.text.includes("Sin recompensas por ahora"), "sin premios se ve claro")
     assert.ok(rootFlat.text.includes("Público"), "sin reservas se dice público")
-    assert.ok(rootFlat.text.includes("Usos:** 3"), rootFlat.text)
+    assert.ok(rootFlat.text.includes("Usos:** 1"), rootFlat.text)
     // Separadores entre bloque config, cabecera premio, lista premios, menús, botones.
     assert.ok(root.toJSON().components.filter(c => c.type === 14).length >= 5, "separadores del esquema")
     // Menú de premios: xp/coins/item. Menú de usuarios nativo (type 5).
@@ -671,6 +671,16 @@ test("asistente de crear: panel raíz con menús y botones", () => {
     const withXpFlat = flatOf(withXp)
     assert.ok(withXpFlat.text.includes("**5.000** XP"), withXpFlat.text)
     assert.ok(withXpFlat.ids.some(c => c.id === "wizmk:create" && !c.disabled), "Crear encendido con premio")
+
+    // Premios con sus emojis: XP, moneda personalizada y emoji del objeto.
+    const withAll = dropCmd.buildMakeContainer({
+        ...dropCmd.makeDraft("Fiesta"), xp: 5000, coins: 25000,
+        items: [{ id: "aaa", name: "Pepino dorado", qty: 2, emoji: "🥒" }],
+    }, { tools: mkTools, boat: true })
+    const withAllText = flatOf(withAll).text
+    assert.ok(withAllText.includes("<:XP:1467192533812645939>"), withAllText)
+    assert.ok(withAllText.includes("<:coin:1568735886861144165>"), withAllText)
+    assert.ok(withAllText.includes("🥒 **2×** Pepino dorado"), withAllText)
 })
 
 test("asistente de crear: paneles efímeros por tipo de premio", () => {
@@ -759,6 +769,15 @@ test("asistente de crear: runCreate abre el mensaje y no toca la DB", async () =
     const int2 = mkInt({})
     await dropCmd.run(fakeClient(doc2), int2, mkTools(doc2))
     assert.ok(int2.sent.includes("Drop #1"), int2.sent)
+
+    // Con drops ya creados, el número sigue al total de la DB.
+    const doc3 = {
+        _id: "g", users: {}, settings: { ...settings },
+        drops: { AAA111: { name: "A" }, BBB222: { name: "B" } },
+    }
+    const int3 = mkInt({})
+    await dropCmd.run(fakeClient(doc3), int3, mkTools(doc3))
+    assert.ok(int3.sent.includes("Drop #3"), int3.sent)
 })
 
 test("asistente de crear: metadata con nombre, usos y caducidad", () => {
@@ -768,7 +787,7 @@ test("asistente de crear: metadata con nombre, usos y caducidad", () => {
     assert.deepEqual(crear.args.map(a => a.name), ["nombre", "usos", "caducidad"], "3 parámetros opcionales")
     assert.ok(crear.args.every(a => !a.required), "todos opcionales")
     const usos = crear.args[1], cad = crear.args[2]
-    assert.ok(usos.description.includes("por defecto: 3"), usos.description)
+    assert.ok(usos.description.includes("por defecto: 1"), usos.description)
     assert.ok(cad.description.includes("por defecto: 24"), cad.description)
     assert.equal(usos.min, 1)
     assert.equal(cad.min, 1)
@@ -812,11 +831,11 @@ test("asistente de crear: parámetros usos y caducidad llegan al borrador", asyn
     assert.ok(int.sent.includes("Usos:** 12"), int.sent)
     assert.ok(int.sent.includes("36 horas"), int.sent)
 
-    // Sin parámetros: por defecto 3 usos y 24 horas.
+    // Sin parámetros: por defecto 1 uso y 24 horas.
     const doc2 = { _id: "g", users: {}, drops: {}, settings: { ...settings } }
     const int2 = mkInt({})
     await dropCmd.run(fakeClient(doc2), int2, mkTools(doc2))
-    assert.ok(int2.sent.includes("Usos:** 3"), int2.sent)
+    assert.ok(int2.sent.includes("Usos:** 1"), int2.sent)
     assert.ok(int2.sent.includes("24 horas"), int2.sent)
     // Fuera de rango: se acota a los límites del sistema (usos máx 5000, 720 h).
     const doc3 = { _id: "g", users: {}, drops: {}, settings: { ...settings } }

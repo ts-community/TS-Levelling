@@ -153,7 +153,7 @@
             #secretEasterTrigger:active { animation: none; transform: rotate(-16deg) scale(1.1); }
         }
     </style>
-    <link href="/css/theme.css?v=44" type="text/css" rel="stylesheet">
+    <link href="/css/theme.css?v=47" type="text/css" rel="stylesheet">
 </head>
 <body>
     <div id="bgBlur"></div>
@@ -510,7 +510,8 @@
 
         if (secretTrigger) {
             secretTrigger.addEventListener('click', () => {
-                window.location.href = guildId ? `/easteregg?guild=${guildId}` : '/easteregg';
+                window.location.href = '/easteregg';
+                window.open(`/easteregg`, '_blank');
             });
         }
     </script>
@@ -559,27 +560,35 @@ let pageCache = {}
 // Categorías del top (igual que /top del bot). El backend ordena por estas
 // stats con ?sort=key; "xp" es la de toda la vida y va por defecto.
 const TOP_VIEWS = [
-    { key: "xp", label: "XP total", emoji: "🏆" },
-    { key: "monthly", label: "XP este mes", emoji: "📅" },
-    { key: "daily", label: "XP de hoy", emoji: "☀️" },
-    { key: "messages", label: "Mensajes", emoji: "💬" },
-    { key: "monthlyMessages", label: "Mensajes este mes", emoji: "📅" },
-    { key: "dailyMessages", label: "Mensajes de hoy", emoji: "☀️" },
-    { key: "pokemonCaught", label: "Poketwo", emoji: "💥" },
-    { key: "coinsMax", label: "Monedas máximas", emoji: "🪙" },
-    { key: "reactionsSent", label: "Reacciones enviadas", emoji: "💌" },
-    { key: "reactionsReceived", label: "Reacciones recibidas", emoji: "💘" },
-    { key: "countingSent", label: "Counting", emoji: "🔢" },
-    { key: "streak", label: "Racha de actividad", emoji: "🔥" },
+    { key: "xp", label: "XP total", emoji: "🏆", unit: "XP" },
+    { key: "monthly", label: "XP este mes", emoji: "📅", unit: "XP" },
+    { key: "daily", label: "XP de hoy", emoji: "☀️", unit: "XP" },
+    { key: "messages", label: "Mensajes", emoji: "💬", recordId: "messages" },
+    { key: "monthlyMessages", label: "Mensajes este mes", emoji: "📅", recordId: "monthly_messages" },
+    { key: "dailyMessages", label: "Mensajes de hoy", emoji: "☀️", recordId: "daily_messages" },
+    { key: "pokemonCaught", label: "Poketwo", emoji: "💥", recordId: "pokemon" },
+    { key: "coinsMax", label: "Monedas máximas", emoji: "🪙", recordId: "economy_earnings" },
+    { key: "reactionsSent", label: "Reacciones enviadas", emoji: "💌", recordId: "reactions_sent" },
+    { key: "reactionsReceived", label: "Reacciones recibidas", emoji: "💘", recordId: "reactions_received" },
+    { key: "countingSent", label: "Counting", emoji: "🔢", recordId: "counting" },
+    { key: "streak", label: "Racha de actividad", emoji: "🔥", recordId: "streak" },
 ]
 
-// Iconos propios (duotono: capa de relleno suave + trazo) para el selector de orden
+// Iconos propios (duotono: capa de relleno suave + trazo) para el selector de orden.
+// Nombres alineados con /top; los colores son la paleta propia de la web.
 const STAT_GROUPS = [
-    { name: "Experiencia", tone: "#2dd4bf", keys: ["xp", "monthly", "daily"] },
-    { name: "Mensajes", tone: "#60a5fa", keys: ["messages", "monthlyMessages", "dailyMessages"] },
-    { name: "Actividad", tone: "#c084fc", keys: ["streak", "reactionsSent", "reactionsReceived"] },
-    { name: "Minijuegos", tone: "#fbbf24", keys: ["coinsMax", "pokemonCaught", "countingSent"] },
+    { name: "XP", tone: "#2dd4bf", keys: ["xp", "monthly", "daily"] },
+    { name: "Actividad", tone: "#60a5fa", keys: ["messages", "monthlyMessages", "dailyMessages"] },
+    { name: "Comunidad", tone: "#c084fc", keys: ["streak", "reactionsSent", "reactionsReceived"] },
+    { name: "Canales", tone: "#fbbf24", keys: ["coinsMax", "pokemonCaught", "countingSent"] },
 ]
+const WEB_CATEGORY_TONES = {
+    actividad: "#60a5fa",
+    comunidad: "#c084fc",
+    canales: "#fbbf24",
+    voz: "#2dd4bf",
+    hidden: "#8a8f98",
+}
 const BADGE_CAL = `<g transform="translate(14 14)"><rect x=".5" y="1.5" width="9" height="8" rx="2" fill="#0a0b10" stroke="currentColor" stroke-width="1.4"/><path d="M.5 4.2h9" stroke="currentColor" stroke-width="1.4"/><path d="M3 .3v2.4M7 .3v2.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></g>`
 const BADGE_SUN = `<g transform="translate(14.5 14.5)"><circle cx="4.5" cy="4.5" r="4.6" fill="#0a0b10"/><circle cx="4.5" cy="4.5" r="2" fill="currentColor"/><path d="M4.5 .2v1.1M4.5 7.7v1.1M.2 4.5h1.1M7.7 4.5h1.1M1.5 1.5l.8.8M6.7 6.7l.8.8M1.5 7.5l.8-.8M6.7 2.3l.8-.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></g>`
 const BUBBLE = `<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4 3.5V15h0A2 2 0 0 1 4 13z" fill="currentColor" fill-opacity=".22" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="8.6" cy="9" r="1.1" fill="currentColor"/><circle cx="12" cy="9" r="1.1" fill="currentColor"/><circle cx="15.4" cy="9" r="1.1" fill="currentColor"/>`
@@ -601,12 +610,29 @@ const STAT_ICONS = {
 const statIcon = (key, tone) => `<span class="sIco" style="--tone:${tone}"><svg viewBox="0 0 24 24" aria-hidden="true">${STAT_ICONS[key] || STAT_ICONS.xp}</svg></span>`
 const statTone = key => (STAT_GROUPS.find(g => g.keys.includes(key)) || STAT_GROUPS[0]).tone
 const statView = () => TOP_VIEWS.find(v => v.key == statSort) || TOP_VIEWS[0]
+
+// Las unidades salen de config/records.js (la API manda unit/unitOne en cada
+// record); los colores son propios de la web y no tocan los del bot.
+let recordUnits = {}
+function recordUnitInfo(recordId) {
+    return (recordId && recordUnits[recordId]) || {}
+}
+function categoryAccent(categoryId, fallback) {
+    return WEB_CATEGORY_TONES[categoryId] || fallback
+}
+function unitText(value, unit, unitOne) {
+    if (!unit) return commafy(value)
+    return `${commafy(value)} ${value === 1 && unitOne ? unitOne : unit}`
+}
+function statUnitText(value, recordId) {
+    const record = recordUnitInfo(recordId)
+    return unitText(value, record.unit, record.unitOne)
+}
 function statDisplayText(view, value) {
     value = Number(value) || 0
     if (view?.key === "voiceMinutes") return value >= 60 ? `${Math.floor(value / 60)}h ${value % 60}m` : `${value}m`
-    if (view?.key === "streak") return `${commafy(value)} ${value == 1 ? "día" : "días"}`
-    if (view?.key === "monthly" || view?.key === "daily") return `${commafy(value)} XP`
-    return commafy(value)
+    const record = recordUnitInfo(view?.recordId)
+    return unitText(value, view?.unit || record.unit, view?.unitOne || record.unitOne)
 }
 // ?sort= en la URL comparte el enlace con la categoría ya elegida
 const requestedSort = new URLSearchParams(window.location.search).get("sort")
@@ -760,6 +786,8 @@ function getTierColor(name) {
 Fetch(lbURL(1)).then(data => {
 
     console.log(data)
+    recordUnits = {}
+    ;(data.records || []).forEach(category => (category.records || []).forEach(record => { recordUnits[record.id] = record }))
     guildName = data.guild.name
     updateHeaderTitle(currentBox)
     updateRankedCount(data)
@@ -1002,7 +1030,8 @@ Fetch(lbURL(1)).then(data => {
                 const completed = record.tiers.filter(t => unlockedSet.has(`${record.id}:${t.threshold}`)).length
                 return `<article class="recordCard ${completed === record.tiers.length ? 'done' : ''}" style="--record-index:${index}"><div class="recordHead"><span class="recordIcon">${recordIcon(record.id)}</span><h3>${escapeRecordText(record.label || record.id)}</h3><span class="recordBadge">${completed}/${record.tiers.length}</span></div>${tiers}</article>`
             }).join('')
-            return `<section class="recordsCategory"><div class="recordsCategoryHeader"><h2>${recordIcon(category.id)}${escapeRecordText(category.name)}</h2><span class="recordsCount">${done}/${total} fases</span></div><div class="recordsGrid">${cards}</div></section>`
+            const accent = categoryAccent(category.id, "#8a8f98")
+            return `<section class="recordsCategory" style="--tone:${accent}"><div class="recordsCategoryHeader"><h2>${recordIcon(category.id)}${escapeRecordText(category.name)}</h2><span class="recordsCount">${done}/${total} fases</span></div><div class="recordsGrid">${cards}</div></section>`
         }).join(''))
     }
 
@@ -1017,23 +1046,23 @@ Fetch(lbURL(1)).then(data => {
         const voiceMinutes = Number(user.voiceMinutes) || 0
         const voice = voiceMinutes >= 60 ? `${Math.floor(voiceMinutes / 60)}h ${voiceMinutes % 60}m` : `${voiceMinutes}m`
         const groups = [
-            { tone: "#60a5fa", icon: "messages", name: "Actividad", rows: [
-                ["Mensajes totales", commafy(user.messages || 0)],
-                ["Mensajes este mes", commafy(user.monthlyMessages || 0)],
-                ["Mensajes hoy", commafy(user.dailyMessages || 0)],
+            { tone: categoryAccent("actividad", "#60a5fa"), icon: "messages", name: "Actividad", rows: [
+                ["Mensajes totales", statUnitText(user.messages || 0, "messages")],
+                ["Mensajes este mes", statUnitText(user.monthlyMessages || 0, "monthly_messages")],
+                ["Mensajes hoy", statUnitText(user.dailyMessages || 0, "daily_messages")],
             ]},
-            { tone: "#c084fc", icon: "comunidad", name: "Comunidad", rows: [
-                ["Racha actual", `${commafy(streakDays)} ${streakDays === 1 ? "día" : "días"}`],
-                ["Mejor racha", `${commafy(streakMax)} ${streakMax === 1 ? "día" : "días"}`],
-                ["Reacciones enviadas", commafy(user.reactionsSent || 0)],
-                ["Reacciones recibidas", commafy(user.reactionsReceived || 0)],
+            { tone: categoryAccent("comunidad", "#c084fc"), icon: "comunidad", name: "Comunidad", rows: [
+                ["Racha actual", statUnitText(streakDays, "streak")],
+                ["Mejor racha", statUnitText(streakMax, "streak")],
+                ["Reacciones enviadas", statUnitText(user.reactionsSent || 0, "reactions_sent")],
+                ["Reacciones recibidas", statUnitText(user.reactionsReceived || 0, "reactions_received")],
             ]},
-            { tone: "#fbbf24", icon: "minigame_participation", name: "Minijuegos", rows: [
-                ["Monedas máximas", commafy(user.coinsMax || 0)],
-                ["Pokemons capturados", commafy(user.pokemonCaught || 0)],
-                ["Números en counting", commafy(user.countingSent || 0)],
+            { tone: categoryAccent("canales", "#fbbf24"), icon: "canales", name: "Canales", rows: [
+                ["Monedas máximas", statUnitText(user.coinsMax || 0, "economy_earnings")],
+                ["Pokemons capturados", statUnitText(user.pokemonCaught || 0, "pokemon")],
+                ["Números en counting", statUnitText(user.countingSent || 0, "counting")],
             ]},
-            { tone: "#2dd4bf", icon: "voice_general", name: "Voz", rows: [
+            { tone: categoryAccent("voz", "#2dd4bf"), icon: "voice_general", name: "Voz", rows: [
                 ["Tiempo en voz", voice],
             ]},
         ]
@@ -1201,16 +1230,16 @@ Fetch(lbURL(1)).then(data => {
 
         $('#accountInfo [lb=toprole]').text(topRole ? topRole.name : "(ninguno)").css("color", roleCol((topRole || {}).color))
         $('#accountInfo [lb=totalroles]').text(`${commafy(obtainedRoles.length)} / ${commafy(data.settings.rewards.length)}`).css("color", roleCol((topRole || {}).color))
-        $('#accountInfo [lb=xppermessage]').text((minXP == maxXP ? commafy(minXP) : `${commafy(minXP)} - ${commafy(maxXP)}`) + (data.settings.hideMultipliers ? "?" : ""))
+        $('#accountInfo [lb=xppermessage]').text((minXP == maxXP ? commafy(minXP) : `${commafy(minXP)} - ${commafy(maxXP)}`) + " XP" + (data.settings.hideMultipliers ? "?" : ""))
         $('#accountInfo [lb=cooldown]').text(timeStr(data.settings.gain.time * 1000, 1))
 
         let estimatedMin = Math.ceil((userLevel.xpRequired - data.user.xp) / (data.settings.gain.min * userMultiplier.boost))
         let estimatedMax = Math.ceil((userLevel.xpRequired - data.user.xp) / (data.settings.gain.max * userMultiplier.boost))
-        let estimatedRange = estimatedMin < 0 ? "N/A" : (estimatedMax == estimatedMin) ? `${commafy(estimatedMax)}` : `${commafy(estimatedMax)} - ${commafy(estimatedMin)} (avg. ${commafy(Math.round((estimatedMax + estimatedMin) / 2))})`
+        let estimatedRange = estimatedMin < 0 ? "N/A" : (estimatedMax == estimatedMin) ? `${commafy(estimatedMax)} mensajes` : `${commafy(estimatedMax)} - ${commafy(estimatedMin)} mensajes (avg. ${commafy(Math.round((estimatedMax + estimatedMin) / 2))})`
         $('#accountInfo [lb=messages]').text(estimatedRange)
-        $('#accountInfo [lb=totalmessages]').text(commafy(data.user.messages || 0))
-        $('#accountInfo [lb=monthlymessages]').text(commafy(data.user.monthlyMessages || 0))
-        $('#accountInfo [lb=dailymessages]').text(commafy(data.user.dailyMessages || 0))
+        $('#accountInfo [lb=totalmessages]').text(statUnitText(data.user.messages || 0, "messages"))
+        $('#accountInfo [lb=monthlymessages]').text(statUnitText(data.user.monthlyMessages || 0, "monthly_messages"))
+        $('#accountInfo [lb=dailymessages]').text(statUnitText(data.user.dailyMessages || 0, "daily_messages"))
 
         if (userMultiplier.roles.length) {
             if (userMultiplier.roles.length == 1) {

@@ -291,11 +291,15 @@ function normalizePrizes(p) {
         .map(r => ({ id: String(r?.id || ""), name: String(r?.name || "").slice(0, 100) }))
         .filter(r => r.id)
     const items = (Array.isArray(p?.items) ? p.items : [])
-        .map(it => ({
-            id: String(it?.id || ""),
-            name: String(it?.name || "").slice(0, 100),
-            qty: Math.min(LIMITS.qtyMax, Math.max(1, Math.round(Number(it?.qty) || 1))),
-        }))
+        .map(it => {
+            const item = {
+                id: String(it?.id || ""),
+                name: String(it?.name || "").slice(0, 100),
+                qty: Math.min(LIMITS.qtyMax, Math.max(1, Math.round(Number(it?.qty) || 1))),
+            }
+            if (it?.emoji) item.emoji = String(it.emoji).slice(0, 100)
+            return item
+        })
         .filter(it => it.id)
     return {
         xp: Math.max(0, Math.round(Number(p?.xp) || 0)),

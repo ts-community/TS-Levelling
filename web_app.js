@@ -346,6 +346,32 @@ async function handleDropClaim(req, res) {
     const dropDetails = (d, l, ended = expiredDrop(d)) => rewardsDetail(d) + reserveDetail(d) + claimsDetail(d, l) + expiryDetail(d, ended)
 
     if (!user) {
+        // Un drop caducado o agotado ya no se puede reclamar: no tiene sentido
+        // pedir login. Se muestra el estado final directamente.
+        if (expiredDrop(drop)) {
+            return res.send(renderCelebrationPage({
+                title: drop.name,
+                message: `<strong>Cerró el ${escapeDropHtml(fmtDate(drop.expiresAt))}</strong>. El enlace ya no otorga premios.`,
+                badge: "hourglass",
+                kicker: "Terminado",
+                status: "expired",
+                celebration: false,
+                detailsHtml: rewardsDetail(drop) + reserveDetail(drop) + claimsDetail(drop, left) + expiryDetail(drop, true),
+                actionsHtml: serverButtons,
+            }))
+        }
+        if (left <= 0) {
+            return res.send(renderCelebrationPage({
+                title: drop.name,
+                message: "Este drop se ha <strong>agotado</strong>: ya se han reclamado todos los usos. ¡Más suerte la próxima vez!",
+                badge: "soldout",
+                kicker: "Agotado",
+                status: "expired",
+                celebration: false,
+                detailsHtml: rewardsDetail(drop) + reserveDetail(drop) + claimsDetail(drop, 0),
+                actionsHtml: serverButtons,
+            }))
+        }
         const reserved = allowNames(drop)
         const reservedNote = reserved.length
             ? ` Es un drop <strong>reservado</strong>: solo pueden reclamarlo ${reserved.slice(0, 12).join(", ")}${reserved.length > 12 ? ` y ${reserved.length - 12} más` : ""}.`
@@ -392,7 +418,7 @@ async function handleDropClaim(req, res) {
         return res.send(renderCelebrationPage({
             title: drop.name,
             message: "Este drop se ha <strong>agotado</strong>: ya se han reclamado todos los usos. ¡Más suerte la próxima vez!",
-            badge: "box",
+            badge: "soldout",
             kicker: "Agotado",
             status: "expired",
             celebration: false,
@@ -499,7 +525,7 @@ async function handleDropClaim(req, res) {
         return res.send(renderCelebrationPage({
             title: drop.name,
             message: "Alguien se te ha <strong>adelantado</strong>: ya no quedan usos.",
-            badge: "box",
+            badge: "soldout",
             kicker: "Agotado",
             status: "expired",
             celebration: false,

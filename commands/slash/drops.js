@@ -4,6 +4,10 @@ const Drops = require("../../classes/Drops.js")
 const ACCENT = 0x87f3ff
 // Emoji de XP del servidor (igual que /rank y /records).
 const XP_EMOJI = "<:XP:1467192533812645939>"
+const COIN_EMOJI = "<:coin:1568735886861144165>"
+const ITEM_EMOJI = "📦"
+
+const itemEmoji = it => it?.emoji || ITEM_EMOJI
 
 // Miles con punto siempre (igual que commafy en las respuestas).
 const fmtInt = n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ".")
@@ -28,9 +32,9 @@ function accessLine(allow) {
 function prizeLines(prizes, tools) {
     const lines = []
     if (prizes.xp > 0) lines.push(`- ${XP_EMOJI} **${tools.commafy(prizes.xp)}** XP`)
-    if (prizes.coins > 0) lines.push(`- 🪙 **${tools.commafy(prizes.coins)}** monedas`)
+    if (prizes.coins > 0) lines.push(`- ${COIN_EMOJI} **${tools.commafy(prizes.coins)}** monedas`)
     for (const r of prizes.roles || []) lines.push(`- 🎭 <@&${r.id}>`)
-    for (const it of prizes.items || []) lines.push(`- 📦 **${tools.commafy(it.qty)}×** ${it.name || "objeto"}`)
+    for (const it of prizes.items || []) lines.push(`- ${itemEmoji(it)} **${tools.commafy(it.qty)}×** ${it.name || "objeto"}`)
     return lines.length ? lines.join("\n") : "-# *Sin recompensas por ahora.*"
 }
 
@@ -44,9 +48,9 @@ function dropPrizeLines(drop, tools) {
 function describePrizes(prizes, tools, maxParts = Infinity) {
     const parts = []
     if (prizes.xp > 0) parts.push(`${XP_EMOJI} ${tools.commafy(prizes.xp)} XP`)
-    if (prizes.coins > 0) parts.push(`🪙 ${tools.commafy(prizes.coins)} monedas`)
+    if (prizes.coins > 0) parts.push(`${COIN_EMOJI} ${tools.commafy(prizes.coins)} monedas`)
     for (const r of prizes.roles) parts.push(`🎭 <@&${r.id}>`)
-    for (const it of prizes.items) parts.push(`📦 ${tools.commafy(it.qty)}× ${it.name || "objeto"}`)
+    for (const it of prizes.items) parts.push(`${itemEmoji(it)} ${tools.commafy(it.qty)}× ${it.name || "objeto"}`)
     if (parts.length > maxParts) parts.splice(maxParts, parts.length - maxParts, `+${parts.length - maxParts} más`)
     return parts.join(" + ")
 }
@@ -244,11 +248,11 @@ const MK = {
     DONE: "wizmk:done",
 }
 
-// Borrador del asistente. Por defecto: 3 usos y 24 h de caducidad.
-function makeDraft(name, { maxClaims = 3, durationMin = 1440 } = {}) {
+// Borrador del asistente. Por defecto: 1 uso y 24 h de caducidad.
+function makeDraft(name, { maxClaims = 1, durationMin = 1440 } = {}) {
     return {
         name: String(name || "").trim() || "Drop",
-        maxClaims: Math.max(1, Math.min(Drops.LIMITS.usesMax, Math.round(Number(maxClaims) || 10))),
+        maxClaims: Math.max(1, Math.min(Drops.LIMITS.usesMax, Math.round(Number(maxClaims) || 1))),
         durationMin: Math.max(Drops.LIMITS.durationMin, Math.min(Drops.LIMITS.durationMax, Math.round(Number(durationMin) || 1440))),
         xp: 0,
         coins: 0,
@@ -262,7 +266,11 @@ function draftPrizes(d) {
         xp: Math.max(0, Math.round(Number(d?.xp) || 0)),
         coins: Math.max(0, Math.round(Number(d?.coins) || 0)),
         roles: [],
-        items: (Array.isArray(d?.items) ? d.items : []).map(it => ({ id: String(it.id), name: String(it.name), qty: Number(it.qty) })),
+        items: (Array.isArray(d?.items) ? d.items : []).map(it => {
+            const item = { id: String(it.id), name: String(it.name), qty: Number(it.qty) }
+            if (it.emoji) item.emoji = String(it.emoji)
+            return item
+        }),
     }
 }
 
@@ -273,10 +281,13 @@ function draftAddItem(d, item, qty) {
     const existing = d.items.find(it => it.id === String(item.id))
     if (existing) {
         existing.qty = Math.min(Drops.LIMITS.qtyMax, existing.qty + n)
+        if (!existing.emoji && item.emoji) existing.emoji = String(item.emoji).slice(0, 100)
         return true
     }
     if (d.items.length >= 3) return false
-    d.items.push({ id: String(item.id), name: String(item.name || "objeto").slice(0, 100), qty: n })
+    const entry = { id: String(item.id), name: String(item.name || "objeto").slice(0, 100), qty: n }
+    if (item.emoji) entry.emoji = String(item.emoji).slice(0, 100)
+    d.items.push(entry)
     return true
 }
 
@@ -332,9 +343,9 @@ const presetOption = (label, value, description) =>
 // "🆙 10.000 XP + 📦 3× X" para los textos cortos.
 function prizeSummary(d, tools) {
     const parts = []
-    if (d.xp > 0) parts.push(`🆙 ${tools.commafy(d.xp)} XP`)
-    if (d.coins > 0) parts.push(`🪙 ${tools.commafy(d.coins)} monedas`)
-    for (const it of d.items) parts.push(`📦 ${tools.commafy(it.qty)}× ${it.name}`)
+    if (d.xp > 0) parts.push(`${XP_EMOJI} ${tools.commafy(d.xp)} XP`)
+    if (d.coins > 0) parts.push(`${COIN_EMOJI} ${tools.commafy(d.coins)} monedas`)
+    for (const it of d.items) parts.push(`${itemEmoji(it)} ${tools.commafy(it.qty)}× ${it.name}`)
     return parts.join(" + ")
 }
 
@@ -393,7 +404,7 @@ function buildMakeContainer(draft, { tools = { commafy: fmtInt }, boat = false }
 // Vista de selección de un premio (sustituye al panel principal hasta volver).
 function buildPickContainer(kind, { tools = { commafy: fmtInt }, storeItems = null, draft = null } = {}) {
     const container = new ContainerBuilder().setAccentColor(ACCENT)
-    const titles = { xp: "🆙 XP", coins: "🪙 Monedas", item: "📦 Objetos" }
+    const titles = { xp: `${XP_EMOJI} XP`, coins: `${COIN_EMOJI} Monedas`, item: `${ITEM_EMOJI} Objetos` }
     container.addTextDisplayComponents(textBuilder(`## ${titles[kind] || "Premio"}`))
     container.addSeparatorComponents(sepBuilder())
 
@@ -418,14 +429,14 @@ function buildPickContainer(kind, { tools = { commafy: fmtInt }, storeItems = nu
         container.addActionRowComponents(new ActionRowBuilder().addComponents(menu))
     } else if (kind === "item") {
         container.addTextDisplayComponents(textBuilder(draft?.items?.length
-            ? draft.items.map(it => `- 📦 **${tools.commafy(it.qty)}×** ${it.name}`).join("\n")
+            ? draft.items.map(it => `- ${itemEmoji(it)} **${tools.commafy(it.qty)}×** ${it.name}`).join("\n")
             : "-# *Sin objetos todavía.*"))
         if (draft?.items?.length) {
             container.addActionRowComponents(new ActionRowBuilder().addComponents(
                 new StringSelectMenuBuilder()
                     .setCustomId(MK.RITEM)
                     .setPlaceholder("Quitar un objeto")
-                    .addOptions(draft.items.map(it => presetOption(`${it.qty}× ${it.name}`, it.id, "Quitar del premio"))),
+                    .addOptions(draft.items.map(it => presetOption(`${itemEmoji(it)} ${it.qty}× ${it.name}`, it.id, "Quitar del premio"))),
             ))
         }
         const menu = new StringSelectMenuBuilder()
@@ -433,7 +444,7 @@ function buildPickContainer(kind, { tools = { commafy: fmtInt }, storeItems = nu
             .setPlaceholder("Añadir un objeto de la tienda")
         for (const it of (storeItems || []).slice(0, MAX_MENU_OPTIONS)) {
             menu.addOptions(presetOption(
-                `${it.emoji ? it.emoji + " " : ""}${it.name}`, it.id,
+                `${itemEmoji(it)} ${it.name}`, it.id,
                 Number(it.price) ? `${tools.commafy(it.price)} monedas` : "Gratis",
             ))
         }
@@ -603,7 +614,7 @@ module.exports = {
         args: [
             { type: "subcommand", name: "crear", description: "Crea un drop con enlace para reclamar (asistente interactivo)", args: [
                 { type: "string", name: "nombre", description: "Nombre del drop (por defecto: Drop #N)", required: false },
-                { type: "integer", name: "usos", description: "Usos totales del drop: cada persona lo reclama una vez (por defecto: 3)", required: false, min: 1, max: 5000 },
+                { type: "integer", name: "usos", description: "Usos totales del drop: cada persona lo reclama una vez (por defecto: 1)", required: false, min: 1, max: 5000 },
                 { type: "integer", name: "caducidad", description: "Horas hasta que el enlace caduca (por defecto: 24)", required: false, min: 1, max: 720 },
             ]},
             { type: "subcommand", name: "mostrar", description: "Ver los drops activos del servidor", args: [] },
@@ -644,11 +655,13 @@ module.exports = {
         const authorId = int.user.id
         const boat = Drops.boatEnabled()
 
-        // Contador para el nombre automático.
+        // Contador para el nombre automático: total creado en la DB + 1.
         let dropSeq = 0
         try {
-            const doc = await client.db.fetch(guildId, ["settings.dropSeq"]).exec().catch(() => null)
-            dropSeq = (Number(doc?.settings?.dropSeq) || 0) + 1
+            const doc = await client.db.fetch(guildId, ["settings.dropSeq", "drops"]).exec().catch(() => null)
+            const stored = Number(doc?.settings?.dropSeq) || 0
+            const existing = Object.keys(doc?.drops || {}).length
+            dropSeq = Math.max(stored, existing) + 1
         } catch {}
 
         const nameRaw = String(int.options.get("nombre")?.value || "").trim()
