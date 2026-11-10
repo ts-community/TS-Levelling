@@ -27,6 +27,10 @@ module.exports = {
         description: "Ver tu XP, nivel y cooldown.",
         args: [
             { type: "user", name: "member", description: "De qué miembro ver la tarjeta", required: false },
+            { type: "string", name: "view", description: "Estilo de los rangos (por defecto, el que tengas guardado)", required: false, choices: [
+                { name: "Predeterminada", value: "new" },
+                { name: "Legacy", value: "old" },
+            ] },
         ]
     },
 
@@ -56,7 +60,9 @@ module.exports = {
         if (db.settings.rankCard.disabled) return tools.warn("Las tarjetas de rango están desactivadas en este servidor.")
         if (!currentXP || !currentXP.xp) return tools.noXPYet(target.user || int.user)
 
-        const style = view.style || (db.users[int.user.id]?.rankStyle === 'old' ? 'old' : 'new')
+        // Opción view de /rank: solo cambia esta tarjeta, no la preferencia guardada
+        const viewOption = int.options?.getString?.("view")
+        const style = view.style || (["old", "new"].includes(viewOption) ? viewOption : null) || (db.users[int.user.id]?.rankStyle === 'old' ? 'old' : 'new')
         const modern = style === 'new'
         let xp = currentXP.xp
         let levelData = tools.getLevel(xp, db.settings, true)
