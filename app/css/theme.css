@@ -519,16 +519,44 @@ code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .9em; 
     white-space: nowrap;
 }
 .plsLogIn {
-    color: var(--c-accent) !important;
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    width: min(100%, 560px);
+    box-sizing: border-box;
+    margin: 24px auto !important;
+    padding: 34px 28px !important;
+    color: var(--c-fg) !important;
     font-size: 16px !important;
     font-weight: 600;
+    line-height: 1.5;
     text-align: center;
-    padding: 30px 20px !important;
-    margin: 0 !important;
-    background: var(--c-surface);
-    border: 1px solid var(--c-line);
-    border-radius: 18px;
+    background:
+        radial-gradient(120% 130% at 50% 0%, rgb(88 101 242 / .18), transparent 62%),
+        var(--c-surface);
+    border: 1px solid var(--c-line-strong);
+    border-radius: 20px;
+    box-shadow: 0 18px 50px rgb(0 0 0 / .28);
 }
+.plsLogIn[role="button"] { cursor: pointer; }
+.plsLogIn .loginPromptIcon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+    color: #fff;
+    background: linear-gradient(135deg, #5865f2, #4752c4);
+    box-shadow: 0 12px 28px rgb(88 101 242 / .38);
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+.plsLogIn .loginPromptIcon svg { width: 32px; height: 32px; }
+.plsLogIn:hover .loginPromptIcon,
+.plsLogIn:focus-visible .loginPromptIcon { transform: translateY(-2px) scale(1.03); box-shadow: 0 16px 34px rgb(88 101 242 / .5); }
+.plsLogIn:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 3px; }
 body.guestSession .guestHide { display: none !important; }
 
 .leaderboardBox {
@@ -1622,7 +1650,7 @@ input[type="number"] { min-width: 96px; width: 96px; }
 .lbHeadText { min-width: 0; }
 #serverName { text-align: left !important; font-size: clamp(26px, 3.2vw, 34px) !important; margin: 0 !important; line-height: 1.1 !important; }
 #serverMembers { margin: 4px 0 0 !important; font-size: 14px !important; justify-content: flex-start; }
-#lbPageHeader #statChips:not([style*="none"]) { width: auto !important; max-width: none !important; margin: 0 !important; }
+#lbPageHeader #statChips:not([style*="none"]) { width: auto !important; max-width: none !important; margin: 0 0 0 auto !important; justify-content: flex-end !important; }
 #lbPageHeader #notInServerWarning, #lbPageHeader #bigLoginBtn { flex-basis: 100%; }
 #lbPodium { margin-top: 4px !important; }
 .podiumCard { padding-top: 18px !important; }

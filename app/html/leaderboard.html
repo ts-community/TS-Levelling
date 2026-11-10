@@ -153,7 +153,7 @@
             #secretEasterTrigger:active { animation: none; transform: rotate(-16deg) scale(1.1); }
         }
     </style>
-    <link href="/css/theme.css?v=48" type="text/css" rel="stylesheet">
+    <link href="/css/theme.css?v=49" type="text/css" rel="stylesheet">
 </head>
 <body>
     <div id="bgBlur"></div>
@@ -670,13 +670,11 @@ $('.leaderboardSlot').remove()
 $('.rewardSlot').remove()
 $('.levelSlot').remove()
 
-if (currentBox !== "leaderboard") {
-    $('.selectedlb').removeClass('selectedlb')
-    $(`.lbNavItem[box=${currentBox}]`).addClass('selectedlb')
-    $('.lbBox').hide()
-    $(`[box=${currentBox}]`).show()
-    $('#lbPageHeader').css('display', currentBox == 'rank' ? 'none' : 'flex')
-}
+$('.selectedlb').removeClass('selectedlb')
+$(`.lbNavItem[box=${currentBox}]`).addClass('selectedlb')
+$('.lbBox').hide()
+$(`[box=${currentBox}]`).show()
+$('#lbPageHeader').css('display', currentBox == 'rank' ? 'none' : 'flex')
 updateHeaderTitle(currentBox)
 
 $('#userMenuButton').on('click', function(e) {
@@ -815,12 +813,17 @@ Fetch(lbURL(1)).then(data => {
         if (data.moderator) { $('.adminNav a').each(function() { $(this).attr('href', `/settings/${guildID}?tab=${$(this).attr('data-tab')}`) }); $('.adminNav').show() }
         $('#userMenu').show()
     }
-    else $('#topbarLogin').show()
 
     if (loggedIn) $('.plsLogIn').remove()
     else {
         $('#accountInfo').remove()
-        $('#bigLoginBtn').show()
+        const loginIcon = $('#topbarLogin svg').first().prop('outerHTML')
+        $('.plsLogIn').each(function() {
+            $(this).attr({ role: 'button', tabindex: '0' })
+            if (loginIcon && !$(this).children('.loginPromptIcon').length) {
+                $(this).prepend(`<span class="loginPromptIcon" aria-hidden="true">${loginIcon}</span>`)
+            }
+        })
     }
 
     if (!data.moderator) $('#addxp').remove()
@@ -1454,6 +1457,10 @@ $(document).on('click', '.sTrigger', function(e) {
 })
 $(document).on('click', function(e) { if (!$(e.target).closest('.sSelect').length) $('.sSelect').removeClass('open') })
 $(document).on('keydown', function(e) { if (e.key == "Escape") $('.sSelect').removeClass('open') })
+$(document).on('click', '.plsLogIn', function() { loginButton() })
+$(document).on('keydown', '.plsLogIn', function(e) {
+    if (e.key == "Enter" || e.key == " ") { e.preventDefault(); loginButton() }
+})
 $(document).on('click', '#addtypeSeg button', function() {
     $('#addtypeSeg button').removeClass('on'); $(this).addClass('on')
     $('#addtype').val($(this).attr('data-v')).trigger('change')
