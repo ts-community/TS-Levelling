@@ -32,9 +32,9 @@ module.exports = {
             ))
             .addSeparatorComponents(sep())
             .addActionRowComponents(new ActionRowBuilder().addComponents(
-                link("Clasificación", "🏆", `${tools.WEBSITE}/leaderboard/${guildId}`),
-                link("Mi rango", "📇", `${tools.WEBSITE}/rank/${guildId}`),
-                link("Mis Records", "⭐", `${tools.WEBSITE}/records/${guildId}`),
+                link("Clasificación", "🏆", `${tools.WEBSITE}/clasificacion`),
+                link("Mi rango", "📇", `${tools.WEBSITE}/rango`),
+                link("Mis Records", "⭐", `${tools.WEBSITE}/records`),
             ))
             .addSeparatorComponents(sep())
             .addTextDisplayComponents(text(

@@ -184,17 +184,56 @@ app.use(function(req, res, next) {
     return res.redirect(`${siteURL}${req.originalUrl}`)
 })
 
-app.get("/servers", (req, res) => sendPage(res, "servers"))
-app.get("/settings/:id", (req, res) => sendPage(res, "config"))
-app.get(["/leaderboard/:id", "/top/:id", "/rank/:id", "/roles/:id", "/levels/:id", "/records/:id"], (req, res) => sendPage(res, "leaderboard"))
-app.get("/", (req, res) => sendPage(res, "home"))
-
-app.get(["/leaderboard", "/top"], (req, res) => sendRedirect(res, `/leaderboard/${DEFAULT_EASTEREGG_GUILD_ID}`))
-app.get(["/rank", "/roles", "/levels", "/records"], (req, res) => {
-    const page = req.path.slice(1)
-    return sendRedirect(res, `/${page}/${DEFAULT_EASTEREGG_GUILD_ID}`)
+// Ya no hay selector de servidores: /servers lleva directo a la clasificación
+app.get("/servers", (req, res) => res.redirect("/clasificacion"))
+// La web ya es solo de TS Community Brawl: las rutas no llevan el ID del servidor y van en español.
+const LB_PAGES = ["clasificacion", "rango", "recompensas", "niveles", "records"]
+app.get(LB_PAGES.map(p => "/" + p), (req, res) => sendPage(res, "leaderboard"))
+app.get("/ajustes", (req, res) => sendPage(res, "config"))
+// Rutas antiguas (en inglés y/o con ID del servidor): redirección permanente a la nueva
+const OLD_ROUTES = { leaderboard: "clasificacion", top: "clasificacion", rank: "rango", roles: "recompensas", levels: "niveles", records: "records", settings: "ajustes" }
+const OLD_ROUTE_PATHS = Object.keys(OLD_ROUTES).flatMap(p => [`/${p}`, `/${p}/:id(\\d{10,30})`])
+    .concat(LB_PAGES.concat("ajustes").map(p => `/${p}/:id(\\d{10,30})`))
+app.get(OLD_ROUTE_PATHS, (req, res) => {
+    const first = req.path.split("/")[1]
+    const qs = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : ""
+    res.redirect(301, "/" + (OLD_ROUTES[first] || first) + qs)
 })
-app.get(["/settings", "/servers"], (req, res) => sendRedirect(res, "/servers"))
+// Las APIs también se pueden llamar sin ID; se rellena el del servidor principal
+app.use((req, res, next) => {
+    if (/^\/api\/(leaderboard|settings|xp)\/?$/.test(req.path)) req.url = req.url.replace(/^(\/api\/[a-z]+)\/?/, `$1/${DEFAULT_EASTEREGG_GUILD_ID}`)
+    next()
+})
+// Portada: el top 5 va ya dentro del HTML, así no se ve el esqueleto vacío al cargar.
+// Se pide a la propia API como visitante anónimo (sin cookie: no espera a Discord) y se
+// guarda un minuto; si aún no hay datos, la página lo carga por su cuenta como antes.
+let homeTop = { json: null, at: 0, pending: null }
+function refreshHomeTop() {
+    if (homeTop.pending) return homeTop.pending
+    homeTop.pending = fetch(`http://127.0.0.1:${auth.serverPort}/api/leaderboard?page=1&pageSize=5`, { signal: AbortSignal.timeout(8000) })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+            if (d && d.guild && Array.isArray(d.leaderboard)) homeTop = { json: JSON.stringify({
+                guild: { members: d.guild.members, totalMessages: d.guild.totalMessages },
+                leaderboard: d.leaderboard.slice(0, 5).map(u => ({ xp: u.xp, avatar: u.avatar, nickname: u.nickname, displayName: u.displayName, username: u.username }))
+            }).replace(/</g, "\\u003c"), at: Date.now(), pending: null }
+        })
+        .catch(() => {})
+        .finally(() => {
+            homeTop.pending = null
+            if (!homeTop.json) setTimeout(refreshHomeTop, 10000) // al arrancar los datos aún no están: reintenta
+        })
+    return homeTop.pending
+}
+app.get("/", (req, res) => {
+    if (Date.now() - homeTop.at > 60 * 1000) refreshHomeTop()
+    res.set("Cache-Control", "no-cache")
+    let html = renderPage("home")
+    if (homeTop.json) html = html.replace("</head>", `<script>window.__HOME_TOP__=${homeTop.json}</script>\n</head>`)
+    return res.type("html").send(html)
+})
+
+
 
 app.get("/easteregg", async function(req, res) {
     res.set("Cache-Control", "no-store")
@@ -1122,10 +1161,24 @@ function loadLbData(guildID) {
     entry.pending = client.db.fetch(guildID).then(doc => {
         let data = doc ? doc.toObject() : null
         lbCache.set(guildID, { data, at: Date.now(), pending: null })
+        if (guildID == DEFAULT_EASTEREGG_GUILD_ID && data) setTimeout(warmRankings, 200)
         return data
     }).catch(e => { entry.pending = null; throw e })
     lbCache.set(guildID, entry)
     return entry.pending
+}
+
+// Tras cada refresco de datos se calculan en segundo plano todos los órdenes de la clasificación
+// (y las fichas de sus miembros), para que ningún visitante pague ese primer cálculo.
+let warmingRankings = false
+async function warmRankings() {
+    if (warmingRankings) return
+    warmingRankings = true
+    try {
+        for (const key of Object.keys(TOP_VIEWS)) {
+            await fetch(`http://127.0.0.1:${auth.serverPort}/api/leaderboard?page=1&sort=${key}`, { signal: AbortSignal.timeout(10000) }).catch(() => {})
+        }
+    } finally { warmingRankings = false }
 }
 
 async function getLbData(guildID) {
@@ -1176,18 +1229,29 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
     let pkCtx = { ...periodContext(), info: data.info }
     let statOf = user => Number(sortView.get(user, pkCtx)) || 0
 
-    let xpCandidates = []
-    let hiddenMembers = []
+    // El orden de cada categoría se calcula una vez por versión de los datos (antes: en cada
+    // petición, llamando a sortView.get miles de veces dentro del sort → ~0,5 s por cambio de orden)
+    let rankCacheKey = `${sortKey}|${pkCtx.today}|${pkCtx.month}`
+    let ranked = data.__ranked && data.__ranked[rankCacheKey]
+    if (!ranked) {
+        let rows = []
+        Object.entries(data.users || {}).forEach(([id, u]) => {
+            if (!id || !u || !u.xp || u.xp <= 0 || u.hidden) return
+            rows.push({ id, xp: u.xp, statValue: statOf(u) })
+        })
+        rows.sort((a, b) => (b.statValue - a.statValue) || (b.xp - a.xp))
+        rows.forEach((r, i) => { r.rank = i + 1 })
+        ranked = rows
+        Object.defineProperty(data, "__ranked", { value: data.__ranked || {}, enumerable: false, configurable: true })
+        data.__ranked[rankCacheKey] = ranked
+    }
 
-    Object.entries(data.users || {}).forEach(x => {
-        if (!x || !x[0] || !x[1].xp || x[1].xp <= 0) return
-        let isHidden = x[1].hidden
-        if (!isHidden) xpCandidates.push(x)
-        else if (isMod || isDev) hiddenMembers.push({ id: x[0], xp: x[1].xp })
+    let hiddenMembers = []
+    if (isMod || isDev) Object.entries(data.users || {}).forEach(([id, u]) => {
+        if (id && u && u.xp > 0 && u.hidden) hiddenMembers.push({ id, xp: u.xp })
     })
 
-    xpCandidates.sort((a, b) => (statOf(b[1]) - statOf(a[1])) || (b[1].xp - a[1].xp))
-    let xpArray = xpCandidates.map((x, y) => ({ id: x[0], xp: x[1].xp, rank: y + 1, statValue: statOf(x[1]) }))
+    let xpArray = ranked.map(r => ({ ...r }))
 
     if (hiddenMembers.length) hiddenMembers = hiddenMembers.sort((a, b) => b.xp - a.xp)
 
@@ -1230,8 +1294,15 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
         }))
 
         // Solo pedimos a Discord los miembros que no estén ya en caché (antes se pedían los 100 cada vez)
-        let missing = xd.members.filter(id => !guild.members.cache.has(id))
-        if (missing.length) await guild.members.fetch({ user: missing, time: 4000 }).catch(() => null)
+        // Los que ya se fueron del servidor nunca entran en caché y se volvían a pedir a Discord en
+        // cada carga (~500 ms). Se recuerda 10 min que no están para no preguntar otra vez.
+        const gone = cl.__goneMembers || (cl.__goneMembers = new Map())
+        const now = Date.now()
+        let missing = xd.members.filter(id => !guild.members.cache.has(id) && !((gone.get(id) || 0) > now))
+        if (missing.length) {
+            await guild.members.fetch({ user: missing, time: 4000 }).catch(() => null)
+            missing.forEach(id => { if (!guild.members.cache.has(id)) gone.set(id, now + 10 * 60 * 1000) })
+        }
         let members = await Promise.resolve(xd.members.map(id => guild.members.cache.get(id)).filter(Boolean)).then(list => list.map(x => ({
             id: x.user.id,
             username: x.user.username,
@@ -1548,6 +1619,7 @@ async function getDiscordToken(token) {
 /* STEP 5
 Now we can make requests to Discord to get the client's stuff! */
 let discordCache = {} // cache data to prevent rate limits
+let discordPending = {} // sesión -> consulta a Discord en curso
 
 // Limpieza: ninguna de las dos cachés se vaciaba nunca y crecían sin parar.
 setInterval(() => {
@@ -1565,6 +1637,25 @@ async function getDiscordInfo(req, userOnly, singleGuildLookup = false) {
     let cacheKey = token.access_token
     let foundData = discordCache[cacheKey] // check for cached data
     if (foundData && Date.now() <= foundData.expires) return userOnly ? foundData.data[0] : foundData.data
+    // Si ya hay una consulta a Discord en marcha para esta sesión, se espera a esa en vez de repetirla
+    if (!singleGuildLookup && discordPending[cacheKey]) {
+        let shared = await discordPending[cacheKey]
+        return userOnly ? (shared && shared[0]) || null : shared
+    }
+    if (!singleGuildLookup && !userOnly) {
+        let resolveShared
+        discordPending[cacheKey] = new Promise(r => { resolveShared = r })
+        try {
+            let result = await fetchDiscordInfo(token, false)
+            resolveShared(result)
+            return result
+        } finally { delete discordPending[cacheKey] }
+    }
+    return fetchDiscordInfo(token, singleGuildLookup, userOnly)
+}
+
+async function fetchDiscordInfo(token, singleGuildLookup, userOnly) {
+    let cacheKey = token.access_token
 
     // the two things the client authorized - user data and guilds. this is all we need
     let options = { auth: false, headers: { authorization: `Bearer ${token.access_token}` } };
@@ -1588,7 +1679,8 @@ async function getDiscordInfo(req, userOnly, singleGuildLookup = false) {
 
     if (!userData || !guilds || userData.message || guilds.message || !userData.id) return [null, null] // if discord sends error
     let discordRes = [userData, guilds] // return this as an array, so we can do "let [userData, guilds]"
-    if (!singleGuildLookup) discordCache[cacheKey] = {data: discordRes, expires: Date.now() + 15000} // 15 second cache to prevent ratelimits uwu
+    // 5 min: tus servidores y permisos casi nunca cambian, y cada consulta a Discord tarda 300-700 ms
+    if (!singleGuildLookup) discordCache[cacheKey] = {data: discordRes, expires: Date.now() + 5 * 60 * 1000}
     return discordRes
 }
 
@@ -1654,6 +1746,6 @@ process.on('unhandledRejection', (e, p) => { console.warn(e) });
 
 // Solo en local: nginx es el único que debe poder hablar con el bot.
 // (Si el bot corre en Docker, quita "127.0.0.1" y cierra el puerto en el firewall.)
-app.listen(auth.serverPort, "127.0.0.1", () => console.log(`Web server online at http://127.0.0.1:${auth.serverPort} (${+process.uptime().toFixed(2)} secs)`));
+app.listen(auth.serverPort, "127.0.0.1", () => setTimeout(refreshHomeTop, 16000) && console.log(`Web server online at http://127.0.0.1:${auth.serverPort} (${+process.uptime().toFixed(2)} secs)`));
 
 }

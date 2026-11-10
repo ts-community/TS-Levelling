@@ -551,7 +551,7 @@ async run(client, int, tools) {
     await int.deferReply({
         flags: MessageFlags.IsComponentsV2 | (isHidden ? MessageFlags.Ephemeral : 0)
     })
-    let lbLink = `${tools.WEBSITE}/leaderboard/${int.guild.id}`
+    let lbLink = `${tools.WEBSITE}/clasificacion`
 
     let db = await tools.fetchAll()
     if (!db) return tools.warn(`¡Aún no hay nadie en la clasificación de este servidor!`)

@@ -535,7 +535,8 @@ code { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .9em; 
     white-space: nowrap;
 }
 .plsLogIn {
-    display: flex !important;
+    /* sin !important: si no, .hide() no las oculta y salían las cuatro a la vez */
+    display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -1888,3 +1889,140 @@ a.lbNavItem:hover, a.category:hover { color: var(--c-fg) !important; }
     #importBotSection #importfrom { width: 100%; }
     .dataPruneControls label { flex-basis: 100%; }
 }
+
+/* ---------- Tarjeta de inicio de sesión (visitantes) ---------- */
+.plsLogIn {
+    position: relative; overflow: hidden; gap: 0 !important;
+    width: min(100%, 520px) !important; margin: 40px auto !important; padding: 44px 32px 30px !important;
+    background: radial-gradient(90% 70% at 50% 0%, rgb(88 101 242 / .22), transparent 70%), linear-gradient(180deg, var(--c-surface-2), var(--c-surface)) !important;
+    border-radius: 24px !important; cursor: default !important;
+    box-shadow: 0 30px 80px rgb(0 0 0 / .4), inset 0 1px 0 rgb(255 255 255 / .06) !important;
+    animation: loginIn .5s cubic-bezier(.2,.7,.2,1) both;
+}
+.plsLogIn::before { content: ''; position: absolute; inset: 0 40px auto; height: 1px; background: linear-gradient(90deg, transparent, rgb(88 101 242 / .8), transparent); }
+.plsLogIn .loginPromptIcon { width: 64px; height: 64px; border-radius: 20px; margin-bottom: 22px; }
+.plsLogIn .loginPromptTitle { margin: 0 !important; font: 400 28px/1.15 var(--display) !important; letter-spacing: .01em; color: var(--c-fg); }
+.plsLogIn .loginPromptText { margin: 10px 0 24px !important; max-width: 360px; font: 400 15px/1.6 var(--lato) !important; color: var(--c-muted) !important; }
+.plsLogIn .loginPromptBtn {
+    display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 26px; border: 0; border-radius: 12px;
+    font: 600 15px var(--lato); color: #fff; cursor: pointer; background: #5865f2; box-shadow: 0 10px 30px -8px #5865f2;
+    transition: background .15s, transform .15s;
+}
+.plsLogIn .loginPromptBtn:hover { background: #4752c4; transform: translateY(-1px); }
+.plsLogIn .loginPromptBtn:active { transform: scale(.98); }
+.plsLogIn .loginPromptPerks { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin: 26px 0 0; padding: 20px 0 0; width: 100%; list-style: none; border-top: 1px solid var(--c-line); }
+.plsLogIn .loginPromptPerks li { display: flex; align-items: center; gap: 7px; font: 500 12.5px var(--lato); color: var(--c-muted); }
+.plsLogIn .loginPromptPerks li::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--c-accent); box-shadow: 0 0 8px var(--c-accent); }
+@keyframes loginIn { from { opacity: 0; transform: translateY(12px); } }
+@media (max-width: 480px) { .plsLogIn { padding: 36px 20px 24px !important; margin: 20px auto !important; } .plsLogIn .loginPromptTitle { font-size: 24px !important; } .plsLogIn .loginPromptBtn { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .plsLogIn { animation: none; } }
+
+/* ---------- Vista previa de "Tu Rango" para visitantes (datos de ejemplo) ---------- */
+.rankDemo { position: relative; width: min(100%, 620px); margin: 28px auto 0; box-sizing: border-box; }
+.rankDemo:not([style*="none"]) { display: block; }
+.rankDemoRibbon {
+    position: absolute; top: 14px; right: 14px; z-index: 3; padding: 7px 14px;
+    font: 700 11px var(--lato); letter-spacing: .14em; text-transform: uppercase; color: #1a1305;
+    background: repeating-linear-gradient(-45deg, #fbbf24 0 10px, #f59e0b 10px 20px);
+    border-radius: 8px; box-shadow: 0 8px 24px rgb(245 158 11 / .35);
+}
+.rankDemoNote {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding: 11px 14px;
+    font: 500 13px var(--lato); color: #fcd34d; background: rgb(251 191 36 / .08);
+    border: 1px dashed rgb(251 191 36 / .45); border-radius: 12px;
+}
+.rankDemoNote svg { width: 18px; height: 18px; flex: none; }
+.rankDemoCard {
+    position: relative; overflow: hidden; border-radius: 22px; background: var(--c-surface);
+    border: 1px dashed rgb(251 191 36 / .4); box-shadow: 0 30px 80px rgb(0 0 0 / .35);
+    user-select: none;
+}
+.rankDemoCard::after { /* marca de agua */
+    content: 'EJEMPLO'; position: absolute; right: -10px; bottom: 6px; pointer-events: none;
+    font: 400 92px/1 var(--display); letter-spacing: .04em; color: rgb(251 191 36 / .04); transform: rotate(-8deg); z-index: 0;
+}
+.rankDemoBanner { height: 96px; background: radial-gradient(80% 140% at 20% 0%, rgb(90 125 255 / .55), transparent 70%), linear-gradient(120deg, #1e2a5a, #12141c 80%); }
+.rankDemoHead { display: grid; grid-template-columns: auto 1fr auto; align-items: end; gap: 16px; padding: 0 24px; margin-top: -44px; }
+.rankDemoAvatar { position: relative; width: 88px; height: 88px; }
+.rankDemoAvatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 4px solid var(--c-surface); box-sizing: border-box; background: var(--c-surface-2); filter: grayscale(.3); }
+.rankDemoLvl { position: absolute; right: -2px; bottom: 2px; display: grid; place-items: center; min-width: 30px; height: 30px; padding: 0 6px; box-sizing: border-box; border-radius: 99px; font: 400 15px var(--display); color: var(--c-bg); background: var(--c-accent); border: 3px solid var(--c-surface); }
+.rankDemoWho { min-width: 0; padding-bottom: 6px; }
+.rankDemoName { display: flex; align-items: center; gap: 8px; margin: 0 !important; font: 700 19px var(--lato) !important; color: var(--c-fg); }
+.rankDemoTag { padding: 2px 7px; border-radius: 6px; font: 700 10px var(--lato); letter-spacing: .1em; color: #1a1305; background: #fbbf24; }
+.rankDemoUser { margin: 2px 0 0 !important; font-size: 13px !important; color: var(--c-muted) !important; }
+.rankDemoPos { padding-bottom: 6px; text-align: right; }
+.rankDemoPos span { display: block; font: 600 10px var(--lato); letter-spacing: .14em; text-transform: uppercase; color: var(--c-muted); }
+.rankDemoPos b { font: 400 30px/1.1 var(--display); color: var(--c-fg); }
+.rankDemoProgress { padding: 22px 24px 4px; }
+.rankDemoRow { display: flex; justify-content: space-between; gap: 12px; font: 500 13.5px var(--lato); color: var(--c-muted); }
+.rankDemoRow b { color: var(--c-fg); }
+.rankDemoRow.small { margin-top: 8px; font-size: 12px; }
+.rankDemoXp { color: var(--c-accent); font-variant-numeric: tabular-nums; }
+.rankDemoBar { height: 10px; margin-top: 10px; border-radius: 99px; background: var(--c-surface-2); overflow: hidden; }
+.rankDemoBar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--c-accent-strong), var(--c-accent)); box-shadow: 0 0 14px rgb(45 212 191 / .5); }
+.rankDemoStats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin: 20px 24px 0; overflow: hidden; border-radius: 14px; background: var(--c-line); border: 1px solid var(--c-line); }
+.rankDemoStats div { padding: 12px 14px; background: var(--c-bg); }
+.rankDemoStats span { display: block; font: 500 11.5px var(--lato); color: var(--c-muted); }
+.rankDemoStats b { display: block; margin-top: 4px; font: 700 16px var(--lato); color: var(--c-fg); font-variant-numeric: tabular-nums; }
+.rankDemoNext { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 18px 24px 22px; font: 400 13px var(--lato); color: var(--c-muted); }
+.rankDemoNext b { color: var(--c-fg); }
+.rankDemoRole { padding: 4px 10px; border-radius: 99px; font: 700 12px var(--lato); color: var(--rc); background: color-mix(in oklab, var(--rc) 15%, transparent); border: 1px solid color-mix(in oklab, var(--rc) 40%, transparent); }
+.rankDemo ~ .plsLogIn[box="rank"] { margin-top: 18px !important; }
+@media (max-width: 560px) {
+    .rankDemoHead { grid-template-columns: auto 1fr; padding: 0 16px; }
+    .rankDemoPos { grid-column: 1 / -1; text-align: left; display: flex; align-items: baseline; gap: 8px; padding: 0; }
+    .rankDemoAvatar { width: 72px; height: 72px; }
+    .rankDemoProgress, .rankDemoNext { padding-left: 16px; padding-right: 16px; }
+    .rankDemoStats { grid-template-columns: repeat(2, 1fr); margin: 18px 16px 0; }
+    .rankDemoRibbon { right: 10px; top: 10px; padding: 6px 10px; font-size: 10px; }
+    .rankDemoCard::after { font-size: 64px; }
+}
+
+/* Botón de login de la barra lateral (solo visitantes) */
+.lbSidebarUser #topbarLogin {
+    gap: 10px; min-height: 44px; margin: 4px 0 0; border: 0 !important; border-radius: 12px !important;
+    font: 600 14px var(--lato) !important; color: #fff !important; text-decoration: none;
+    background: #5865f2 !important; box-shadow: 0 8px 24px -8px #5865f2; transition: background .15s, transform .15s;
+}
+.lbSidebarUser #topbarLogin:hover { background: #4752c4 !important; transform: translateY(-1px); }
+.lbSidebarUser #topbarLogin svg { width: 20px; height: 20px; flex: none; }
+.lbSidebarUser #topbarLogin span { color: inherit !important; font: inherit !important; }
+
+/* ---------- Aviso de login discreto (bajo las vistas previas) ---------- */
+.plsLogIn.compact {
+    flex-direction: row !important; flex-wrap: wrap; justify-content: center; gap: 10px 14px !important;
+    width: min(100%, 620px) !important; margin: 16px auto 8px !important; padding: 14px 16px !important;
+    background: transparent !important; border: 1px solid var(--c-line) !important; border-radius: 14px !important;
+    box-shadow: none !important; text-align: left; animation: none;
+}
+.plsLogIn.compact::before, .plsLogIn.compact .loginPromptPerks { display: none; }
+.plsLogIn.compact .loginPromptIcon { display: none; }
+.plsLogIn.compact .loginPromptTitle { display: none; }
+.plsLogIn.compact .loginPromptText { flex: 1 1 260px; margin: 0 !important; max-width: none; font-size: 13.5px !important; }
+.plsLogIn.compact .loginPromptBtn { min-height: 36px; padding: 0 16px; font-size: 13px; border-radius: 10px; box-shadow: none; }
+@media (max-width: 480px) { .plsLogIn.compact { text-align: center; } .plsLogIn.compact .loginPromptBtn { width: 100%; } }
+
+/* Récords con datos de ejemplo */
+#recordsBox.isDemo .recordsCategory, #recordsBox.isDemo #recordStats { outline: 1px dashed rgb(251 191 36 / .28); outline-offset: 6px; border-radius: 16px; }
+#recordsBox.isDemo #recordStats { margin-bottom: 26px; }
+.demoNote { flex-wrap: wrap; }
+.demoPill { margin-left: auto; padding: 4px 10px; border-radius: 7px; font: 700 10.5px var(--lato); letter-spacing: .12em; text-transform: uppercase; color: #1a1305; background: repeating-linear-gradient(-45deg, #fbbf24 0 8px, #f59e0b 8px 16px); }
+
+/* Recompensas y niveles con datos de ejemplo */
+#roleList.isDemo, #progress.isDemo, #levelSummary.isDemo { outline: 1px dashed rgb(251 191 36 / .28); outline-offset: 8px; border-radius: 16px; }
+#levelSummary.isDemo { margin-top: 6px; }
+.demoNote.lbBox { width: 100%; box-sizing: border-box; margin: 0 0 18px; }
+
+/* Aviso de datos de ejemplo con su botón de login (sustituye a la barra de abajo) */
+.plsLogIn.compact { display: none !important; }
+.rankDemoNote { gap: 12px; padding: 10px 10px 10px 14px; }
+.rankDemoNote .demoNoteText { flex: 1 1 240px; line-height: 1.45; }
+.demoLoginBtn {
+    flex: none; margin-left: auto; min-height: 34px; padding: 0 16px; border: 0; border-radius: 9px; cursor: pointer;
+    font: 700 13px var(--lato); color: #1a1305; background: #fbbf24; box-shadow: 0 6px 18px -6px rgb(251 191 36 / .7);
+    transition: background .15s, transform .15s;
+}
+.demoLoginBtn:hover { background: #fcd34d; transform: translateY(-1px); }
+.demoLoginBtn:active { transform: scale(.97); }
+.demoLoginBtn:focus-visible { outline: 2px solid #fcd34d; outline-offset: 2px; }
+@media (max-width: 480px) { .rankDemoNote { flex-wrap: wrap; } .demoLoginBtn { width: 100%; margin-left: 0; } }
