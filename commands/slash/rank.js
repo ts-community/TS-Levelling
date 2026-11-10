@@ -273,7 +273,7 @@ module.exports = {
 
         // Sin rank/role (sin rewards o nivel sin rol): tarjeta sin banner ni rol.
         const hasRankCard = Boolean(rank && role)
-        const bannerAttachment = hasRankCard && !modern
+        const bannerAttachment = hasRankCard
             ? new AttachmentBuilder(path.join(__dirname, "../../assets/banners/", rank.banner.url), { name: rank.banner.url })
             : null
         const rankColors = { bronze: '#e08a45', silver: '#6f9cff', gold: '#f7c844', diamond: '#4fd0f5', mythic: '#d45cff', legendary: '#ff4a3d', masters: '#62d64a', pro: '#d9dde6' }
@@ -356,12 +356,15 @@ module.exports = {
                 .addTextDisplayComponents(new TextDisplayBuilder().setContent(nextLevelXP))
         }
 
-        container.addActionRowComponents(new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId(`rank_style~${int.user.id}~${member.id}~${modern ? 'old' : 'new'}`)
-                .setLabel(modern ? 'Iconos clásicos' : 'Iconos nuevos')
-                .setStyle(ButtonStyle.Secondary)
-        ))
+        container.addSeparatorComponents(new SeparatorBuilder())
+
+        const styleButton = new ButtonBuilder()
+            .setCustomId(`rank_style~${int.user.id}~${member.id}~${modern ? 'old' : 'new'}`)
+            .setLabel(modern ? 'Vista Legacy' : 'Vista Predeterminada')
+            .setStyle(ButtonStyle.Secondary)
+        const destinationEmoji = modern ? (role?.legacyEmoji || role?.emoji) : role?.emoji
+        if (destinationEmoji) styleButton.setEmoji(destinationEmoji)
+        container.addActionRowComponents(new ActionRowBuilder().addComponents(styleButton))
 
         const payload = {
             components: [container],

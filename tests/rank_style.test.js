@@ -35,15 +35,19 @@ for (const preference of [undefined, 'old', 'new']) {
         await rank.run({}, { user: { id: owner }, guild: { id: 'guild' }, deferred: update, deferReply: async () => {}, editReply: async p => { assert.equal(update, false); payload = p }, message: { edit: async p => { assert.equal(update, true); payload = p } } }, tools, { update })
         const json = JSON.stringify(payload.components.map(c => c.toJSON()))
         const modern = preference !== 'old'
-        assert.ok(json.includes(modern ? 'Iconos clásicos' : 'Iconos nuevos'))
+        assert.ok(json.includes(modern ? 'Vista Legacy' : 'Vista Predeterminada'))
         assert.ok(json.includes(`rank_style~${owner}~${target}~${modern ? 'old' : 'new'}`))
         assert.equal(json.includes('attachment://rank-icon.webp'), false)
         assert.ok(json.includes('https://example.com/avatar.png'))
         const role = require('../consts/ranks.js').find(r => r.rank === 'masters').roles[0]
         const emoji = modern ? role.emoji : role.legacyEmoji
         assert.ok(json.includes(`## ${emoji} <@&${role.id}>`))
-        assert.equal(payload.files.length, modern ? 0 : 1)
-        assert.equal(json.includes('attachment://masters.webp'), !modern)
+        const components = payload.components[0].toJSON().components
+        const button = components[components.length - 1].components[0]
+        const destinationEmoji = modern ? role.legacyEmoji : role.emoji
+        assert.equal(button.emoji.id, destinationEmoji.match(/:(\d+)>/)[1])
+        assert.equal(payload.files.length, 1)
+        assert.equal(json.includes('attachment://masters.webp'), true)
         assert.equal(payload.components[0].toJSON().accent_color, modern ? 0x62d64a : 0xf59e0b)
     })
 }
