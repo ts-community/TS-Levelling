@@ -2026,3 +2026,79 @@ a.lbNavItem:hover, a.category:hover { color: var(--c-fg) !important; }
 .demoLoginBtn:active { transform: scale(.97); }
 .demoLoginBtn:focus-visible { outline: 2px solid #fcd34d; outline-offset: 2px; }
 @media (max-width: 480px) { .rankDemoNote { flex-wrap: wrap; } .demoLoginBtn { width: 100%; margin-left: 0; } }
+
+/* Todos los Niveles: una sola columna, como una lista de progreso */
+#levelGrid { grid-template-columns: minmax(0, 1fr) !important; max-width: 720px; margin: 0 auto; }
+#levelGrid .levelSlot.highlightedSlot { grid-column: auto; }
+#levelGrid #earlierLevels { justify-self: center; margin: 4px 0; }
+#moreLevels { display: block; margin-left: auto !important; margin-right: auto !important; }
+#levelGrid { display: grid !important; justify-items: stretch !important; width: 100%; }
+#levelGrid .levelSlot { width: 100% !important; max-width: none !important; box-sizing: border-box; }
+#levelGrid #earlierLevels { width: auto !important; }
+
+/* ---------- Recompensas: escalera de rangos con divisiones 1 · 2 · 3 ---------- */
+#roleGrid.ladder { display: flex !important; flex-direction: column; gap: 12px !important; max-width: 860px; margin: 0 auto; }
+.tierRow {
+    position: relative; display: grid; grid-template-columns: 190px 1fr; align-items: center; gap: 24px;
+    padding: 18px 24px; border-radius: 18px; border: 1px solid var(--c-line);
+    background: linear-gradient(90deg, color-mix(in oklab, var(--tier) 12%, transparent), transparent 55%), var(--c-surface);
+    animation: tierIn .45s cubic-bezier(.2,.7,.2,1) calc(var(--i) * 45ms) both;
+}
+.tierRow.current { border-color: color-mix(in oklab, var(--tier) 55%, transparent); box-shadow: 0 0 0 1px color-mix(in oklab, var(--tier) 25%, transparent), 0 16px 40px -18px var(--tier); }
+.tierRow.locked { background: var(--c-surface); }
+.tierRow.locked .tierBadge h3 { color: var(--c-muted) !important; }
+.tierBadge { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.tierEmblem { width: 50px; height: 56px; flex: none; filter: drop-shadow(0 6px 14px color-mix(in oklab, var(--tier) 45%, transparent)); }
+.tierEmblem.locked { filter: grayscale(.85) brightness(.6); }
+.tierBadge h3 { margin: 0 !important; font: 400 24px/1 var(--display) !important; letter-spacing: .02em; color: var(--tier) !important; }
+.tierRowCount { display: inline-block; margin-top: 6px; font: 600 12px var(--lato); color: var(--c-muted); font-variant-numeric: tabular-nums; }
+.tierRow.complete .tierRowCount { color: var(--tier); }
+.tierTrack { position: relative; display: grid; grid-template-columns: repeat(var(--n), 1fr); margin: 0; padding: 0; list-style: none; }
+.tierTrack::before, .tierTrack::after { content: ''; position: absolute; top: 19px; left: calc(50% / var(--n)); right: calc(50% / var(--n)); height: 4px; border-radius: 4px; }
+.tierTrack::before { background: rgb(255 255 255 / .08); }
+.tierTrack::after { right: auto; width: calc((100% - 100% / var(--n)) * var(--fill)); background: var(--tier); box-shadow: 0 0 10px color-mix(in oklab, var(--tier) 60%, transparent); }
+.tierTrack:only-child, .tierTrack[style*="--n:1"]::before, .tierTrack[style*="--n:1"]::after { display: none; }
+.tierStep { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.tierNode {
+    display: grid; place-items: center; width: 42px; height: 42px; margin-bottom: 4px; border-radius: 50%; box-sizing: border-box;
+    font: 400 20px/1 var(--display); color: var(--c-muted); background: var(--c-bg); border: 2px solid rgb(255 255 255 / .12);
+    transition: transform .2s;
+}
+.tierStep.reached .tierNode { color: #111; background: var(--tier); border-color: color-mix(in oklab, var(--tier) 60%, white); box-shadow: 0 0 16px color-mix(in oklab, var(--tier) 55%, transparent); }
+.tierStep.next .tierNode { color: var(--tier); border-color: var(--tier); box-shadow: 0 0 0 4px color-mix(in oklab, var(--tier) 22%, transparent); transform: scale(1.08); }
+.tierStepLvl { font: 600 13px var(--lato); color: var(--c-fg); }
+.tierStep:not(.reached):not(.next) .tierStepLvl { color: var(--c-muted); }
+.tierStepInfo { font: 600 12px var(--lato); color: var(--c-muted); font-variant-numeric: tabular-nums; }
+.tierStep.reached .tierStepInfo { color: var(--tier); }
+.tierStep.next .tierStepInfo { color: var(--c-fg); }
+.tierStepXp { font: 500 11px var(--lato); color: var(--c-muted); font-variant-numeric: tabular-nums; }
+@keyframes tierIn { from { opacity: 0; transform: translateY(8px); } }
+@media (max-width: 640px) {
+    .tierRow { grid-template-columns: 1fr; gap: 16px; padding: 16px; }
+    .tierBadge h3 { font-size: 21px !important; }
+    .tierNode { width: 38px; height: 38px; font-size: 18px; }
+    .tierTrack::before, .tierTrack::after { top: 17px; }
+}
+@media (prefers-reduced-motion: reduce) { .tierRow { animation: none; } }
+
+/* Iconos de rango por división */
+.tierEmblemImg { width: 60px; height: 60px; flex: none; object-fit: contain; filter: drop-shadow(0 6px 14px color-mix(in oklab, var(--tier) 40%, transparent)); }
+.tierEmblemImg.locked { filter: grayscale(1) brightness(.55); }
+.tierIcon { width: 52px; height: 52px; object-fit: contain; margin-bottom: 2px; transition: transform .2s, filter .2s; filter: grayscale(1) brightness(.45); opacity: .85; }
+.tierStep.reached .tierIcon { filter: drop-shadow(0 4px 10px color-mix(in oklab, var(--tier) 45%, transparent)); opacity: 1; }
+.tierStep.next .tierIcon { filter: grayscale(.25) brightness(.95) drop-shadow(0 0 12px color-mix(in oklab, var(--tier) 70%, transparent)); opacity: 1; transform: scale(1.12); }
+.tierStep:hover .tierIcon { transform: scale(1.12); }
+.tierTrack:has(.tierIcon)::before, .tierTrack:has(.tierIcon)::after { top: 24px; }
+@media (max-width: 640px) { .tierIcon { width: 46px; height: 46px; } .tierTrack:has(.tierIcon)::before, .tierTrack:has(.tierIcon)::after { top: 21px; } .tierEmblemImg { width: 52px; height: 52px; } }
+
+/* Recompensas: tarjetas anchas y divisiones con aire (no se pisan los textos) */
+#roleList { width: 100% !important; max-width: 980px !important; margin-left: auto !important; margin-right: auto !important; box-sizing: border-box; }
+#roleGrid.ladder { max-width: none; width: 100%; }
+.tierRow { grid-template-columns: 210px minmax(0, 1fr); gap: 32px; padding: 20px 32px; }
+.tierTrack { grid-template-columns: repeat(var(--n), minmax(120px, 1fr)); column-gap: 12px; }
+.tierStepInfo, .tierStepLvl { white-space: nowrap; }
+@media (max-width: 640px) {
+    .tierRow { grid-template-columns: 1fr; gap: 16px; padding: 16px; }
+    .tierTrack { grid-template-columns: repeat(var(--n), minmax(0, 1fr)); column-gap: 6px; }
+    .tierStepInfo { font-size: 11px; white-space: normal; }
+}
