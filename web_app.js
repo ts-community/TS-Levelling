@@ -1411,6 +1411,10 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
     })
 })
 
+const rankStyleRoute = require('./routes/rank_style')(client, getDiscordInfo)
+app.get('/api/rankStyle', rankStyleRoute)
+app.post('/api/rankStyle', rankStyleRoute)
+
 app.post("/api/editXP", async function(req, res) {
     if (typeof req.body != "object") return res.apiError("Invalid  data!");
 

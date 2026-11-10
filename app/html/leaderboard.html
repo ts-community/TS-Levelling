@@ -272,10 +272,16 @@
         <div id="lbPageHeader">
             <div class="lbHeadText"><h1 id="serverName"></h1>
             <p id="serverMembers"></p></div>
+    <div class="rankIconOptions" role="group" aria-label="Iconos de rango">
+        <button type="button" data-rank-style="old" aria-pressed="false"><img src="/assets/ranks/classic/masters_I.webp" alt="" width="24" height="24"><span>Clásicos</span></button>
+        <button type="button" data-rank-style="new" aria-pressed="true"><img src="/assets/ranks/masters_I.webp" alt="" width="24" height="24"><span>Nuevos</span></button>
+    </div>
+
 
             <h2 style="color: #ff5555; margin: 0px 0px 15px 0px; text-align: center; display: none" id="notInServerWarning">¡No estás en este servidor!</h2>
             <button id="bigLoginBtn" onclick="loginButton()" style="display: none; background: linear-gradient(135deg, var(--polarisgreen), var(--emojiblue)); color: #0b1210; width: 350px; margin-bottom: 30px; margin-top: 10px; font-size: 20px; height: 50px; border-radius: 999px;">Inicia sesión para ver tus estadísticas</button>
         </div>
+
 
     <div id="statChips" box="leaderboard" class="lbBox"></div>
     <div id="lbPodium" box="leaderboard" class="lbBox" style="display: none"></div>
@@ -577,6 +583,83 @@
 <script type="text/javascript" src="/js/vendor/jquery-3.6.0.min.js"></script>
 
 <script>
+// Discord y la web comparten la preferencia; los visitantes la guardan en su navegador.
+let rankIconStyle = 'new'
+try { if (localStorage.getItem('ts_rank_icon_style') === 'old') rankIconStyle = 'old' } catch (_) {}
+const rankIconButtons = document.querySelectorAll('[data-rank-style]')
+function updateRankIconButtons() {
+    rankIconButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.rankStyle === rankIconStyle)))
+}
+updateRankIconButtons()
+function applyRankIconStyle() {
+    document.querySelectorAll('img[src*="/assets/ranks/"]').forEach(img => {
+        if (img.closest('.rankIconOptions')) return
+        const source = img.getAttribute('src')
+        const original = source.replace('/assets/ranks/classic/', '/assets/ranks/')
+        const selected = rankIconStyle === 'old'
+            ? original.replace('/assets/ranks/', '/assets/ranks/classic/') : original
+        if (source !== selected) img.setAttribute('src', selected)
+        const tier = original.match(/\/assets\/ranks\/([a-z]+)(?:_|\.)/)?.[1]
+        const palette = rankIconStyle === 'old'
+            ? { bronze: '#e08a45', silver: '#979c9f', gold: '#f1c40f', diamond: '#3498db', mythic: '#9b59b6', legendary: '#e74c3c', masters: '#f59e0b', pro: '#008f39' }
+            : { bronze: '#e08a45', silver: '#6f9cff', gold: '#f7c844', diamond: '#4fd0f5', mythic: '#d45cff', legendary: '#ff4a3d', masters: '#62d64a', pro: '#d9dde6' }
+        const color = palette[tier]
+        if (color) {
+            const owner = img.closest('.tierRow, .levelSlot, #accountInfo, #levelSummary')
+            if (owner) owner.style.setProperty(owner.classList.contains('tierRow') ? '--tier' : '--lv', color)
+            const summaryMain = img.closest('.lvSumMain')
+            if (summaryMain) summaryMain.style.setProperty('--lv', color)
+        }
+    })
+}
+let rankStyleLoggedIn = false
+let rankStyleSaving = false
+function setRankIconStyle(style) {
+    rankIconStyle = style === 'old' ? 'old' : 'new'
+    updateRankIconButtons()
+    applyRankIconStyle()
+}
+async function syncRankIconStyle() {
+    if (!rankStyleLoggedIn || rankStyleSaving) return
+    try {
+        const result = await Fetch(`/api/rankStyle?guildID=${guildID}`)
+        setRankIconStyle(result.style)
+    } catch (_) {}
+}
+rankIconButtons.forEach(button => button.addEventListener('click', async () => {
+    if (rankStyleSaving) return
+    const previous = rankIconStyle
+    setRankIconStyle(button.dataset.rankStyle)
+    if (!rankStyleLoggedIn) {
+        try { localStorage.setItem('ts_rank_icon_style', rankIconStyle) } catch (_) {}
+        return
+    }
+    rankStyleSaving = true
+    rankIconButtons.forEach(b => b.disabled = true)
+    try {
+        const response = await fetch('/api/rankStyle', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ guildID, style: rankIconStyle })
+        })
+        const result = await response.json()
+        if (!response.ok || result.apiError) throw new Error(result.message || 'No se ha podido guardar.')
+        setRankIconStyle(result.style)
+    } catch (error) {
+        setRankIconStyle(previous)
+        alert(error.message)
+    } finally {
+        rankStyleSaving = false
+        rankIconButtons.forEach(b => b.disabled = false)
+    }
+}))
+window.addEventListener('focus', syncRankIconStyle)
+document.addEventListener('visibilitychange', () => { if (!document.hidden) syncRankIconStyle() })
+new MutationObserver(applyRankIconStyle).observe(document.body, {
+    childList: true, subtree: true, attributes: true, attributeFilter: ['src']
+})
+applyRankIconStyle()
+
 const tabInfo = {
     leaderboard: { slug: "clasificacion", label: "Clasificación" },
     rank: { slug: "rango", label: "Tu Rango" },
@@ -863,6 +946,11 @@ Fetch(lbURL(1)).then(data => {
     $('#statPickerWrap').toggle(currentBox === "leaderboard")
 
     let loggedIn = !data.user.noLogin
+    rankStyleLoggedIn = loggedIn
+    if (loggedIn) {
+        setRankIconStyle('new')
+        syncRankIconStyle()
+    }
     document.body.classList.toggle('guestSession', !loggedIn)
     // El huevo secreto desaparece una vez reclamado
     if (loggedIn && data.user.records && Object.keys(data.user.records).some(k => k.startsWith('web_easter'))) $('#secretEasterTrigger').remove()
