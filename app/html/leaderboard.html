@@ -1232,7 +1232,7 @@ Fetch(lbURL(1)).then(data => {
     // divisiones 1 · 2 · 3 sobre una barra de progreso
     {
         const ROMAN = { I: 1, II: 2, III: 3, IV: 4, V: 5 }
-        const TIER_COLORS = { bronce: "#d08a4e", plata: "#c3cad1", oro: "#f5c542", diamante: "#4fc3f7", "mítico": "#b26bff", mitico: "#b26bff", legendario: "#ff5a5a", maestro: "#ffb020", pro: "#2dd4bf" }
+        const TIER_COLORS = { bronce: "#e08a45", plata: "#6f9cff", oro: "#f7c844", diamante: "#4fd0f5", "mítico": "#d45cff", mitico: "#d45cff", legendario: "#ff4a3d", maestro: "#62d64a", pro: "#d9dde6" }
         const esc3 = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))
         const hasUser = !!viewUser.id
         // Iconos de cada división (los mismos emojis que usa el bot en /rank)
@@ -1241,7 +1241,7 @@ Fetch(lbURL(1)).then(data => {
         const rankIcon = (tier, division) => {
             const f = TIER_FILES[tier.toLowerCase()]
             if (!f) return null
-            return f == "pro" ? "/assets/ranks/pro.webp" : `/assets/ranks/${f}_${ROMAN_TXT[division || 1]}.webp`
+            return f == "pro" ? "/assets/ranks/pro.webp?v=2" : `/assets/ranks/${f}_${ROMAN_TXT[division || 1]}.webp?v=2`
         }
         const tiers = []
         data.settings.rewards.slice().sort((a, b) => a.level - b.level).forEach(r => {
@@ -1311,7 +1311,7 @@ Fetch(lbURL(1)).then(data => {
     // lista completa con todos los niveles era kilométrica y nadie la usa)
     // Rango (icono + color) que corresponde a cada nivel: la última recompensa con nivel <= ese nivel
     const RANK_FILES = { bronce: "bronze", plata: "silver", oro: "gold", diamante: "diamond", "mítico": "mythic", mitico: "mythic", legendario: "legendary", maestro: "masters", pro: "pro" }
-    const RANK_COLORS = { bronce: "#e08a45", plata: "#aeb8f0", oro: "#f7c844", diamante: "#4fc8f5", "mítico": "#c46bff", mitico: "#c46bff", legendario: "#ff5a4f", maestro: "#e8a33a", pro: "#f2b94b" }
+    const RANK_COLORS = { bronce: "#e08a45", plata: "#6f9cff", oro: "#f7c844", diamante: "#4fd0f5", "mítico": "#d45cff", mitico: "#d45cff", legendario: "#ff4a3d", maestro: "#62d64a", pro: "#d9dde6" }
     const RANK_ROMAN = { I: "I", II: "II", III: "III" }
     const rankSteps = data.settings.rewards.slice().sort((a, b) => a.level - b.level).map(r => {
         const role = data.roles.find(x => x.id == r.id)
@@ -1320,7 +1320,7 @@ Fetch(lbURL(1)).then(data => {
         const tier = (m ? m[1] : base).toLowerCase()
         const file = RANK_FILES[tier]
         return { level: r.level, name: base, color: RANK_COLORS[tier] || (role && roleCol(role.color)) || "var(--c-accent)",
-                 icon: file ? (file == "pro" ? "/assets/ranks/pro.webp" : `/assets/ranks/${file}_${RANK_ROMAN[m && m[2]] || "I"}.webp`) : null }
+                 icon: file ? (file == "pro" ? "/assets/ranks/pro.webp?v=2" : `/assets/ranks/${file}_${RANK_ROMAN[m && m[2]] || "I"}.webp?v=2`) : null }
     })
     const rankForLevel = lvl => { let found = null; for (const st of rankSteps) { if (st.level <= lvl) found = st; else break } return found }
 
@@ -1379,6 +1379,7 @@ Fetch(lbURL(1)).then(data => {
                 <div class="lvSumBottom"><span>Te faltan <b>${commafy(left)} XP</b></span><span>Nivel máximo: ${commafy(data.settings.maxLevel)}</span></div>
             </div>`)
         $('#levelSummary').removeClass('empty'); if (currentBox == 'levels') $('#levelSummary').show()
+        if (rankForLevel(viewLevel.level)) { $('#levelSummary')[0].style.setProperty('--lv', rankForLevel(viewLevel.level).color); $('#levelSummary').addClass('hasRank') }
         shownLevels = Math.max(0, viewLevel.level - 1) // solo el último nivel conseguido; el resto tras "Ver niveles anteriores"
         if (shownLevels > 0) $('<button id="earlierLevels" box="levels" class="lbBox" type="button">Ver niveles anteriores (1 – ' + commafy(shownLevels) + ')</button>')
             .on('click', function() { let end = shownLevels; shownLevels = 0; $('#levelGrid').html(""); appendLevels(end); $(this).remove() })

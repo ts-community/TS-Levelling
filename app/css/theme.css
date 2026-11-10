@@ -2117,3 +2117,9 @@ a.lbNavItem:hover, a.category:hover { color: var(--c-fg) !important; }
 .lvSumMain[style*="--lv"] { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; column-gap: 12px; align-items: center; }
 .lvSumMain[style*="--lv"] .lvSumIcon { grid-row: 1 / 3; width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 6px 14px color-mix(in oklab, var(--lv) 50%, transparent)); }
 .lvSumMain[style*="--lv"] .lvSumLevel { color: var(--lv) !important; text-shadow: 0 0 24px color-mix(in oklab, var(--lv) 45%, transparent) !important; }
+
+/* Recuadro "Tu nivel" con el color del rango */
+#levelSummary.hasRank { border-color: color-mix(in oklab, var(--lv) 45%, transparent) !important; background: radial-gradient(70% 140% at 0% 50%, color-mix(in oklab, var(--lv) 16%, transparent), transparent 70%), var(--c-surface) !important; box-shadow: 0 16px 44px -22px var(--lv) !important; }
+#levelSummary.hasRank .progress { background: var(--lv) !important; box-shadow: 0 0 12px color-mix(in oklab, var(--lv) 55%, transparent) !important; }
+#levelSummary.hasRank .lvSumPct, #levelSummary.hasRank .lvSumLabel { color: var(--lv) !important; }
+#levelSummary.hasRank .lvSumMain { border-color: color-mix(in oklab, var(--lv) 25%, transparent) !important; }
