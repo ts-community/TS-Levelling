@@ -919,6 +919,19 @@ Fetch(lbURL(1)).then(data => {
         $('#serverMembers').html(`${commafy(dat.guild.members)} miembro${dat.guild.members == 1 ? "" : "s"} &nbsp;•&nbsp; ${rankedLabel}`)
     }
 
+    // Las mismas imágenes de división que se muestran en Recompensas.
+    function leaderboardRankForLevel(level) {
+        const files = { bronce: "bronze", plata: "silver", oro: "gold", diamante: "diamond", "mítico": "mythic", mitico: "mythic", legendario: "legendary", maestro: "masters", pro: "pro" }
+        const reward = data.settings.rewards.filter(r => r.level <= level).sort((a, b) => b.level - a.level)[0]
+        const role = reward && data.roles.find(r => r.id == reward.id)
+        if (!role) return null
+        const name = role.name.split(/[•|]/)[0].trim()
+        const match = name.match(/^(.*?)\s+(I{1,3})$/)
+        const file = files[(match ? match[1] : name).toLowerCase()]
+        if (!file) return null
+        return { name, icon: `/assets/ranks/${file}${file === "pro" ? "" : "_" + (match ? match[2] : "I")}.webp?v=4` }
+    }
+
     // leaderboard, function so that this supports multiple pages
     function appendLeaderboard(leaderboard) {
         // Las filas se montan fuera del documento y se insertan de una vez (un solo repintado)
@@ -935,13 +948,19 @@ Fetch(lbURL(1)).then(data => {
             if (x.id == data.user.id) userSlot.addClass('isSelf')
             userSlot.find("[lb=rank]").text("#" + commafy(x.rank)).css("font-size", x.rank > 999 ? "18px" : x.rank > 99 ? "20px" : "22px")
             userSlot.find("[lb=name]").text(x.nickname || x.displayName || "Usuario desconocido").attr("title", x.missing ? `No está en el servidor (ID ${x.id})` : `${x.displayName} (@${x.username})`)
-            userSlot.find("[lb=level]").text(`Nivel ${commafy(userXP.level)}`)
+            const levelBadge = userSlot.find("[lb=level]").text(`Nivel ${commafy(userXP.level)}`)
+            const rankBadge = leaderboardRankForLevel(userXP.level)
+            if (rankBadge) {
+                levelBadge.before(
+                    $('<img>', { src: rankBadge.icon, alt: rankBadge.name, title: rankBadge.name, width: 24, height: 24, class: 'lbRankIcon', loading: 'lazy', decoding: 'async' })
+                )
+            }
             userSlot.find("[lb=pfp]").attr("src", x.avatar || "/assets/avatar.png")
             userSlot.find("[lb=progress]").css("background-color", x.missing ? "rgba(118, 126, 137, 0.5)" : "").css("width", userXP.percentage + "%")
             if (statSort !== "xp") {
                 // vista por estadística: el valor de la stat ocupa la línea de
                 // XP y sobra todo lo que habla del nivel original
-                userSlot.find("[lb=level]").hide()
+                userSlot.find("[lb=level], .lbRankIcon").hide()
                 userSlot.find("[lb=multiplier]").hide()
                 userSlot.find(".progressBar").hide()
                 userSlot.find("[lb=percent]").hide()
@@ -986,7 +1005,7 @@ Fetch(lbURL(1)).then(data => {
                 if (!role) return null
                 const base = role.name.split(/[•|]/)[0].trim(), m = base.match(/^(.*?)\s+(I{1,3})$/)
                 const f = PFILES[(m ? m[1] : base).toLowerCase()]
-                return f ? { name: base, icon: `/assets/ranks/${f}.webp?v=4`, division: m ? ({ I: 1, II: 2, III: 3 })[m[2]] : null } : null
+                return f ? { name: base, icon: `/assets/ranks/${f}${f === "pro" ? "" : "_" + (m ? m[2] : "I")}.webp?v=4`, division: m ? ({ I: 1, II: 2, III: 3 })[m[2]] : null } : null
             }
             const crown = `<svg class="podCrown" viewBox="0 0 64 40" aria-hidden="true"><path d="M4 34 8 8l14 13L32 2l10 19L56 8l4 26z" fill="url(#podGold)" stroke="#7a4a00" stroke-width="2.5" stroke-linejoin="round"/><circle cx="8" cy="8" r="4" fill="#fde68a"/><circle cx="32" cy="3" r="4" fill="#fde68a"/><circle cx="56" cy="8" r="4" fill="#fde68a"/><defs><linearGradient id="podGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#f59e0b"/></linearGradient></defs></svg>`
             $('#lbPodium').html([top3[1], top3[0], top3[2]].map(x => {
@@ -998,7 +1017,7 @@ Fetch(lbURL(1)).then(data => {
                         ${x.rank == 1 ? crown : ""}
                         <div class="podAvatarWrap"><img class="podAvatar" src="${esc2(x.avatar || "/assets/avatar.png")}" alt="" decoding="async" onerror="this.onerror=null;this.src='/assets/avatar.png'"></div>
                         <p class="podName" title="${esc2(x.nickname || x.displayName || "Miembro")}">${esc2(x.nickname || x.displayName || "Miembro")}</p>
-                        <div class="podMeta">${rk ? `<span class="rankIco podRankWrap"><img class="podRankIcon" src="${rk.icon}" alt="" title="${esc2(rk.name)}">${rk.division ? `<b class="rankDiv">${rk.division}</b>` : ""}</span>` : ""}<span>Nivel ${commafy(lv.level)}</span></div>
+                        <div class="podMeta">${rk ? `<span class="rankIco podRankWrap"><img class="podRankIcon" src="${rk.icon}" alt="" title="${esc2(rk.name)}"></span>` : ""}<span>Nivel ${commafy(lv.level)}</span></div>
                         <p class="podValue">${esc2(val)}</p>
                         ${x.id == data.user.id ? `<span class="podYou">Tú</span>` : ""}
                     </div>
@@ -1350,7 +1369,7 @@ Fetch(lbURL(1)).then(data => {
         const file = RANK_FILES[tier]
         return { level: r.level, name: base, color: RANK_COLORS[tier] || (role && roleCol(role.color)) || "var(--c-accent)",
                  division: m ? ({ I: 1, II: 2, III: 3 })[m[2]] : null,
-                 icon: file ? `/assets/ranks/${file}.webp?v=4` : null }
+                 icon: file ? `/assets/ranks/${file}${file === "pro" ? "" : "_" + (m ? m[2] : "I")}.webp?v=4` : null }
     })
     const rankForLevel = lvl => { let found = null; for (const st of rankSteps) { if (st.level <= lvl) found = st; else break } return found }
 
@@ -1371,7 +1390,7 @@ Fetch(lbURL(1)).then(data => {
             if (rk) {
                 lvlSlot[0].style.setProperty('--lv', rk.color)
                 lvlSlot.addClass('hasRank')
-                if (rk.icon) lvlSlot.find('.levelHead').first().prepend(`<span class="rankIco levelRankWrap"><img class="levelRankIcon" src="${rk.icon}" alt="" title="${rk.name}" width="34" height="34" loading="lazy" decoding="async">${rk.division ? `<b class="rankDiv">${rk.division}</b>` : ""}</span>`)
+                if (rk.icon) lvlSlot.find('.levelHead').first().prepend(`<span class="rankIco levelRankWrap"><img class="levelRankIcon" src="${rk.icon}" alt="" title="${rk.name}" width="34" height="34" loading="lazy" decoding="async"></span>`)
             }
             lvlSlot.find("[lb=level]").text("Nivel " + commafy(i)).css("color", lvlColor)
             lvlSlot.find("[lb=xp]").text(commafy(lvlXP) + " XP").css("color", lvlColor)
@@ -1399,24 +1418,32 @@ Fetch(lbURL(1)).then(data => {
         let left = Math.max(0, nextXP - viewUser.xp)
         $('#levelSummary').html(`
             <div class="lvSumMain"${rankForLevel(viewLevel.level) ? ` style="--lv:${rankForLevel(viewLevel.level).color}"` : ""}>
-                ${rankForLevel(viewLevel.level)?.icon ? `<span class="rankIco lvSumIconWrap"><img class="lvSumIcon" src="${rankForLevel(viewLevel.level).icon}" alt="" title="${rankForLevel(viewLevel.level).name}" width="56" height="56">${rankForLevel(viewLevel.level).division ? `<b class="rankDiv">${rankForLevel(viewLevel.level).division}</b>` : ""}</span>` : ""}
+                ${rankForLevel(viewLevel.level)?.icon ? `<span class="rankIco lvSumIconWrap"><img class="lvSumIcon" src="${rankForLevel(viewLevel.level).icon}" alt="" title="${rankForLevel(viewLevel.level).name}" width="56" height="56"></span>` : ""}
                 <span class="lvSumLabel">Tu nivel</span>
                 <span class="lvSumLevel">${commafy(viewLevel.level)}</span>
             </div>
             <div class="lvSumProgress">
+                <p class="lvSumXp">${commafy(viewUser.xp)} / ${commafy(nextXP)} XP</p>
                 <div class="lvSumTop"><span>Siguiente: <b>Nivel ${commafy(viewLevel.level + 1)}</b></span><span class="lvSumPct">${+viewLevel.percentage.toFixed(2)}%</span></div>
                 <div class="progressBar"><div class="progress" style="width: ${viewLevel.percentage}%"></div></div>
                 <div class="lvSumBottom"><span>Te faltan <b>${commafy(left)} XP</b></span><span>Nivel máximo: ${commafy(data.settings.maxLevel)}</span></div>
             </div>`)
         $('#levelSummary').removeClass('empty'); if (currentBox == 'levels') $('#levelSummary').show()
         if (rankForLevel(viewLevel.level)) { $('#levelSummary')[0].style.setProperty('--lv', rankForLevel(viewLevel.level).color); $('#levelSummary').addClass('hasRank') }
-        shownLevels = Math.max(0, viewLevel.level - 1) // solo el último nivel conseguido; el resto tras "Ver niveles anteriores"
-        if (shownLevels > 0) $('<button id="earlierLevels" box="levels" class="lbBox" type="button">Ver niveles anteriores (1 – ' + commafy(shownLevels) + ')</button>')
-            .on('click', function() { let end = shownLevels; shownLevels = 0; $('#levelGrid').html(""); appendLevels(end); $(this).remove() })
+        shownLevels = viewLevel.level // El nivel actual ya aparece en el resumen.
+        if (shownLevels > 1) $('<button id="earlierLevels" box="levels" class="lbBox" type="button">Ver niveles anteriores (1 – ' + commafy(shownLevels - 1) + ')</button>')
+            .on('click', function() {
+                const end = shownLevels
+                const upcoming = $('#levelGrid .levelSlot').detach()
+                $(this).remove()
+                shownLevels = 0
+                appendLevels(Math.max(0, viewLevel.level - 1))
+                $('#levelGrid').append(upcoming)
+                shownLevels = end
+                updateMoreLevels()
+            })
             .toggle(currentBox == 'levels').prependTo('#levelGrid')
         appendLevels(15)
-        // El botón va justo debajo del último nivel conseguido (p. ej. tras el 278), no arriba del todo
-        $('#earlierLevels').insertAfter($('#levelGrid .levelSlot.reached').last())
     }
     else appendLevels(20)
 
@@ -1458,7 +1485,7 @@ Fetch(lbURL(1)).then(data => {
             if (rk) {
                 $('#accountInfo')[0].style.setProperty('--lv', rk.color)
                 $('#accountInfo').addClass('hasRank')
-                if (rk.icon) $('#accountInfo [lb=name]').before(`<span class="rankIco rkRankEmblem" title="${$('<i>').text(rk.name).html()}"><img src="${rk.icon}" alt="" width="44" height="44">${rk.division ? `<b class="rankDiv">${rk.division}</b>` : ""}</span>`)
+                if (rk.icon) $('#accountInfo [lb=name]').before(`<span class="rankIco rkRankEmblem" title="${$('<i>').text(rk.name).html()}"><img src="${rk.icon}" alt="" width="44" height="44"></span>`)
             }
         }
         $('#accountInfo [lb=level]').text(`Nivel ${commafy(userLevel.level)}`)

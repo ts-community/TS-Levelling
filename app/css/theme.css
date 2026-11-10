@@ -2302,3 +2302,44 @@ a.lbNavItem:hover, a.category:hover { color: var(--c-fg) !important; }
 }
 .rankIco, .rkRankEmblem { background: none !important; border: 0 !important; box-shadow: none !important; }
 .rkRankEmblem img { filter: none !important; }
+
+/* Insignia independiente de la etiqueta de nivel. */
+.leaderboardSlot .lbRankIcon {
+    width: 24px;
+    height: 24px;
+    flex: none;
+    object-fit: contain;
+    margin-right: 6px;
+    background: none;
+    border: 0;
+    box-shadow: none;
+}
+
+/* Niveles: filas uniformes y énfasis suave en el siguiente nivel. */
+#levelGrid .levelHead {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+}
+#levelGrid .levelHead:not(:has(.levelRankWrap)) { grid-template-columns: minmax(0, 1fr) auto; }
+#levelGrid .levelRankIcon,
+#levelGrid .highlightedSlot .levelRankIcon { width: 28px; height: 28px; filter: none; }
+#levelGrid .levelHead p[lb=level] { font-size: 15px; margin: 0; }
+#levelGrid .levelHead p[lb=xp] { font-size: 12px; margin: 0; text-align: right; }
+#levelGrid .levelSlot.hasRank.highlightedSlot {
+    padding: 14px 16px !important;
+    border-color: color-mix(in oklab, var(--lv) 45%, var(--c-line)) !important;
+    box-shadow: none !important;
+}
+#levelGrid .levelSlot.hasRank.highlightedSlot .progress,
+#levelSummary.hasRank .progress { box-shadow: none !important; }
+#levelGrid .levelSlot.hasRank.highlightedSlot::after { top: -9px; right: 14px; font-size: 9px; }
+#levelGrid .levelSlot:not(.reached):not(.highlightedSlot) { opacity: 1; }
+#levelGrid .levelSlot:not(.reached):not(.highlightedSlot) .levelRankIcon { filter: grayscale(.5); opacity: .65; }
+#levelGrid #earlierLevels { margin: 0 auto 8px !important; }
+#levelSummary.hasRank { box-shadow: none !important; }
+#levelSummary .lvSumMain .lvSumIcon { width: 40px; height: 40px; filter: none; }
+#levelSummary .lvSumMain .lvSumLevel { text-shadow: none !important; }
+
+#levelSummary .lvSumXp { margin: 0 0 10px; color: var(--c-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
