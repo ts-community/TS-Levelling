@@ -699,7 +699,13 @@ function buildStatPicker() {
     if (!$('#lbPageHeader #statChips').length) $('#statChips').appendTo('#lbPageHeader')
     {
         let cur = statView()
-        let groups = STAT_GROUPS.map(g => `<div class="sGroup"><p class="sGroupName">${g.name}</p>${g.keys.map(k => TOP_VIEWS.find(v => v.key == k)).filter(Boolean).map(v => `<button type="button" role="option" aria-selected="${v.key == statSort}" class="statMenuBtn sOpt ${v.key == statSort ? "activeStat" : ""}" data-sort="${v.key}">${statIcon(v.key, g.tone)}<span>${v.label}</span><svg class="sCheck" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`).join("")}</div>`).join("")
+        const SORT_HINTS = {
+            xp: "Desde siempre", monthly: "Solo este mes", daily: "Solo hoy",
+            messages: "Desde siempre", monthlyMessages: "Solo este mes", dailyMessages: "Solo hoy",
+            streak: "Días seguidos activo", reactionsSent: "Reacciones que das", reactionsReceived: "Reacciones que recibes",
+            coinsMax: "Récord de monedas", pokemonCaught: "Pokémon capturados", countingSent: "Números en #counting"
+        }
+        let groups = STAT_GROUPS.map(g => `<div class="sGroup" style="--tone:${g.tone}"><p class="sGroupName"><i></i>${g.name}</p>${g.keys.map(k => TOP_VIEWS.find(v => v.key == k)).filter(Boolean).map(v => `<button type="button" role="option" aria-selected="${v.key == statSort}" class="statMenuBtn sOpt ${v.key == statSort ? "activeStat" : ""}" data-sort="${v.key}">${statIcon(v.key, g.tone)}<span class="sOptTxt"><b>${v.label}</b><small>${SORT_HINTS[v.key] || ""}</small></span><svg class="sCheck" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`).join("")}</div>`).join("")
         $('#statChips').html(`<div class="sSelect">
             <button type="button" class="sTrigger" aria-haspopup="listbox" aria-expanded="false">${statIcon(cur.key, statTone(cur.key))}<span class="sTxt"><small>Ordenar por</small><b aria-live="polite">${cur.label}</b></span><svg class="sChev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             <div class="sMenu" role="listbox">${groups}</div>
@@ -969,17 +975,32 @@ Fetch(lbURL(1)).then(data => {
         let esc2 = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))
         if (top3.length == 3) {
             let medal = ["", "Oro", "Plata", "Bronce"]
+            // Emblema de rango por nivel (mismos iconos que Recompensas)
+            const PFILES = { bronce: "bronze", plata: "silver", oro: "gold", diamante: "diamond", "mítico": "mythic", mitico: "mythic", legendario: "legendary", maestro: "masters", pro: "pro" }
+            const podRank = lvl => {
+                let best = null
+                data.settings.rewards.forEach(r => { if (r.level <= lvl && (!best || r.level > best.level)) best = r })
+                const role = best && data.roles.find(x => x.id == best.id)
+                if (!role) return null
+                const base = role.name.split(/[•|]/)[0].trim(), m = base.match(/^(.*?)\s+(I{1,3})$/)
+                const f = PFILES[(m ? m[1] : base).toLowerCase()]
+                return f ? { name: base, icon: `/assets/ranks/${f}.webp?v=4`, division: m ? ({ I: 1, II: 2, III: 3 })[m[2]] : null } : null
+            }
+            const crown = `<svg class="podCrown" viewBox="0 0 64 40" aria-hidden="true"><path d="M4 34 8 8l14 13L32 2l10 19L56 8l4 26z" fill="url(#podGold)" stroke="#7a4a00" stroke-width="2.5" stroke-linejoin="round"/><circle cx="8" cy="8" r="4" fill="#fde68a"/><circle cx="32" cy="3" r="4" fill="#fde68a"/><circle cx="56" cy="8" r="4" fill="#fde68a"/><defs><linearGradient id="podGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#f59e0b"/></linearGradient></defs></svg>`
             $('#lbPodium').html([top3[1], top3[0], top3[2]].map(x => {
                 let lv = getLevel(x.xp, data.settings)
                 let val = statSort !== "xp" ? statDisplayText(statView(), x.statValue) : `${commafy(x.xp)} XP`
-                return `<div class="podiumCard p${x.rank}${x.id == data.user.id ? " isSelf" : ""}" >
-                    <div class="podiumMedal" title="${medal[x.rank]}">${x.rank}</div>
-                    <img class="podiumAvatar" src="${esc2(x.avatar || "/assets/avatar.png")}" alt="" decoding="async" onerror="this.src='/assets/avatar.png'">
-                    <p class="podiumName">${esc2(x.nickname || x.displayName || "Miembro")}</p>
-                    <span class="podiumLevel">Nivel ${commafy(lv.level)}</span>
-                    <p class="podiumValue">${esc2(val)}</p>
-                    ${statSort === "xp" ? `<div class="progressBar"><div class="progress" style="width: ${lv.percentage}%"></div></div>` : ""}
-                    <div class="podiumBase"></div>
+                let rk = podRank(lv.level)
+                return `<div class="pod pod${x.rank}${x.id == data.user.id ? " isSelf" : ""}">
+                    <div class="podPlayer">
+                        ${x.rank == 1 ? crown : ""}
+                        <div class="podAvatarWrap"><img class="podAvatar" src="${esc2(x.avatar || "/assets/avatar.png")}" alt="" decoding="async" onerror="this.onerror=null;this.src='/assets/avatar.png'"></div>
+                        <p class="podName" title="${esc2(x.nickname || x.displayName || "Miembro")}">${esc2(x.nickname || x.displayName || "Miembro")}</p>
+                        <div class="podMeta">${rk ? `<span class="rankIco podRankWrap"><img class="podRankIcon" src="${rk.icon}" alt="" title="${esc2(rk.name)}">${rk.division ? `<b class="rankDiv">${rk.division}</b>` : ""}</span>` : ""}<span>Nivel ${commafy(lv.level)}</span></div>
+                        <p class="podValue">${esc2(val)}</p>
+                        ${x.id == data.user.id ? `<span class="podYou">Tú</span>` : ""}
+                    </div>
+                    <div class="podStep"><span class="podNum">${x.rank}</span></div>
                 </div>`
             }).join("")).removeClass('empty')
             if (currentBox == 'leaderboard') $('#lbPodium').show()
@@ -1241,7 +1262,13 @@ Fetch(lbURL(1)).then(data => {
         const rankIcon = (tier, division) => {
             const f = TIER_FILES[tier.toLowerCase()]
             if (!f) return null
-            return f == "pro" ? "/assets/ranks/pro.webp?v=2" : `/assets/ranks/${f}_${ROMAN_TXT[division || 1]}.webp?v=2`
+            return `/assets/ranks/${f}.webp?v=4` // emblema sin número (junto al nombre del rango)
+        }
+        // Icono de cada división, con su I / II / III dibujado
+        const divisionIcon = (tier, division) => {
+            const f = TIER_FILES[tier.toLowerCase()]
+            if (!f) return null
+            return f == "pro" ? "/assets/ranks/pro.webp?v=4" : `/assets/ranks/${f}_${ROMAN_TXT[division || 1]}.webp?v=4`
         }
         const tiers = []
         data.settings.rewards.slice().sort((a, b) => a.level - b.level).forEach(r => {
@@ -1255,7 +1282,7 @@ Fetch(lbURL(1)).then(data => {
             const pct = hasUser ? Math.min(100, viewUser.xp / xp * 100) : 0
             let t = tiers.find(x => x.name == tierName)
             if (!t) tiers.push(t = { name: tierName, color: TIER_COLORS[tierName.toLowerCase()] || roleCol(role.color), steps: [] })
-            t.steps.push({ division, level: r.level, xp, pct, reached: pct >= 100, owned: hasUser && (viewUser.roles || []).includes(r.id), icon: rankIcon(tierName, division) })
+            t.steps.push({ division, level: r.level, xp, pct, reached: pct >= 100, owned: hasUser && (viewUser.roles || []).includes(r.id), icon: rankIcon(tierName, division), divIcon: divisionIcon(tierName, division) })
         })
         const nextStep = hasUser ? tiers.flatMap(t => t.steps).find(st => !st.reached) : null
         const shield = (color, label, locked) => `<svg class="tierEmblem${locked ? " locked" : ""}" viewBox="0 0 64 72" aria-hidden="true">
@@ -1283,7 +1310,7 @@ Fetch(lbURL(1)).then(data => {
                     : st.reached ? (st.owned ? "¡Obtenido!" : "¡Conseguido!")
                     : `${+st.pct.toFixed(1)}%`
                 return `<li class="tierStep${st.reached ? " reached" : ""}${isNext ? " next" : ""}">
-                    ${st.icon ? `<img class="tierIcon" src="${st.icon}" alt="${esc3(t.name)} ${st.division ?? ""}" width="56" height="56" loading="lazy" decoding="async">` : `<span class="tierNode">${st.division ?? i + 1}</span>`}
+                    ${st.divIcon ? `<img class="tierIcon" src="${st.divIcon}" alt="${esc3(t.name)} ${st.division ?? ""}" width="56" height="56" loading="lazy" decoding="async">` : `<span class="tierNode">${st.division ?? i + 1}</span>`}
                     <span class="tierStepLvl">Nivel ${commafy(st.level)}</span>
                     <span class="tierStepInfo">${status}</span>
                     ${isNext ? `<span class="tierStepXp">${commafy(viewUser.xp)} / ${commafy(st.xp)} XP</span>` : ""}
@@ -1320,7 +1347,8 @@ Fetch(lbURL(1)).then(data => {
         const tier = (m ? m[1] : base).toLowerCase()
         const file = RANK_FILES[tier]
         return { level: r.level, name: base, color: RANK_COLORS[tier] || (role && roleCol(role.color)) || "var(--c-accent)",
-                 icon: file ? (file == "pro" ? "/assets/ranks/pro.webp?v=2" : `/assets/ranks/${file}_${RANK_ROMAN[m && m[2]] || "I"}.webp?v=2`) : null }
+                 division: m ? ({ I: 1, II: 2, III: 3 })[m[2]] : null,
+                 icon: file ? `/assets/ranks/${file}.webp?v=4` : null }
     })
     const rankForLevel = lvl => { let found = null; for (const st of rankSteps) { if (st.level <= lvl) found = st; else break } return found }
 
@@ -1341,7 +1369,7 @@ Fetch(lbURL(1)).then(data => {
             if (rk) {
                 lvlSlot[0].style.setProperty('--lv', rk.color)
                 lvlSlot.addClass('hasRank')
-                if (rk.icon) lvlSlot.find('.levelHead').first().prepend(`<img class="levelRankIcon" src="${rk.icon}" alt="" title="${rk.name}" width="34" height="34" loading="lazy" decoding="async">`)
+                if (rk.icon) lvlSlot.find('.levelHead').first().prepend(`<span class="rankIco levelRankWrap"><img class="levelRankIcon" src="${rk.icon}" alt="" title="${rk.name}" width="34" height="34" loading="lazy" decoding="async">${rk.division ? `<b class="rankDiv">${rk.division}</b>` : ""}</span>`)
             }
             lvlSlot.find("[lb=level]").text("Nivel " + commafy(i)).css("color", lvlColor)
             lvlSlot.find("[lb=xp]").text(commafy(lvlXP) + " XP").css("color", lvlColor)
@@ -1369,7 +1397,7 @@ Fetch(lbURL(1)).then(data => {
         let left = Math.max(0, nextXP - viewUser.xp)
         $('#levelSummary').html(`
             <div class="lvSumMain"${rankForLevel(viewLevel.level) ? ` style="--lv:${rankForLevel(viewLevel.level).color}"` : ""}>
-                ${rankForLevel(viewLevel.level)?.icon ? `<img class="lvSumIcon" src="${rankForLevel(viewLevel.level).icon}" alt="" title="${rankForLevel(viewLevel.level).name}" width="56" height="56">` : ""}
+                ${rankForLevel(viewLevel.level)?.icon ? `<span class="rankIco lvSumIconWrap"><img class="lvSumIcon" src="${rankForLevel(viewLevel.level).icon}" alt="" title="${rankForLevel(viewLevel.level).name}" width="56" height="56">${rankForLevel(viewLevel.level).division ? `<b class="rankDiv">${rankForLevel(viewLevel.level).division}</b>` : ""}</span>` : ""}
                 <span class="lvSumLabel">Tu nivel</span>
                 <span class="lvSumLevel">${commafy(viewLevel.level)}</span>
             </div>
@@ -1414,9 +1442,23 @@ Fetch(lbURL(1)).then(data => {
 
         // account info
         $('#accountInfo [lb=pfp]').attr('src', data.user.avatar)
-        if (data.user.banner) $('#userBanner').removeClass('noBanner').css('background-image', `url(${data.user.banner})`)
+        if (data.user.banner) {
+            // Banner a más resolución y entero (contain); detrás, el mismo banner difuminado rellena los lados
+            const bannerURL = data.user.banner.replace(/\?size=\d+/, "?size=1024")
+            $('#userBanner').removeClass('noBanner').css('background-image', `url(${bannerURL})`)[0].style.setProperty('--bnr', `url(${bannerURL})`)
+        }
         else $('#userBanner').addClass('noBanner').css('background-image', '')
         $('#accountInfo [lb=name]').text(data.user.nickname || data.user.displayName)
+        // Color y emblema del rango del usuario
+        {
+            const rk = rankForLevel(userLevel.level)
+            $('#accountInfo .rkRankEmblem').remove()
+            if (rk) {
+                $('#accountInfo')[0].style.setProperty('--lv', rk.color)
+                $('#accountInfo').addClass('hasRank')
+                if (rk.icon) $('#accountInfo [lb=name]').before(`<span class="rankIco rkRankEmblem" title="${$('<i>').text(rk.name).html()}"><img src="${rk.icon}" alt="" width="44" height="44">${rk.division ? `<b class="rankDiv">${rk.division}</b>` : ""}</span>`)
+            }
+        }
         $('#accountInfo [lb=level]').text(`Nivel ${commafy(userLevel.level)}`)
         $('#accountInfo [lb=progress]').css('width', userLevel.percentage + "%")
         $('#accountInfo [lb=xp]').html(`<b>${commafy(data.user.xp)}</b> / ${commafy(userLevel.xpRequired)} XP`)

@@ -251,8 +251,8 @@ app.get("/easteregg", async function(req, res) {
     // Textos cortos: el título lleva el nombre del reto y el párrafo no lo
     // repite. Tras reclamar, dos CTA: rango (primario) y records (secundario).
     const rewardDetail = (note) => `<div class="detail"><span>Recompensa</span><strong><img src="/assets/icons/xp.png" alt="XP">${escapeHtml(xpStr)}</strong><small>${note}</small></div>`
-    const serverButtons = id => `<a class="btn-primary" href="/rank/${encodeURIComponent(id)}">Ver mi rango</a>`
-        + `<a class="secondary" href="/records/${encodeURIComponent(id)}">Ver mis records</a>`
+    const serverButtons = id => `<a class="btn-primary" href="/rango">Ver mi rango</a>`
+        + `<a class="secondary" href="/records">Ver mis records</a>`
 
     if (!user) {
         // Sin sesión: celebra el hallazgo, pero el CTA es iniciar sesión.
@@ -312,7 +312,7 @@ app.get("/easteregg", async function(req, res) {
     return res.send(renderCelebrationPage({
         title: eggNameRaw,
         message: `Ya has <strong>reclamado</strong> este secreto en ${name}: la recompensa no se repite, pero puedes volver a celebrarlo cuando quieras.`,
-        badge: "check",
+        badge: "egg",
         kicker: "Ya lo tienes",
         status: "claimed",
         celebration: "soft",
@@ -417,8 +417,8 @@ async function handleDropClaim(req, res) {
     const loginNext = `/drop/${encodeURIComponent(guildId)}/${encodeURIComponent(code)}`
 
     // CTA fija: rango primero (donde se ve el resultado) y records después.
-    const serverButtons = `<a class="btn-primary" href="/rank/${encodeURIComponent(guildId)}">Ver mi rango</a>`
-        + `<a class="secondary" href="/records/${encodeURIComponent(guildId)}">Ver mis records</a>`
+    const serverButtons = `<a class="btn-primary" href="/rango">Ver mi rango</a>`
+        + `<a class="secondary" href="/records">Ver mis records</a>`
     const homeButton = `<a class="secondary" href="/">Volver al inicio</a>`
 
     if (!validPath || !drop) {

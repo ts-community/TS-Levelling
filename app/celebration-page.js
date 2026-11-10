@@ -577,6 +577,37 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                     .badge svg { width: 2.1rem; height: 2.1rem; }
                     .card { padding-top: 1.1rem; }
                 }
+
+                /* ── Pulido: misma identidad que niveles.tscomunity.es ── */
+                @font-face { font-family: 'Inter'; font-weight: 100 900; font-display: swap; src: url(/assets/fonts/inter-latin-wght-normal.woff2) format('woff2'); }
+                @font-face { font-family: 'Lilita One'; font-weight: 400; font-display: swap; src: url(/assets/fonts/lilita-one-latin-400-normal.woff2) format('woff2'); }
+                body { font-family: 'Inter', system-ui, sans-serif !important; justify-content: center !important; }
+                .brandBar { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; margin: 0 0 22px; color: var(--text); text-decoration: none; opacity: .92; transition: opacity .2s; }
+                .brandBar:hover { opacity: 1; }
+                .brandBar img { width: 38px; height: 38px; border-radius: 11px; box-shadow: 0 0 0 1px rgb(255 255 255 / .14), 0 8px 24px -8px var(--a); }
+                .brandBar b { font: 400 19px/1 'Lilita One', sans-serif; letter-spacing: .02em; }
+                .brandBar small { display: block; margin-top: 3px; font: 600 10.5px 'Inter', sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--a); }
+                .card { transform: none !important; width: min(100%, 560px) !important; border-radius: 28px !important;
+                    background: linear-gradient(180deg, rgb(255 255 255 / .06), rgb(255 255 255 / .02)), rgb(12 14 22 / .82) !important;
+                    border: 1px solid rgb(255 255 255 / .1) !important; backdrop-filter: blur(18px) saturate(1.2);
+                    box-shadow: 0 40px 100px -30px rgb(0 0 0 / .8), 0 0 0 1px rgb(255 255 255 / .03) inset, 0 0 80px -40px var(--a) !important; }
+                .card::before { left: 40px !important; right: 40px !important; height: 2px !important; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--a), var(--b), transparent) !important; }
+                .cardGrid { opacity: .35 !important; }
+                .content { padding: 38px clamp(22px, 5vw, 44px) 34px !important; }
+                .badge { width: 104px !important; height: 104px !important; box-shadow: 0 0 0 6px rgb(255 255 255 / .04), 0 0 60px -6px var(--a), inset 0 2px 0 rgb(255 255 255 / .25) !important; }
+                h1 { font: 400 clamp(34px, 6vw, 46px)/1.05 'Lilita One', sans-serif !important; letter-spacing: .01em !important; margin: 20px 0 12px !important;
+                    color: #fff !important; -webkit-text-fill-color: #fff !important; background: none !important; text-shadow: 0 0 40px color-mix(in oklab, var(--a) 55%, transparent), 0 2px 0 rgb(0 0 0 / .25) !important; opacity: 1 !important; }
+                .content > p { font-size: 15.5px !important; line-height: 1.65 !important; max-width: 440px; margin-left: auto !important; margin-right: auto !important; color: rgb(255 255 255 / .72) !important; }
+                .details { margin-top: 22px !important; text-align: left; border-radius: 18px !important; padding: 16px 18px !important;
+                    background: linear-gradient(135deg, color-mix(in oklab, var(--a) 12%, transparent), rgb(255 255 255 / .02)) !important; border: 1px solid color-mix(in oklab, var(--a) 28%, transparent) !important; }
+                .actions { gap: 10px !important; margin-top: 24px !important; }
+                .actions a { flex: 1 1 180px; display: inline-flex !important; align-items: center; justify-content: center; min-height: 48px; border-radius: 14px !important; font: 700 14.5px 'Inter', sans-serif !important; transform: none !important; transition: transform .15s, box-shadow .15s, background .15s !important; }
+                .actions a:hover { transform: translateY(-2px) !important; }
+                .actions .btn-primary { box-shadow: 0 12px 30px -10px var(--a) !important; }
+                .actions .secondary { background: rgb(255 255 255 / .05) !important; border: 1px solid rgb(255 255 255 / .16) !important; color: #fff !important; }
+                .actions .secondary:hover { background: rgb(255 255 255 / .09) !important; }
+                .footNote { position: relative; z-index: 2; margin-top: 18px; font: 500 12px 'Inter', sans-serif; color: rgb(255 255 255 / .45); }
+                .footNote a { color: rgb(255 255 255 / .7); }
             </style>
         </head>
         <body class="status-${escapeHtml(statusKey)}">
@@ -586,6 +617,7 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                 <div class="glow three"></div>
             </div>
 
+            <a class="brandBar" href="/"><img src="/assets/server-icon-128.webp" alt=""><span><b>TS Community Brawl</b><small>Sistema de niveles</small></span></a>
             <main class="card">
                 <div class="cardGrid"></div>
                 <div class="cardSpot"></div>
@@ -598,6 +630,7 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                     ${actionsHtml ? `<div class="actions">${actionsHtml}</div>` : ""}
                 </div>
             </main>
+            <p class="footNote"><a href="/clasificacion">Ver la clasificación</a> · <a href="https://tscomunity.es">Web principal</a></p>
 
             <script>
                 // Tilt + rejilla: solo mientras el cursor está sobre la tarjeta.

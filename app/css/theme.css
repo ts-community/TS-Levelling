@@ -2123,3 +2123,182 @@ a.lbNavItem:hover, a.category:hover { color: var(--c-fg) !important; }
 #levelSummary.hasRank .progress { background: var(--lv) !important; box-shadow: 0 0 12px color-mix(in oklab, var(--lv) 55%, transparent) !important; }
 #levelSummary.hasRank .lvSumPct, #levelSummary.hasRank .lvSumLabel { color: var(--lv) !important; }
 #levelSummary.hasRank .lvSumMain { border-color: color-mix(in oklab, var(--lv) 25%, transparent) !important; }
+
+/* ---------- Podio de la clasificación ---------- */
+#lbPodium:not(.empty):not([style*="none"]) {
+    display: grid !important; grid-template-columns: 1fr 1.15fr 1fr; align-items: end; gap: 14px;
+    max-width: 860px; margin: 8px auto 28px !important; padding: 0 !important;
+}
+.pod { --medal: #cbd5e1; --medal2: #64748b; display: flex; flex-direction: column; align-items: stretch; min-width: 0; animation: podIn .6s cubic-bezier(.2,.7,.2,1) both; }
+.pod1 { --medal: #fcd34d; --medal2: #d97706; animation-delay: .12s; }
+.pod2 { --medal: #e2e8f0; --medal2: #94a3b8; animation-delay: .05s; }
+.pod3 { --medal: #f0a46a; --medal2: #b45309; animation-delay: .18s; }
+.podPlayer { position: relative; display: flex; flex-direction: column; align-items: center; padding: 0 8px 16px; text-align: center; }
+.podCrown { width: 46px; height: 30px; margin-bottom: -6px; position: relative; z-index: 2; filter: drop-shadow(0 4px 10px rgb(245 158 11 / .55)); animation: podCrown 3.2s ease-in-out infinite; }
+.podAvatarWrap { position: relative; padding: 4px; border-radius: 50%; background: conic-gradient(from 210deg, var(--medal), var(--medal2), var(--medal)); box-shadow: 0 0 0 4px rgb(10 11 16), 0 14px 34px -10px var(--medal); }
+.podAvatar { display: block; width: 88px; height: 88px; border-radius: 50%; object-fit: cover; background: var(--c-surface-2); border: 3px solid rgb(10 11 16); }
+.pod1 .podAvatar { width: 112px; height: 112px; }
+.podName { max-width: 100%; margin: 14px 0 6px !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 16px var(--lato) !important; color: var(--c-fg) !important; }
+.pod1 .podName { font-size: 19px !important; }
+.podMeta { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 99px; background: rgb(255 255 255 / .05); border: 1px solid var(--c-line); font: 600 12px var(--lato); color: var(--c-muted); }
+.podRankIcon { width: 24px; height: 24px; object-fit: contain; }
+.podValue { margin: 10px 0 0 !important; font: 700 15px var(--lato) !important; color: var(--medal) !important; font-variant-numeric: tabular-nums; }
+.pod1 .podValue { font-size: 17px !important; }
+.podYou { position: absolute; top: 4px; right: 12px; padding: 2px 8px; border-radius: 99px; font: 700 10px var(--lato); letter-spacing: .08em; text-transform: uppercase; color: var(--c-bg); background: var(--c-accent); }
+.podStep {
+    position: relative; display: grid; place-items: center; overflow: hidden; border-radius: 16px 16px 6px 6px;
+    background: linear-gradient(180deg, color-mix(in oklab, var(--medal) 30%, var(--c-surface)) 0%, var(--c-surface) 75%);
+    border: 1px solid color-mix(in oklab, var(--medal) 40%, transparent); border-bottom: 0;
+    box-shadow: inset 0 1px 0 color-mix(in oklab, var(--medal) 60%, transparent), 0 -10px 40px -24px var(--medal);
+}
+.podStep::before { content: ''; position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, transparent, var(--medal), transparent); }
+.pod1 .podStep { height: 130px; } .pod2 .podStep { height: 92px; } .pod3 .podStep { height: 66px; }
+.podNum { font: 400 64px/1 var(--display); color: transparent; background: linear-gradient(180deg, var(--medal), var(--medal2)); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 4px 12px color-mix(in oklab, var(--medal) 35%, transparent)); }
+.pod2 .podNum { font-size: 50px; } .pod3 .podNum { font-size: 40px; }
+.pod.isSelf .podStep { border-color: var(--c-accent); }
+.pod:hover .podAvatarWrap { transform: translateY(-3px); }
+.podAvatarWrap { transition: transform .25s cubic-bezier(.2,.7,.2,1); }
+@keyframes podIn { from { opacity: 0; transform: translateY(18px); } }
+@keyframes podCrown { 50% { transform: translateY(-3px) rotate(-3deg); } }
+@media (max-width: 640px) {
+    #lbPodium:not(.empty):not([style*="none"]) { gap: 6px; grid-template-columns: 1fr 1.12fr 1fr; }
+    .podAvatar { width: 58px; height: 58px; border-width: 2px; } .pod1 .podAvatar { width: 72px; height: 72px; }
+    .podName { font-size: 13px !important; margin-top: 10px !important; } .pod1 .podName { font-size: 14px !important; }
+    .podMeta { padding: 2px 7px 2px 3px; font-size: 10.5px; gap: 3px; } .podRankIcon { width: 18px; height: 18px; }
+    .podValue { font-size: 11.5px !important; } .pod1 .podValue { font-size: 12.5px !important; }
+    .pod1 .podStep { height: 92px; } .pod2 .podStep { height: 66px; } .pod3 .podStep { height: 48px; }
+    .podNum { font-size: 42px; } .pod2 .podNum { font-size: 34px; } .pod3 .podNum { font-size: 28px; }
+    .podCrown { width: 34px; height: 22px; }
+}
+@media (prefers-reduced-motion: reduce) { .pod, .podCrown { animation: none; } }
+
+/* ---------- Selector "Ordenar por" ---------- */
+.sMenu { padding: 12px !important; gap: 10px !important; border-radius: 20px !important; background: rgb(16 18 26 / .97) !important; border: 1px solid var(--c-line-strong) !important; box-shadow: 0 30px 70px rgb(0 0 0 / .55), 0 0 0 1px rgb(255 255 255 / .03) inset !important; backdrop-filter: blur(16px); }
+.sGroup {
+    gap: 2px !important; padding: 10px 8px 8px; border-radius: 14px;
+    background: linear-gradient(180deg, color-mix(in oklab, var(--tone) 9%, transparent), transparent 70%);
+    border: 1px solid color-mix(in oklab, var(--tone) 16%, transparent);
+}
+.sGroupName { display: flex; align-items: center; gap: 8px; margin: 0 6px 8px !important; color: color-mix(in oklab, var(--tone) 75%, white) !important; }
+.sGroupName i { width: 6px; height: 6px; border-radius: 50%; background: var(--tone); box-shadow: 0 0 8px var(--tone); }
+.sOpt { gap: 12px !important; padding: 8px 10px !important; border-radius: 12px !important; border: 1px solid transparent !important; transition: background .15s, border-color .15s, transform .15s !important; }
+.sOpt:hover { background: color-mix(in oklab, var(--tone) 10%, transparent) !important; transform: translateX(2px); }
+.sOpt .sIco { width: 36px !important; height: 36px !important; border-radius: 11px !important; flex: none; transition: transform .2s; }
+.sOpt:hover .sIco { transform: scale(1.08) rotate(-4deg); }
+.sOptTxt { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; text-align: left; }
+.sOptTxt b { font: 600 14px var(--lato); color: var(--c-fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sOptTxt small { font: 500 11.5px var(--lato); color: var(--c-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sOpt.activeStat { background: color-mix(in oklab, var(--tone) 16%, transparent) !important; border-color: color-mix(in oklab, var(--tone) 45%, transparent) !important; box-shadow: 0 8px 22px -12px var(--tone); }
+.sOpt.activeStat .sOptTxt b, .sOpt.activeStat .sCheck { color: color-mix(in oklab, var(--tone) 80%, white) !important; }
+.sOpt.activeStat .sIco { box-shadow: inset 0 0 0 1px var(--tone), 0 0 14px -2px var(--tone) !important; }
+
+/* Emblema de rango sin número + número de división en una chapita */
+.rankIco { position: relative; display: inline-grid; place-items: center; flex: none; order: -1; }
+.rankDiv {
+    position: absolute; right: -4px; bottom: -3px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box;
+    border-radius: 99px; font: 400 12px/1 var(--display); color: #111; background: var(--tier, var(--lv, #e5e7eb));
+    border: 2px solid rgb(10 11 16); box-shadow: 0 2px 6px rgb(0 0 0 / .5);
+}
+.tierIconWrap { margin-bottom: 2px; }
+.tierIconWrap .rankDiv { min-width: 22px; height: 22px; font-size: 14px; right: -6px; bottom: -2px; }
+.tierStep:not(.reached):not(.next) .rankDiv { background: #3a3f4d; color: var(--c-muted); }
+.levelSlot:not(.reached):not(.highlightedSlot) .rankDiv { background: #3a3f4d; color: var(--c-muted); }
+.lvSumIconWrap { grid-row: 1 / 3; }
+.lvSumIconWrap .rankDiv { min-width: 22px; height: 22px; font-size: 14px; }
+.podRankWrap .rankDiv { min-width: 14px; height: 14px; font-size: 9px; border-width: 1.5px; right: -3px; bottom: -2px; padding: 0 3px; background: var(--medal); }
+
+/* ---------- Tu Rango: banner entero + color del rango ---------- */
+#accountInfo .discordBanner {
+    position: relative; height: auto !important; aspect-ratio: 5 / 2 !important; max-height: 340px !important;
+    background-size: contain !important; background-repeat: no-repeat !important; background-position: center !important;
+    background-color: var(--c-surface-2); overflow: hidden; isolation: isolate;
+}
+#accountInfo .discordBanner:not(.noBanner)::before {
+    content: ''; position: absolute; inset: -30px; z-index: -1;
+    background: var(--bnr) center / cover no-repeat; filter: blur(28px) brightness(.55) saturate(1.2);
+}
+#accountInfo .discordBanner.noBanner { aspect-ratio: auto !important; height: 130px !important; }
+#accountInfo.hasRank .discordBanner.noBanner { background-image: radial-gradient(80% 140% at 20% 0%, color-mix(in oklab, var(--lv) 55%, transparent), transparent 70%), linear-gradient(120deg, color-mix(in oklab, var(--lv) 25%, #10131a), #10131a 80%) !important; }
+#accountInfo.hasRank .discordCard { border-color: color-mix(in oklab, var(--lv) 35%, transparent) !important; box-shadow: 0 24px 60px -30px var(--lv) !important; }
+#accountInfo.hasRank .discordAvatar { border-color: var(--c-surface) !important; box-shadow: 0 0 0 3px var(--lv), 0 12px 30px -8px var(--lv) !important; }
+#accountInfo .rkTop .generalInfo, #accountInfo .rkTop { align-items: center; }
+#accountInfo .rkTop { display: flex; flex-wrap: wrap; gap: 10px 14px; }
+#accountInfo .rkTop > .rkRankEmblem { order: 0; }
+.rkRankEmblem img { width: 44px; height: 44px; object-fit: contain; filter: drop-shadow(0 4px 10px color-mix(in oklab, var(--lv) 50%, transparent)); }
+.rkRankEmblem .rankDiv { background: var(--lv); }
+#accountInfo .rkTop .discordName { flex: 1 1 auto; min-width: 0; }
+#accountInfo.hasRank .rkLevel { color: var(--lv) !important; border-color: color-mix(in oklab, var(--lv) 45%, transparent) !important; background: color-mix(in oklab, var(--lv) 12%, transparent) !important; }
+#accountInfo.hasRank .rkProgress .progress { background: var(--lv) !important; box-shadow: 0 0 12px color-mix(in oklab, var(--lv) 55%, transparent) !important; }
+#accountInfo.hasRank .rkPercent { color: var(--lv) !important; }
+#accountInfo.hasRank .rkProgress { border-color: color-mix(in oklab, var(--lv) 22%, transparent) !important; }
+@media (max-width: 700px) { #accountInfo .discordBanner { max-height: none !important; } .rkRankEmblem img { width: 36px; height: 36px; } }
+/* La imagen nítida va en ::after (encima del fondo difuminado de ::before) */
+#accountInfo .discordBanner:not(.noBanner) { background-image: none !important; }
+#accountInfo .discordBanner:not(.noBanner)::after {
+    content: ''; position: absolute; inset: 0; height: auto; z-index: 0;
+    background: linear-gradient(to top, rgb(18 20 28 / .7), transparent 35%), var(--bnr) center / contain no-repeat;
+}
+#accountInfo .rkRankEmblem img { background: none !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; padding: 0 !important; }
+
+/* Tu Rango compacto: todo cabe en una pantalla sin hacer scroll */
+#accountInfo .discordBanner { aspect-ratio: auto !important; height: clamp(120px, 24vh, 210px) !important; max-height: none !important; }
+#accountInfo .discordBanner.noBanner { height: 110px !important; }
+#accountInfo .discordAvatar { width: 96px !important; height: 96px !important; margin: -52px 0 12px 22px !important; }
+#accountInfo .discordHeader { padding: 10px 22px 14px 18px !important; }
+#accountInfo .discordName { font-size: 26px !important; }
+#accountInfo .rkTop { margin-bottom: 8px; }
+#accountInfo .rkProgress { padding: 10px 14px !important; }
+#accountInfo .discordCard { margin-bottom: 12px !important; }
+#accountInfo .statBox, #accountInfo [class*="statCard"], #accountInfo .rsCard { padding-top: 10px !important; padding-bottom: 10px !important; }
+#accountInfo .statBox p, #accountInfo .statBox span { line-height: 1.3 !important; }
+@media (min-width: 1300px) { #accountInfo .statGrid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 10px !important; } }
+
+/* ---------- Tu Rango: 4 tarjetas de estadísticas ---------- */
+#accountInfo .statBox { --c: var(--c-accent); position: relative; overflow: hidden; padding: 16px 16px 10px !important; border-radius: 18px !important;
+    background: radial-gradient(120% 80% at 100% 0%, color-mix(in oklab, var(--c) 16%, transparent), transparent 60%), var(--c-surface) !important;
+    border: 1px solid color-mix(in oklab, var(--c) 22%, var(--c-line)) !important; transition: transform .2s, border-color .2s, box-shadow .2s; }
+#accountInfo .statBox:hover { transform: translateY(-3px); border-color: color-mix(in oklab, var(--c) 50%, transparent) !important; box-shadow: 0 18px 40px -22px var(--c); }
+#accountInfo .statBox[stat="level"] { --c: #2dd4bf; }
+#accountInfo .statBox:nth-child(2) { --c: #f5c542; }
+#accountInfo .statBox:nth-child(3) { --c: #60a5fa; }
+#accountInfo .statBox:nth-child(4) { --c: #c084fc; }
+#accountInfo .statBox::before { content: ''; position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, var(--c), transparent 80%) !important; }
+#accountInfo .statHead { display: flex; align-items: center; gap: 10px; margin-bottom: 12px !important; }
+#accountInfo .statHead h3 { font: 700 13px var(--lato) !important; letter-spacing: .08em; text-transform: uppercase; color: color-mix(in oklab, var(--c) 70%, white) !important; }
+#accountInfo .statIco { width: 34px !important; height: 34px !important; border-radius: 11px !important; color: var(--c) !important;
+    background: color-mix(in oklab, var(--c) 16%, transparent) !important; box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 35%, transparent) !important; }
+/* Primera fila = cifra destacada */
+#accountInfo .statBox .statHead + .statRow { display: block !important; padding: 0 0 12px !important; border: 0 !important; }
+#accountInfo .statBox .statHead + .statRow .statLabel { font: 600 10.5px var(--lato) !important; letter-spacing: .12em; text-transform: uppercase; color: var(--c-muted) !important; margin: 0 0 4px !important; }
+#accountInfo .statBox .statHead + .statRow .statValue { font: 400 28px/1.1 var(--display) !important; letter-spacing: .01em; color: var(--c) !important; text-shadow: 0 0 22px color-mix(in oklab, var(--c) 40%, transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Resto: filas tipo lista en una cajita */
+#accountInfo .statBox .statHead + .statRow ~ .statRow { display: flex !important; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px !important; margin: 0 -4px !important;
+    border: 0 !important; border-top: 1px solid rgb(255 255 255 / .06) !important; background: none !important; }
+#accountInfo .statBox .statHead + .statRow ~ .statRow .statLabel { font: 500 12px/1.3 var(--lato) !important; color: var(--c-muted) !important; margin: 0 !important; }
+#accountInfo .statBox .statHead + .statRow ~ .statRow .statValue { font: 700 13.5px var(--lato) !important; color: var(--c-fg) !important; white-space: nowrap; margin: 0 !important; font-variant-numeric: tabular-nums; }
+#accountInfo .statHead { padding: 0 !important; border: 0 !important; } #accountInfo .statBox { padding: 16px 16px 8px !important; }
+#accountInfo .statBox .statHead + .statRow .statValue { font-size: 25px !important; white-space: normal !important; }
+
+/* ---------- Tus Records: tarjetas de estadísticas (mismo estilo que Tu Rango) ---------- */
+#recordStats .recordStatsCard { position: relative; overflow: hidden; padding: 16px 16px 8px !important; border-radius: 18px !important;
+    background: radial-gradient(120% 80% at 100% 0%, color-mix(in oklab, var(--tone) 16%, transparent), transparent 60%), var(--c-surface) !important;
+    border: 1px solid color-mix(in oklab, var(--tone) 22%, var(--c-line)) !important; transition: transform .2s, border-color .2s, box-shadow .2s; }
+#recordStats .recordStatsCard:hover { transform: translateY(-3px); border-color: color-mix(in oklab, var(--tone) 50%, transparent) !important; box-shadow: 0 18px 40px -22px var(--tone); }
+#recordStats .recordStatsCard::before { content: ''; position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, var(--tone), transparent 80%) !important; }
+#recordStats .recordStatsTitle { display: flex; align-items: center; gap: 10px; margin-bottom: 12px !important; padding: 0 !important; border: 0 !important;
+    font: 700 13px var(--lato) !important; letter-spacing: .08em; text-transform: uppercase; color: color-mix(in oklab, var(--tone) 70%, white) !important; }
+#recordStats .rsIco { width: 34px !important; height: 34px !important; border-radius: 11px !important; color: var(--tone) !important;
+    background: color-mix(in oklab, var(--tone) 16%, transparent) !important; box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--tone) 35%, transparent) !important; }
+#recordStats .rsHero { display: block !important; padding: 0 0 12px !important; border: 0 !important; }
+#recordStats .rsHero span { display: block; margin-bottom: 4px; font: 600 10.5px var(--lato) !important; letter-spacing: .12em; text-transform: uppercase; color: var(--c-muted) !important; }
+#recordStats .rsHero b { display: block; font: 400 26px/1.1 var(--display) !important; letter-spacing: .01em; color: var(--tone) !important; text-shadow: 0 0 22px color-mix(in oklab, var(--tone) 40%, transparent); }
+#recordStats .recordStatsCard > p { display: flex !important; align-items: center; justify-content: space-between; gap: 10px; margin: 0 -4px !important; padding: 9px 10px !important;
+    border: 0 !important; border-top: 1px solid rgb(255 255 255 / .06) !important; background: none !important; }
+#recordStats .recordStatsCard > p span { font: 500 12px/1.3 var(--lato) !important; color: var(--c-muted) !important; }
+#recordStats .recordStatsCard > p b { font: 700 13.5px var(--lato) !important; color: var(--c-fg) !important; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* Los emblemas de rango son PNG con transparencia: sin fondo ni recuadro heredado */
+.rankIco img, .tierIcon, .tierEmblemImg, .levelRankIcon, .lvSumIcon, .podRankIcon, .rkRankEmblem img {
+    background: none !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; padding: 0 !important; outline: 0 !important;
+}
+.rankIco, .rkRankEmblem { background: none !important; border: 0 !important; box-shadow: none !important; }
+.rkRankEmblem img { filter: none !important; }
