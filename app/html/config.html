@@ -1182,6 +1182,32 @@
             return curveDiff
         }
 
+        // Cabecera del resumen: servidor + datos clave de un vistazo
+        {
+            const escH = t => $('<i>').text(t ?? "").html()
+            const nf = n => Number(n || 0).toLocaleString("es-ES")
+            const saved = data.guild.lastUpdate ? new Date(data.guild.lastUpdate).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "nunca"
+            const st = data.settings || {}
+            const chips = [
+                ["Miembros", nf(data.guild.members)],
+                ["XP por mensaje", st.gain ? (st.gain.min == st.gain.max ? nf(st.gain.min) : `${nf(st.gain.min)}–${nf(st.gain.max)}`) : "—"],
+                ["Cooldown", st.gain ? `${nf(st.gain.time)} s` : "—"],
+                ["Recompensas", nf((st.rewards || []).length)],
+                ["Nivel máximo", nf(st.maxLevel)],
+            ]
+            $('#serverInfo').prepend(`<header class="adminHero">
+                <div class="adminHeroGlow" aria-hidden="true"></div>
+                <img class="adminHeroIcon" src="${escH(data.guild.icon || "/assets/server-icon-128.webp")}" alt="" onerror="this.onerror=null;this.src='/assets/server-icon-128.webp'">
+                <div class="adminHeroText">
+                    <span class="adminHeroEyebrow">Panel de administración</span>
+                    <h1>${escH(data.guild.name)}</h1>
+                    <p><span class="adminHeroStatus ${st.enabled ? "on" : "off"}"><i></i>${st.enabled ? "XP activada" : "XP desactivada"}</span><span class="adminHeroSaved">Último guardado: ${escH(saved)}</span></p>
+                </div>
+                <dl class="adminHeroStats">${chips.map(([k, v]) => `<div><dt>${k}</dt><dd>${escH(v)}</dd></div>`).join("")}</dl>
+            </header>
+            <p class="adminSectionLabel">Secciones</p>`)
+        }
+
         // home tab
         let categorySlot = $('.categoryBox').clone()
         $('.categoryBox').remove()

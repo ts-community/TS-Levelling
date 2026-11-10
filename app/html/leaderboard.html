@@ -1107,19 +1107,37 @@ Fetch(lbURL(1)).then(async data => {
 
     // leaderboard, function so that this supports multiple pages
     function appendLeaderboard(leaderboard) {
+        let esc2 = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))
+        // Emblema de rango por nivel (mismos iconos que Recompensas)
+        const PFILES = { bronce: "bronze", plata: "silver", oro: "gold", diamante: "diamond", "mítico": "mythic", mitico: "mythic", legendario: "legendary", maestro: "masters", pro: "pro" }
+        const podRank = lvl => {
+            let best = null
+            data.settings.rewards.forEach(r => { if (r.level <= lvl && (!best || r.level > best.level)) best = r })
+            const role = best && data.roles.find(x => x.id == best.id)
+            if (!role) return null
+            const base = role.name.split(/[•|]/)[0].trim(), m = base.match(/^(.*?)\s+(I{1,3})$/)
+            const f = PFILES[(m ? m[1] : base).toLowerCase()]
+            return f ? { name: base, icon: `/assets/ranks/${f}${f === "pro" ? "" : "_" + (m ? m[2] : "I")}.webp?v=4`, division: m ? ({ I: 1, II: 2, III: 3 })[m[2]] : null } : null
+        }
         // Las filas se montan fuera del documento y se insertan de una vez (un solo repintado)
         let rows = document.createDocumentFragment()
+        let rowIndex = 0
+        const topValue = Math.max(...leaderboard.map(x => statSort !== "xp" ? (Number(x.statValue) || 0) : 0), 1)
         leaderboard.forEach(x => {
             let userSlot = leaderboardSlot.clone()
             let userXP = getLevel(x.xp, data.settings)
             let multiplier = getMultiplier(x.roles, data.settings, data.roles)
             if (x.rank <= 3) userSlot.addClass('rank-' + x.rank)
+            userSlot[0].style.setProperty('--i', Math.min(rowIndex++, 14))
+            {
+                userSlot[0].style.setProperty('--rowTone', ({ 1: "#fcd34d", 2: "#e2e8f0", 3: "#f0a46a" })[x.rank] || "var(--c-accent)")
+            }
             if (x.missing) {
                 userSlot.addClass('notInServer')
                 userSlot.find("[lb=warning]").show()
             }
             if (x.id == data.user.id) userSlot.addClass('isSelf')
-            userSlot.find("[lb=rank]").text("#" + commafy(x.rank)).css("font-size", x.rank > 999 ? "18px" : x.rank > 99 ? "20px" : "22px")
+            userSlot.find("[lb=rank]").text(commafy(x.rank)).attr("data-len", String(x.rank).length)
             userSlot.find("[lb=name]").text(x.nickname || x.displayName || "Usuario desconocido").attr("title", x.missing ? `No está en el servidor (ID ${x.id})` : `${x.displayName} (@${x.username})`)
             const levelBadge = userSlot.find("[lb=level]").text(`Nivel ${commafy(userXP.level)}`)
             const rankBadge = leaderboardRankForLevel(userXP.level)
@@ -1136,10 +1154,12 @@ Fetch(lbURL(1)).then(async data => {
                 userSlot.find(".progressBar").hide()
                 userSlot.find("[lb=percent]").hide()
                 userSlot.find("[lb=xp]").text(statDisplayText(statView(), x.statValue))
+                // barra relativa al primero de la página para comparar de un vistazo
+                userSlot.addClass('statRow').find(".progressBar").show().find("[lb=progress]").css("width", Math.max(2, (Number(x.statValue) || 0) / topValue * 100) + "%")
             } else {
                 userSlot.find("[lb=xp]").html(`${commafy(x.xp)} / ${commafy(userXP.xpRequired)} XP${data.settings.rankCard.relativeLevel ? ` &nbsp • &nbsp; ${commafy(x.xp - userXP.previousLevel)} / ${commafy(userXP.xpRequired - userXP.previousLevel)}` : ""}`)
             }
-            userSlot.find("[lb=percent]").text(`(${+userXP.percentage.toFixed(2)}%)`)
+            userSlot.find("[lb=percent]").text(`${+userXP.percentage.toFixed(1)}%`)
 
             if (multiplier.roles.length) {
                 let mult = userSlot.find("[lb=multiplier]")
@@ -1164,20 +1184,8 @@ Fetch(lbURL(1)).then(async data => {
 
         // Podio: los tres primeros en tarjetas grandes (2º · 1º · 3º)
         let top3 = leaderboard.filter(x => x.rank <= 3).sort((a, b) => a.rank - b.rank)
-        let esc2 = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))
         if (top3.length == 3) {
             let medal = ["", "Oro", "Plata", "Bronce"]
-            // Emblema de rango por nivel (mismos iconos que Recompensas)
-            const PFILES = { bronce: "bronze", plata: "silver", oro: "gold", diamante: "diamond", "mítico": "mythic", mitico: "mythic", legendario: "legendary", maestro: "masters", pro: "pro" }
-            const podRank = lvl => {
-                let best = null
-                data.settings.rewards.forEach(r => { if (r.level <= lvl && (!best || r.level > best.level)) best = r })
-                const role = best && data.roles.find(x => x.id == best.id)
-                if (!role) return null
-                const base = role.name.split(/[•|]/)[0].trim(), m = base.match(/^(.*?)\s+(I{1,3})$/)
-                const f = PFILES[(m ? m[1] : base).toLowerCase()]
-                return f ? { name: base, icon: `/assets/ranks/${f}${f === "pro" ? "" : "_" + (m ? m[2] : "I")}.webp?v=4`, division: m ? ({ I: 1, II: 2, III: 3 })[m[2]] : null } : null
-            }
             const crown = `<svg class="podCrown" viewBox="0 0 64 40" aria-hidden="true"><path d="M4 34 8 8l14 13L32 2l10 19L56 8l4 26z" fill="url(#podGold)" stroke="#7a4a00" stroke-width="2.5" stroke-linejoin="round"/><circle cx="8" cy="8" r="4" fill="#fde68a"/><circle cx="32" cy="3" r="4" fill="#fde68a"/><circle cx="56" cy="8" r="4" fill="#fde68a"/><defs><linearGradient id="podGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#f59e0b"/></linearGradient></defs></svg>`
             $('#lbPodium').html([top3[1], top3[0], top3[2]].map(x => {
                 let lv = getLevel(x.xp, data.settings)
