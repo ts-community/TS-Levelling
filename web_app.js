@@ -1252,6 +1252,7 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
     }
 
     guildData.server.totalRanked = xpArray.length
+    guildData.server.totalMessages = Object.values(data.users || {}).reduce((sum, user) => sum + (Number(user?.messages) || 0), 0)
     if (xpArray.length < trueTotalXP) guildData.server.totalPartial = true
 
     if (loggedIn && userLevel && !userLevel.noLogin) {
