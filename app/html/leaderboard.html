@@ -864,6 +864,8 @@ Fetch(lbURL(1)).then(data => {
 
     let loggedIn = !data.user.noLogin
     document.body.classList.toggle('guestSession', !loggedIn)
+    // El huevo secreto desaparece una vez reclamado
+    if (loggedIn && data.user.records && Object.keys(data.user.records).some(k => k.startsWith('web_easter'))) $('#secretEasterTrigger').remove()
     $('#topbarLogin').css('display', loggedIn ? 'none' : 'flex') // botón de login bajo "Web Principal"
 
     if (loggedIn) {
