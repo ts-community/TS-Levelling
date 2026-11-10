@@ -35,7 +35,7 @@ for (const preference of [undefined, 'old', 'new']) {
         await rank.run({}, { user: { id: owner }, guild: { id: 'guild' }, deferred: update, deferReply: async () => {}, editReply: async p => { assert.equal(update, false); payload = p }, message: { edit: async p => { assert.equal(update, true); payload = p } } }, tools, { update })
         const json = JSON.stringify(payload.components.map(c => c.toJSON()))
         const modern = preference !== 'old'
-        assert.ok(json.includes(modern ? 'Vista Legacy' : 'Vista Predeterminada'))
+        assert.ok(json.includes(modern ? 'Cambiar a Vista Legacy' : 'Cambiar a Vista Predeterminada'))
         assert.ok(json.includes(`rank_style~${owner}~${target}~${modern ? 'old' : 'new'}`))
         assert.equal(json.includes('attachment://rank-icon.webp'), false)
         assert.ok(json.includes('https://example.com/avatar.png'))
@@ -53,3 +53,24 @@ for (const preference of [undefined, 'old', 'new']) {
 }
 
 }
+
+test('cambia la tarjeta existente sin recalcular ni volver a subir adjuntos', async () => {
+    const tier = require('../consts/ranks').find(r => r.rank === 'pro')
+    const role = tier.roles[0]
+    let edited, saved = false
+    const container = { type: 17, components: [
+        { type: 9, components: [{ type: 10, content: `## ${role.emoji} <@&${role.id}> #3` }] },
+        { type: 1, components: [{ type: 2, custom_id: `rank_style~${owner}~${target}~old` }] }
+    ] }
+    await button.run({ db: { update: () => ({ exec: async () => { saved = true } }) } }, {
+        customId: `rank_style~${owner}~${target}~old`, user: { id: owner }, guild: { id: 'guild' },
+        deferUpdate: async () => {},
+        message: { components: [{ toJSON: () => container }], edit: async payload => { edited = payload } }
+    }, { fetchAll: () => { throw Error('No debe recalcular') } })
+    assert.equal(saved, true)
+    assert.equal(edited.files, undefined)
+    assert.equal(edited.attachments, undefined)
+    assert.ok(edited.components[0].components[0].components[0].content.includes(role.legacyEmoji))
+    assert.equal(edited.components[0].components[1].components[0].label, 'Cambiar a Vista Predeterminada')
+    assert.equal(edited.components[0].accent_color, 0x008f39)
+})

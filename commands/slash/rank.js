@@ -360,7 +360,7 @@ module.exports = {
 
         const styleButton = new ButtonBuilder()
             .setCustomId(`rank_style~${int.user.id}~${member.id}~${modern ? 'old' : 'new'}`)
-            .setLabel(modern ? 'Vista Legacy' : 'Vista Predeterminada')
+            .setLabel(modern ? 'Cambiar a Vista Legacy' : 'Cambiar a Vista Predeterminada')
             .setStyle(ButtonStyle.Secondary)
         const destinationEmoji = modern ? (role?.legacyEmoji || role?.emoji) : role?.emoji
         if (destinationEmoji) styleButton.setEmoji(destinationEmoji)

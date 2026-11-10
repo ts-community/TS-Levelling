@@ -32,7 +32,7 @@ module.exports = {
             const button = row?.components.find(b => b.custom_id?.startsWith('rank_style~'))
             if (button) {
                 button.custom_id = `rank_style~${ownerId}~${targetId}~${modern ? 'old' : 'new'}`
-                button.label = modern ? 'Vista Legacy' : 'Vista Predeterminada'
+                button.label = modern ? 'Cambiar a Vista Legacy' : 'Cambiar a Vista Predeterminada'
                 const emoji = modern ? (role?.legacyEmoji || role?.emoji) : role?.emoji
                 const match = emoji?.match(/<(a?):([^:]+):(\d+)>/)
                 if (match) button.emoji = { animated: !!match[1], name: match[2], id: match[3] }
