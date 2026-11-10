@@ -1,4 +1,7 @@
 const { 
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
     AttachmentBuilder, 
     ContainerBuilder, 
     TextDisplayBuilder, 
@@ -27,13 +30,19 @@ module.exports = {
         ]
     },
 
-    async run(client, int, tools) {
+    async run(client, int, tools, view = {}) {
         // Los bots no tienen XP: respuesta efímera antes del defer (después
         // ya no se puede hacer efímero).
         if (tools.getTargetUser()?.bot) return int.reply({ content: tools.errors.noBotView, ephemeral: true })
-        await int.deferReply()
+        if (view.update) { if (!int.deferred) await int.deferUpdate() }
+        else await int.deferReply()
         // Igual que la opción member, pero desde el menú de contexto (Ver XP).
-        const target = await tools.resolveTargetMember()
+        const selectedMember = view.targetId
+            ? await int.guild.members.fetch(view.targetId).catch(() => null)
+            : null
+        const target = view.targetId
+            ? { member: selectedMember, user: selectedMember?.user }
+            : await tools.resolveTargetMember()
         let member = target.member
         if (!member) return tools.warn("No se ha encontrado a ese miembro en el servidor.")
 
@@ -47,6 +56,8 @@ module.exports = {
         if (db.settings.rankCard.disabled) return tools.warn("Las tarjetas de rango están desactivadas en este servidor.")
         if (!currentXP || !currentXP.xp) return tools.noXPYet(target.user || int.user)
 
+        const style = view.style || (db.users[int.user.id]?.rankStyle === 'old' ? 'old' : 'new')
+        const modern = style === 'new'
         let xp = currentXP.xp
         let levelData = tools.getLevel(xp, db.settings, true)
         let totalMsgs = tools.commafy(tools.getMessages(currentXP))
@@ -262,16 +273,18 @@ module.exports = {
 
         // Sin rank/role (sin rewards o nivel sin rol): tarjeta sin banner ni rol.
         const hasRankCard = Boolean(rank && role)
-        const bannerAttachment = hasRankCard
+        const bannerAttachment = hasRankCard && !modern
             ? new AttachmentBuilder(path.join(__dirname, "../../assets/banners/", rank.banner.url), { name: rank.banner.url })
             : null
+        const rankColors = { bronze: '#e08a45', silver: '#6f9cff', gold: '#f7c844', diamond: '#4fd0f5', mythic: '#d45cff', legendary: '#ff4a3d', masters: '#62d64a', pro: '#d9dde6' }
+        const headerEmoji = modern ? role?.emoji : (role?.legacyEmoji || role?.emoji)
         const headerLine = hasRankCard
-            ? `## ${role.emoji} <@&${role.id}>  <:top:1467967277251956887> #${userRank || "?"}`
+            ? `## ${headerEmoji} <@&${role.id}>  <:top:1467967277251956887> #${userRank || "?"}`
             : `## <:top:1467967277251956887> #${userRank || "?"}`
 
         let container = new ContainerBuilder()
-            .setAccentColor(parseInt(rank?.color?.replace('#', ''), 16) || 3447003)
-        if (hasRankCard) {
+            .setAccentColor(parseInt((modern ? rankColors[rank?.rank] : rank?.color)?.replace('#', ''), 16) || 3447003)
+        if (bannerAttachment) {
             container.addMediaGalleryComponents([
                 new MediaGalleryBuilder()
                     .setId(1)
@@ -343,11 +356,20 @@ module.exports = {
                 .addTextDisplayComponents(new TextDisplayBuilder().setContent(nextLevelXP))
         }
 
-        return int.editReply({
+        container.addActionRowComponents(new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`rank_style~${int.user.id}~${member.id}~${modern ? 'old' : 'new'}`)
+                .setLabel(modern ? 'Iconos clásicos' : 'Iconos nuevos')
+                .setStyle(ButtonStyle.Secondary)
+        ))
+
+        const payload = {
             components: [container],
+            attachments: [],
             files: bannerAttachment ? [bannerAttachment] : [],
             flags: MessageFlags.IsComponentsV2,
             allowedMentions: { parse: [] },
-        })
+        }
+        return view.update ? int.message.edit(payload) : int.editReply(payload)
     }
 }

@@ -958,9 +958,7 @@ Fetch(lbURL(1)).then(data => {
             userSlot.find("[lb=pfp]").attr("src", x.avatar || "/assets/avatar.png")
             userSlot.find("[lb=progress]").css("background-color", x.missing ? "rgba(118, 126, 137, 0.5)" : "").css("width", userXP.percentage + "%")
             if (statSort !== "xp") {
-                // vista por estadística: el valor de la stat ocupa la línea de
-                // XP y sobra todo lo que habla del nivel original
-                userSlot.find("[lb=level], .lbRankIcon").hide()
+                // La estadística sustituye la XP; el nivel y su insignia se mantienen.
                 userSlot.find("[lb=multiplier]").hide()
                 userSlot.find(".progressBar").hide()
                 userSlot.find("[lb=percent]").hide()
@@ -1432,12 +1430,23 @@ Fetch(lbURL(1)).then(data => {
         if (rankForLevel(viewLevel.level)) { $('#levelSummary')[0].style.setProperty('--lv', rankForLevel(viewLevel.level).color); $('#levelSummary').addClass('hasRank') }
         shownLevels = viewLevel.level // El nivel actual ya aparece en el resumen.
         if (shownLevels > 1) $('<button id="earlierLevels" box="levels" class="lbBox" type="button">Ver niveles anteriores (1 – ' + commafy(shownLevels - 1) + ')</button>')
+            .attr('aria-expanded', 'false')
             .on('click', function() {
+                const button = $(this)
+                if (button.attr('aria-expanded') === 'true') {
+                    $('#levelGrid .levelSlot.reached').remove()
+                    button.attr('aria-expanded', 'false')
+                        .text('Ver niveles anteriores (1 – ' + commafy(viewLevel.level - 1) + ')')
+                        .prependTo('#levelGrid')
+                    this.scrollIntoView({ block: 'nearest' })
+                    return
+                }
                 const end = shownLevels
                 const upcoming = $('#levelGrid .levelSlot').detach()
-                $(this).remove()
                 shownLevels = 0
                 appendLevels(Math.max(0, viewLevel.level - 1))
+                button.attr('aria-expanded', 'true').text('Ocultar niveles anteriores')
+                    .insertAfter($('#levelGrid .levelSlot.reached').last())
                 $('#levelGrid').append(upcoming)
                 shownLevels = end
                 updateMoreLevels()
@@ -1485,7 +1494,14 @@ Fetch(lbURL(1)).then(data => {
             if (rk) {
                 $('#accountInfo')[0].style.setProperty('--lv', rk.color)
                 $('#accountInfo').addClass('hasRank')
-                if (rk.icon) $('#accountInfo [lb=name]').before(`<span class="rankIco rkRankEmblem" title="${$('<i>').text(rk.name).html()}"><img src="${rk.icon}" alt="" width="44" height="44"></span>`)
+                if (rk.icon) {
+                    $('#accountInfo .rkLevel > svg').hide()
+                    $('#accountInfo .rkLevel').prepend(
+                        $('<span>', { class: 'rankIco rkRankEmblem', title: rk.name }).append(
+                            $('<img>', { src: rk.icon, alt: rk.name, width: 24, height: 24 })
+                        )
+                    )
+                }
             }
         }
         $('#accountInfo [lb=level]').text(`Nivel ${commafy(userLevel.level)}`)

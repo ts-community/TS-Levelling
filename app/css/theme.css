@@ -2343,3 +2343,5 @@ a.lbNavItem:hover, a.category:hover { color: var(--c-fg) !important; }
 #levelSummary .lvSumMain .lvSumLevel { text-shadow: none !important; }
 
 #levelSummary .lvSumXp { margin: 0 0 10px; color: var(--c-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+#accountInfo .rkLevel .rkRankEmblem img { width: 24px; height: 24px; object-fit: contain; }
