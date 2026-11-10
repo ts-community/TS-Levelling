@@ -195,6 +195,9 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
             <meta name="theme-color" content="${pal.bg[0]}">
             <meta name="robots" content="noindex, nofollow">
             <meta name="referrer" content="no-referrer">
+            <link rel="icon" href="/assets/favicon.ico" sizes="32x32">
+            <link rel="icon" href="/assets/favicon-48.png" type="image/png" sizes="48x48">
+            <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
             <title>${escapeHtml(title)}</title>
             <style>
                 :root {${paletteVars(pal)}

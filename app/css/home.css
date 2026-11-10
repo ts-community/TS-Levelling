@@ -47,6 +47,30 @@
 .homePage .homeStats span { display: block; margin-top: 6px; font-size: 11px; }
 .homePage #homeTopList .homeTopEmpty { display: block; font-size: 14px; line-height: 1.7; padding: 20px 0; }
 .homeTopEmpty a { display: block; }
+/* ---------- Detalles: enlace de marca, barras de XP y entrada suave ---------- */
+.homePage a.homeBrand { width: fit-content; color: inherit !important; text-decoration: none; border-radius: 14px; transition: opacity .2s; }
+.homePage a.homeBrand:hover { opacity: .85; }
+.homePage a.homeBrand img { transition: transform .25s cubic-bezier(.2,.7,.2,1); }
+.homePage a.homeBrand:hover img { transform: scale(1.05) rotate(-3deg); }
+.homePage .homeBrandName { color: var(--c-fg); }
+/* Mismo degradado que los títulos de tscomunity.es */
+.homePage .heroTitle span { background: linear-gradient(110deg, var(--c-accent) 20%, var(--c-leaf) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+/* Cada fila enseña su XP respecto al primero: una línea fina bajo el nombre */
+.homePage #homeTopList li { position: relative; }
+.homePage #homeTopList li[style*="--p"]::after { content: ''; position: absolute; left: 82px; right: 10px; bottom: 5px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, rgb(45 212 191 / .55) var(--p), rgb(255 255 255 / .05) var(--p)); pointer-events: none; }
+.homePage #homeTopList li[style*="--p"] { animation: homeRow .5s cubic-bezier(.2,.7,.2,1) calc(var(--i, 0) * 55ms) both; }
+.homePage #homeTopList li:hover { background: rgb(255 255 255 / .035); }
+.homePage #homeTopList .pos-1:hover { background: linear-gradient(90deg, rgb(45 212 191 / .14), rgb(45 212 191 / .04)); }
+.homePage .homeTop { position: relative; }
+.homePage .homeTop::before { content: ''; position: absolute; inset: 0 22px auto; height: 1px; background: linear-gradient(90deg, transparent, rgb(45 212 191 / .5), transparent); pointer-events: none; }
+.homePage .homeIntro > * { animation: homeEnter .7s cubic-bezier(.2,.7,.2,1) both; }
+.homePage .homeIntro > :nth-child(2) { animation-delay: 60ms; }
+.homePage .homeIntro > :nth-child(3) { animation-delay: 120ms; }
+.homePage .homeIntro > :nth-child(4) { animation-delay: 180ms; }
+.homePage .homeIntro > :nth-child(n+5) { animation-delay: 240ms; }
+.homePage .homeTop { animation: homeEnter .8s cubic-bezier(.2,.7,.2,1) 140ms both; }
+@keyframes homeEnter { from { opacity: 0; transform: translateY(16px); } }
+@keyframes homeRow { from { opacity: 0; transform: translateY(6px); } }
 @media (max-width: 960px) {
     .homePage .homeGrid { grid-template-columns: minmax(0, 1fr); max-width: 620px; gap: 32px; }
     .homePage .heroWrap { padding: 40px 24px !important; }
@@ -70,6 +94,7 @@
     .homePage #homeTopList .rk { width: 22px; height: 22px; font-size: 11px; }
     .homePage #homeTopList .nm { font-size: 12px; }
     .homePage #homeTopList .lv { font-size: 10px; }
+    .homePage #homeTopList li[style*="--p"]::after { left: 66px; right: 6px; }
 }
 @media (prefers-reduced-motion: reduce) {
     .homePage *, .homePage *::before { animation: none !important; transition: none !important; }

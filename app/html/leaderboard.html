@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="/css/polaris.css?v=11" type="text/css" rel="stylesheet">
-    <link rel="icon" href="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless">
+    <link rel="icon" href="/assets/favicon.ico" sizes="32x32">
+    <link rel="icon" href="/assets/favicon-48.png" type="image/png" sizes="48x48">
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
     <title>Clasificación</title>
 
     <meta property="og:title" content="TS Community">
@@ -163,7 +165,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
             <a class="topbarBrand" href="/">
-                <img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt="">
+                <img src="/assets/server-icon-128.webp" alt="">
                 <span>TS Community Brawl</span>
             </a>
         </div>
@@ -171,7 +173,7 @@
     <div class="sidebarBackdrop" id="sidebarBackdrop"></div>
 
     <div class="tsLoader" id="loading" role="status" aria-live="polite">
-        <div class="tsLoaderRing"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" class="trk"/><circle cx="60" cy="60" r="54" class="arc"/></svg><img src="https://images-ext-1.discordapp.net/external/vsh7pbxkoonbodZ8hUBafIy4eiJ6oKGEZKgZcADdfkg/%3Fsize%3D2048/https/cdn.discordapp.com/icons/1093864130030612521/aaa49d9f23bce2e8b18a417cfab2b72a.png?format=webp&amp;quality=lossless" alt=""></div>
+        <div class="tsLoaderRing"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54" class="trk"/><circle cx="60" cy="60" r="54" class="arc"/></svg><img src="/assets/server-icon-128.webp" alt=""></div>
         <p class="tsLoaderTxt">Cargando la clasificación</p>
         <div class="tsLoaderDots"><i></i><i></i><i></i></div>
     </div>
@@ -326,7 +328,7 @@
                         <span lb="rankBadgePercent"></span>
                     </div>
                 </div>
-                <img lb="pfp" class="discordAvatar">
+                <img lb="pfp" class="discordAvatar" alt="">
                 <div class="discordHeader">
                     <div class="generalInfo">
                         <div class="rkTop">
@@ -432,11 +434,11 @@
         <div class="mainInfo" style="width: 50%">
             <h2 lb="rank"></h2>
             <div class="lbAvatar" style="height: 70px; width: 70px; margin-left: 10px; margin-right: 20px; border-radius: 420px; background-color: rgba(255, 255, 255, 0.1);">
-                <img lb="pfp" style="border-radius: 420px; height: 100%;">
+                <img lb="pfp" alt="" loading="lazy" decoding="async" style="border-radius: 420px; height: 100%;">
             </div>
             <div class="generalInfo">
                 <p lb="name" style="font-weight: bold; cursor: help"></p>
-                <div style="display: flex">
+                <div style="display: flex; flex-wrap: wrap; align-items: center; row-gap: 6px">
                     <p lb="level"></p>
                     <p lb="warning" class="red" style="margin-left: 10px; display: none; opacity: 100%; text-decoration: unset !important; font-weight: bold !important;">No está en el servidor</p>
                 </div>
@@ -519,7 +521,7 @@
 </body>
 
 <script type="text/javascript" src="/polaris.js"></script>
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.js"></script>
+<script type="text/javascript" src="/js/vendor/jquery-3.6.0.min.js"></script>
 
 <script>
 const tabInfo = {
@@ -784,7 +786,6 @@ function getTierColor(name) {
 
 Fetch(lbURL(1)).then(data => {
 
-    console.log(data)
     recordUnits = {}
     ;(data.records || []).forEach(category => (category.records || []).forEach(record => { recordUnits[record.id] = record }))
     guildName = data.guild.name
@@ -851,7 +852,8 @@ Fetch(lbURL(1)).then(data => {
 
     // leaderboard, function so that this supports multiple pages
     function appendLeaderboard(leaderboard) {
-        $('#leaderboard').html("")
+        // Las filas se montan fuera del documento y se insertan de una vez (un solo repintado)
+        let rows = document.createDocumentFragment()
         leaderboard.forEach(x => {
             let userSlot = leaderboardSlot.clone()
             let userXP = getLevel(x.xp, data.settings)
@@ -863,7 +865,7 @@ Fetch(lbURL(1)).then(data => {
             }
             if (x.id == data.user.id) userSlot.addClass('isSelf')
             userSlot.find("[lb=rank]").text("#" + commafy(x.rank)).css("font-size", x.rank > 999 ? "18px" : x.rank > 99 ? "20px" : "22px")
-            userSlot.find("[lb=name]").text(x.nickname || x.displayName || `<@${x.id}>`).attr("title", x.missing ? "No está en el servidor" : `${x.displayName} (@${x.username})`)
+            userSlot.find("[lb=name]").text(x.nickname || x.displayName || "Usuario desconocido").attr("title", x.missing ? `No está en el servidor (ID ${x.id})` : `${x.displayName} (@${x.username})`)
             userSlot.find("[lb=level]").text(`Nivel ${commafy(userXP.level)}`)
             userSlot.find("[lb=pfp]").attr("src", x.avatar || "/assets/avatar.png")
             userSlot.find("[lb=progress]").css("background-color", x.missing ? "rgba(118, 126, 137, 0.5)" : "").css("width", userXP.percentage + "%")
@@ -897,8 +899,9 @@ Fetch(lbURL(1)).then(data => {
                 mult.text(`${multText} - ${multiplier.boost}x XP`)
             }
 
-            $('#leaderboard').append(userSlot)
+            rows.appendChild(userSlot[0])
         })
+        $('#leaderboard').empty().append(rows)
 
         // Podio: los tres primeros en tarjetas grandes (2º · 1º · 3º)
         let top3 = leaderboard.filter(x => x.rank <= 3).sort((a, b) => a.rank - b.rank)
@@ -910,7 +913,7 @@ Fetch(lbURL(1)).then(data => {
                 let val = statSort !== "xp" ? statDisplayText(statView(), x.statValue) : `${commafy(x.xp)} XP`
                 return `<div class="podiumCard p${x.rank}${x.id == data.user.id ? " isSelf" : ""}" >
                     <div class="podiumMedal" title="${medal[x.rank]}">${x.rank}</div>
-                    <img class="podiumAvatar" src="${esc2(x.avatar || "/assets/avatar.png")}" alt="" onerror="this.src='/assets/avatar.png'">
+                    <img class="podiumAvatar" src="${esc2(x.avatar || "/assets/avatar.png")}" alt="" decoding="async" onerror="this.src='/assets/avatar.png'">
                     <p class="podiumName">${esc2(x.nickname || x.displayName || "Miembro")}</p>
                     <span class="podiumLevel">Nivel ${commafy(lv.level)}</span>
                     <p class="podiumValue">${esc2(val)}</p>

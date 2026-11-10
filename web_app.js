@@ -2,10 +2,12 @@
 
 const express = require('express')
 const cookieParser = require('cookie-parser')
+const compression = require('compression')
 const timeout = require('connect-timeout')
 const cors = require('cors')
 
 const path = require('path')
+const fs = require('fs')
 const mongoose = require("mongoose")
 const Discord = require('discord.js')
 const { REST } = require("@discordjs/rest")
@@ -30,6 +32,7 @@ const app = express();
 const tools = Tools.global
 
 app.disable('x-powered-by')
+app.use(compression()) // gzip/brotli para HTML, CSS, JS y JSON (nginx no comprime lo que viene del proxy)
 app.use(cookieParser());
 app.use(express.json({ limit: '20mb' }));  // keeping the limit pretty high for json imports, some servers are like 10+ megabytes
 app.use(timeout('20s'));
@@ -67,8 +70,42 @@ let schema = new mongoose.Schema({
 }, { collection: "auth" })
 let authDB = new Model("auth", schema)
 
+// ---------- Páginas y archivos estáticos ----------
+// Cada página se sirve con sus CSS/JS/imágenes versionados por contenido
+// (?v=<mtime+tamaño>): el navegador los guarda un año y solo vuelve a
+// pedirlos cuando el archivo cambia, sin tener que subir ?v= a mano.
+const STATIC_DIRS = { css: "/app/css", assets: "/app/assets", js: "/app/js" }
+const assetVersions = new Map() // ruta -> { v, checked }
+function assetVersion(urlPath) {
+    let cached = assetVersions.get(urlPath)
+    if (cached && Date.now() - cached.checked < 5000) return cached.v
+    let file = urlPath == "/polaris.js"
+        ? path.join(__dirname, "app/js/extras.js")
+        : path.join(__dirname, STATIC_DIRS[urlPath.split("/")[1]], urlPath.split("/").slice(2).join("/"))
+    let v = "0"
+    try { let st = fs.statSync(file); v = (Math.round(st.mtimeMs) + st.size).toString(36) } catch (e) {}
+    assetVersions.set(urlPath, { v, checked: Date.now() })
+    return v
+}
+
+const FONT_PRELOADS = ["inter-latin-wght-normal", "lilita-one-latin-400-normal"]
+    .map(f => `<link rel="preload" href="/assets/fonts/${f}.woff2" as="font" type="font/woff2" crossorigin>`).join("\n    ")
+const pageCache = new Map() // nombre -> { html, mtime, at }
+function renderPage(name) {
+    let file = path.join(__dirname, `app/html/${name}.html`)
+    let mtime = fs.statSync(file).mtimeMs
+    let cached = pageCache.get(name)
+    if (cached && cached.mtime == mtime && Date.now() - cached.at < 5000) return cached.html
+    let html = fs.readFileSync(file, "utf8")
+        .replace(/\b(href|src)="(\/(?:css|assets|js)\/[^"?#]+|\/polaris\.js)(?:\?[^"#]*)?"/g, (m, attr, url) => `${attr}="${url}?v=${assetVersion(url)}"`)
+        .replace(/(<meta name="viewport"[^>]*>)/, `$1\n    ${FONT_PRELOADS}`)
+    pageCache.set(name, { html, mtime, at: Date.now() })
+    return html
+}
+
 function sendPage(res, name) {
-    return res.sendFile(path.join(__dirname + `/app/html/${name}.html`))
+    res.set("Cache-Control", "no-cache") // el HTML se revalida siempre (ETag); lo pesado va versionado
+    return res.type("html").send(renderPage(name))
 }
 
 function sendRedirect(res, name) {
@@ -80,8 +117,16 @@ function canManageServer(guild) {
     return guild.owner || hasPerm(guild.permissions, server_admin)
 }
 
-function botIsPublic() {
-    return client.application.fetch().then(x => x.botPublic)
+// Antes se preguntaba a Discord en cada carga de la portada (300-600 ms); el dato casi nunca cambia.
+let botPublicCache = { value: undefined, at: 0 }
+async function botIsPublic() {
+    if (botPublicCache.value !== undefined && Date.now() - botPublicCache.at < 10 * 60 * 1000) return botPublicCache.value
+    try {
+        botPublicCache = { value: (await client.application.fetch()).botPublic, at: Date.now() }
+    } catch (e) {
+        if (botPublicCache.value === undefined) throw e
+    }
+    return botPublicCache.value
 }
 
 function notFalse(val) {
@@ -102,9 +147,17 @@ function clearDeletedData(settings, roles, channels) {
     return settings
 }
 
-app.use("/css", express.static(__dirname + '/app/css'));
-app.use("/assets", express.static(__dirname + '/app/assets'));
-app.use("/polaris.js", express.static(__dirname + '/app/js/extras.js'));
+// Con ?v= (o fuentes, que nunca cambian) el archivo es inmutable; sin versión, un día.
+const staticOptions = {
+    setHeaders(res, file) {
+        const versioned = "v" in (res.req.query || {}) || file.includes(`${path.sep}fonts${path.sep}`) || file.includes(`${path.sep}vendor${path.sep}`)
+        res.set("Cache-Control", versioned ? "public, max-age=31536000, immutable" : "public, max-age=86400")
+    }
+}
+app.use("/css", express.static(__dirname + '/app/css', staticOptions));
+app.use("/assets", express.static(__dirname + '/app/assets', staticOptions));
+app.use("/js/vendor", express.static(__dirname + '/app/js/vendor', staticOptions));
+app.use("/polaris.js", express.static(__dirname + '/app/js/extras.js', staticOptions));
 
 app.use(function(req, res, next) {
     res.apiError = function(message, code) {
@@ -1185,7 +1238,7 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
             displayName: x.user.displayName,
             discriminator: x.user.discriminator || "0",
             nickname: x.nickname,
-            avatar: x.displayAvatarURL({format: "png", dynamic: true}),
+            avatar: x.displayAvatarURL({ extension: "webp", forceStatic: true, size: 128 }),
             color: x.displayHexColor,
             roles: x.roles.cache.filter(r => xd.importantRoles.includes(r.id)).map(r => r.id),
             topRole: (x.roles.hoist || x.roles.highest)?.id == guild.id ? null : (x.roles.hoist || x.roles.highest)?.name || null,

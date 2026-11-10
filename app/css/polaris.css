@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Open+Sans:wght@500;700;800&display=swap');
-
+/* Las fuentes las define theme.css (Inter y Lilita One, servidas en local). */
 html {
     --bg: #202020;
     --fg: #303030;
