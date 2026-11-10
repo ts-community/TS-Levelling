@@ -20,7 +20,7 @@ const version = require("./json/auto/version.json")
 
 const startTime = Date.now()
 
-const RESTART_NOTIFY_CHANNEL_ID = "1235177703045599304"
+const RESTART_NOTIFY_CHANNEL_ID = "1569786641910857930"
 
 const memberCleanupInterval = 6 * 60 * 60 * 1000
 const memberCleanupBatchSize = 500
