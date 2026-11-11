@@ -189,7 +189,7 @@ class LevelUpMessage {
         }
 
         // ---------- Container V2 resumido ----------
-        const accentColor = bannerRank?.color ? parseInt(bannerRank.color.replace("#", ""), 16) : tools.COLOR
+        const accentColor = bannerRank?.modernColor ? parseInt(bannerRank.modernColor.replace("#", ""), 16) : tools.COLOR
 
         const files = []
         if (bannerRank?.banner?.url) {

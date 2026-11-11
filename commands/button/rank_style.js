@@ -23,10 +23,9 @@ module.exports = {
             const text = section?.components?.find(c => c.type === 10)
             const tier = ranks.find(r => r.roles.some(role => text?.content.includes(`<@&${role.id}>`)))
             const role = tier?.roles.find(role => text.content.includes(`<@&${role.id}>`))
-            const colors = { bronze: '#e08a45', silver: '#6f9cff', gold: '#f7c844', diamond: '#4fd0f5', mythic: '#d45cff', legendary: '#ff4a3d', masters: '#62d64a', pro: '#d9dde6' }
             if (role) {
                 text.content = text.content.replace(/^## <a?:[^>]+>/, `## ${modern ? role.emoji : (role.legacyEmoji || role.emoji)}`)
-                container.accent_color = parseInt((modern ? colors[tier.rank] : tier.color).slice(1), 16)
+                container.accent_color = parseInt((modern ? tier.modernColor : tier.color).slice(1), 16)
             }
             const row = container.components.find(c => c.type === 1 && c.components.some(b => b.custom_id?.startsWith('rank_style~')))
             const button = row?.components.find(b => b.custom_id?.startsWith('rank_style~'))

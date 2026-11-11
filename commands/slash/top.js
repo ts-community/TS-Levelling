@@ -745,7 +745,7 @@ async run(client, int, tools) {
             : viewKey === "xp_mes"
             ? 0x8ecae6
             : dominantRank
-            ? parseInt(dominantRank.color.replace("#", ""), 16)
+            ? parseInt(dominantRank.modernColor.replace("#", ""), 16)
             : accentColor
 
         pageData.forEach((entry, index) => {

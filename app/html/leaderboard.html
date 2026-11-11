@@ -595,7 +595,7 @@ let rankIconDivision = 'I'
 function rankIconPalette(style) {
     return style === 'old'
         ? { bronze: '#e08a45', silver: '#979c9f', gold: '#f1c40f', diamond: '#3498db', mythic: '#9b59b6', legendary: '#e74c3c', masters: '#f59e0b', pro: '#008f39' }
-        : { bronze: '#e08a45', silver: '#6f9cff', gold: '#f7c844', diamond: '#4fd0f5', mythic: '#d45cff', legendary: '#ff4a3d', masters: '#62d64a', pro: '#d9dde6' }
+        : { bronze: '#e08a45', silver: '#6f9cff', gold: '#f7c844', diamond: '#4fd0f5', mythic: '#d45cff', legendary: '#ff4a3d', masters: '#62d64a', pro: '#3A3A3A' }
 }
 function updateRankIconButtons() {
     rankIconButtons.forEach(button => {
@@ -1453,7 +1453,7 @@ Fetch(lbURL(1)).then(async data => {
     // divisiones 1 · 2 · 3 sobre una barra de progreso
     {
         const ROMAN = { I: 1, II: 2, III: 3, IV: 4, V: 5 }
-        const TIER_COLORS = { bronce: "#e08a45", plata: "#6f9cff", oro: "#f7c844", diamante: "#4fd0f5", "mítico": "#d45cff", mitico: "#d45cff", legendario: "#ff4a3d", maestro: "#62d64a", pro: "#d9dde6" }
+        const TIER_COLORS = { bronce: "#e08a45", plata: "#6f9cff", oro: "#f7c844", diamante: "#4fd0f5", "mítico": "#d45cff", mitico: "#d45cff", legendario: "#ff4a3d", maestro: "#62d64a", pro: "#3A3A3A" }
         const esc3 = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))
         const hasUser = !!viewUser.id
         // Iconos de cada división (los mismos emojis que usa el bot en /rank)
@@ -1538,7 +1538,7 @@ Fetch(lbURL(1)).then(async data => {
     // lista completa con todos los niveles era kilométrica y nadie la usa)
     // Rango (icono + color) que corresponde a cada nivel: la última recompensa con nivel <= ese nivel
     const RANK_FILES = { bronce: "bronze", plata: "silver", oro: "gold", diamante: "diamond", "mítico": "mythic", mitico: "mythic", legendario: "legendary", maestro: "masters", pro: "pro" }
-    const RANK_COLORS = { bronce: "#e08a45", plata: "#6f9cff", oro: "#f7c844", diamante: "#4fd0f5", "mítico": "#d45cff", mitico: "#d45cff", legendario: "#ff4a3d", maestro: "#62d64a", pro: "#d9dde6" }
+    const RANK_COLORS = { bronce: "#e08a45", plata: "#6f9cff", oro: "#f7c844", diamante: "#4fd0f5", "mítico": "#d45cff", mitico: "#d45cff", legendario: "#ff4a3d", maestro: "#62d64a", pro: "#3A3A3A" }
     const RANK_ROMAN = { I: "I", II: "II", III: "III" }
     const rankSteps = data.settings.rewards.slice().sort((a, b) => a.level - b.level).map(r => {
         const role = data.roles.find(x => x.id == r.id)

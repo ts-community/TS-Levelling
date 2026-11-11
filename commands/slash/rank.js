@@ -27,9 +27,9 @@ module.exports = {
         description: "Ver tu XP, nivel y cooldown.",
         args: [
             { type: "user", name: "member", description: "De qué miembro ver la tarjeta", required: false },
-            { type: "string", name: "view", description: "Estilo de los rangos (por defecto, el que tengas guardado)", required: false, choices: [
-                { name: "Predeterminada", value: "new" },
-                { name: "Legacy", value: "old" },
+            { type: "string", name: "view", description: "Vista Predeterminada o Legacy. Por defecto: Predeterminada.", required: false, choices: [
+                { name: "Vista Predeterminada", value: "new" },
+                { name: "Vista Legacy", value: "old" },
             ] },
         ]
     },
@@ -60,9 +60,10 @@ module.exports = {
         if (db.settings.rankCard.disabled) return tools.warn("Las tarjetas de rango están desactivadas en este servidor.")
         if (!currentXP || !currentXP.xp) return tools.noXPYet(target.user || int.user)
 
-        // Opción view de /rank: solo cambia esta tarjeta, no la preferencia guardada
+        // Opción view de /rank: solo cambia esta tarjeta, no la preferencia guardada.
+        // Sin elección se usa siempre la vista Predeterminada.
         const viewOption = int.options?.getString?.("view")
-        const style = view.style || (["old", "new"].includes(viewOption) ? viewOption : null) || (db.users[int.user.id]?.rankStyle === 'old' ? 'old' : 'new')
+        const style = view.style || (viewOption === 'old' ? 'old' : 'new')
         const modern = style === 'new'
         let xp = currentXP.xp
         let levelData = tools.getLevel(xp, db.settings, true)
@@ -282,14 +283,13 @@ module.exports = {
         const bannerAttachment = hasRankCard
             ? new AttachmentBuilder(path.join(__dirname, "../../assets/banners/", rank.banner.url), { name: rank.banner.url })
             : null
-        const rankColors = { bronze: '#e08a45', silver: '#6f9cff', gold: '#f7c844', diamond: '#4fd0f5', mythic: '#d45cff', legendary: '#ff4a3d', masters: '#62d64a', pro: '#d9dde6' }
         const headerEmoji = modern ? role?.emoji : (role?.legacyEmoji || role?.emoji)
         const headerLine = hasRankCard
             ? `## ${headerEmoji} <@&${role.id}>  <:top:1467967277251956887> #${userRank || "?"}`
             : `## <:top:1467967277251956887> #${userRank || "?"}`
 
         let container = new ContainerBuilder()
-            .setAccentColor(parseInt((modern ? rankColors[rank?.rank] : rank?.color)?.replace('#', ''), 16) || 3447003)
+            .setAccentColor(parseInt((modern ? rank?.modernColor : rank?.color)?.replace('#', ''), 16) || 3447003)
         if (bannerAttachment) {
             container.addMediaGalleryComponents([
                 new MediaGalleryBuilder()

@@ -116,7 +116,7 @@ class OvertakeMessage {
         }
 
         // ---------- Container V2, misma estructura que LevelUpMessage ----------
-        const accentColor = proRank?.color ? parseInt(proRank.color.replace("#", ""), 16) : tools.COLOR
+        const accentColor = proRank?.modernColor ? parseInt(proRank.modernColor.replace("#", ""), 16) : tools.COLOR
 
         const files = []
         if (proRank?.banner?.url) {

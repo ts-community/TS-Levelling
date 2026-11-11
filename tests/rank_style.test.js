@@ -19,9 +19,10 @@ test('protege y guarda la preferencia del autor, conservando el miembro consulta
         assert.deepEqual(rendered, { targetId: target, style: 'old', update: true })
     } finally { rank.run = original }
 })
-for (const preference of [undefined, 'old', 'new']) {
-  for (const update of [false, true]) {
-    test(`renderiza estilo ${preference || 'predeterminado'} (${update ? 'botón' : 'comando'})`, async () => {
+for (const viewOption of [undefined, 'old', 'new']) {
+  for (const preference of [undefined, 'old', 'new']) {
+    for (const update of [false, true]) {
+    test(`renderiza vista ${viewOption || 'predeterminada'} (guardada: ${preference || 'ninguna'}, ${update ? 'botón' : 'comando'})`, async () => {
         let payload
         const member = { id: target, displayName: 'Miembro', displayAvatarURL: () => 'https://example.com/avatar.png' }
         const tools = {
@@ -32,9 +33,9 @@ for (const preference of [undefined, 'old', 'new']) {
             getRolesForLevel: () => [{ id: '1168639778405752872' }], getLeaderboard: () => [{ id: target, xp: 1000 }],
             getMultiplier: () => ({ multiplier: 1, roleList: [], channelList: [] }), getRecordsCompleted: () => 0
         }
-        await rank.run({}, { user: { id: owner }, guild: { id: 'guild' }, deferred: update, deferReply: async () => {}, editReply: async p => { assert.equal(update, false); payload = p }, message: { edit: async p => { assert.equal(update, true); payload = p } } }, tools, { update })
+        await rank.run({}, { user: { id: owner }, guild: { id: 'guild' }, deferred: update, options: { getString: name => name === 'view' ? viewOption : undefined }, deferReply: async () => {}, editReply: async p => { assert.equal(update, false); payload = p }, message: { edit: async p => { assert.equal(update, true); payload = p } } }, tools, { update })
         const json = JSON.stringify(payload.components.map(c => c.toJSON()))
-        const modern = preference !== 'old'
+        const modern = viewOption !== 'old'
         assert.ok(json.includes(modern ? 'Cambiar a Vista Legacy' : 'Cambiar a Vista Predeterminada'))
         assert.ok(json.includes(`rank_style~${owner}~${target}~${modern ? 'old' : 'new'}`))
         assert.equal(json.includes('attachment://rank-icon.webp'), false)
@@ -50,8 +51,8 @@ for (const preference of [undefined, 'old', 'new']) {
         assert.equal(json.includes('attachment://masters.webp'), true)
         assert.equal(payload.components[0].toJSON().accent_color, modern ? 0x62d64a : 0xf59e0b)
     })
-}
-
+    }
+  }
 }
 
 test('cambia la tarjeta existente sin recalcular ni volver a subir adjuntos', async () => {
