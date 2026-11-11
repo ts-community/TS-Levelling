@@ -75,6 +75,20 @@ a { color: var(--c-accent) !important; }
 .details, .settingBox p.details, p[style*="opacity"] { color: var(--c-muted); }
 ::selection { background: rgb(45 212 191 / 0.3); }
 
+/* Mismo degradado de títulos que tscomunity.es */
+.heading-gradient {
+    background-image: linear-gradient(110deg, #ffffff 4%, #dffcf5 38%, var(--c-accent) 72%, var(--c-leaf) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+}
+/* La palabra "Brawl" de la marca, en el verde-azul de la web principal */
+.brandAccent {
+    color: var(--c-accent);
+    -webkit-text-fill-color: var(--c-accent);
+}
+
 /* ---------- Topbar ---------- */
 .topbar {
     height: 64px;
@@ -2474,7 +2488,7 @@ a.lbNavItem:hover, a.category:hover { color: var(--c-fg) !important; }
 .adminHeroIcon { position: relative; width: 84px; height: 84px; border-radius: 24px; object-fit: cover; box-shadow: 0 0 0 1px rgb(255 255 255 / .14), 0 16px 40px -12px rgb(45 212 191 / .55); }
 .adminHeroText { position: relative; min-width: 0; }
 .adminHeroEyebrow { font: 700 11px var(--lato); letter-spacing: .18em; text-transform: uppercase; color: var(--c-accent); }
-.adminHero h1 { margin: 4px 0 8px !important; font: 400 clamp(28px, 3.4vw, 40px)/1.05 var(--display) !important; letter-spacing: .01em; background: linear-gradient(110deg, #fff 10%, #dffcf5 45%, var(--c-accent) 85%); -webkit-background-clip: text; background-clip: text; color: transparent !important; }
+.adminHero h1 { margin: 4px 0 8px !important; font: 400 clamp(28px, 3.4vw, 40px)/1.05 var(--display) !important; letter-spacing: .01em; background-image: linear-gradient(110deg, #ffffff 4%, #dffcf5 38%, var(--c-accent) 72%, var(--c-leaf) 100%); -webkit-background-clip: text; background-clip: text; color: transparent !important; }
 .adminHero p { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 !important; font-size: 13px !important; color: var(--c-muted) !important; }
 .adminHeroStatus { display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px; border-radius: 99px; font: 600 12px var(--lato); }
 .adminHeroStatus i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 0 currentColor; animation: statusPulse 2s infinite; }
@@ -2518,7 +2532,7 @@ a.lbNavItem:hover, a.category:hover { color: var(--c-fg) !important; }
 /* --- Páginas de ajustes --- */
 .configboxes:not(#serverInfo) > .settingBox:first-child { position: relative; padding: 0 0 22px !important; border-bottom: 1px solid color-mix(in oklab, var(--tone) 22%, var(--c-line)) !important; }
 .configboxes:not(#serverInfo) > .settingBox:first-child::after { content: ''; position: absolute; left: 0; bottom: -1px; width: 120px; height: 2px; border-radius: 2px; background: var(--tone); box-shadow: 0 0 14px var(--tone); }
-.configboxes:not(#serverInfo) > .settingBox:first-child > h1:first-child { display: inline-block; font-size: 40px !important; background: linear-gradient(110deg, #fff 20%, color-mix(in oklab, var(--tone) 60%, white) 70%, var(--tone)); -webkit-background-clip: text; background-clip: text; color: transparent !important; }
+.configboxes:not(#serverInfo) > .settingBox:first-child > h1:first-child { display: inline-block; font-size: 40px !important; background-image: linear-gradient(110deg, #ffffff 4%, #dffcf5 38%, var(--c-accent) 72%, var(--c-leaf) 100%); -webkit-background-clip: text; background-clip: text; color: transparent !important; }
 .configboxes:not(#serverInfo) > .settingBox:not(:first-child) {
     position: relative; border-radius: 18px !important; padding: 24px 26px 26px !important;
     background: linear-gradient(180deg, color-mix(in oklab, var(--tone) 4%, transparent), transparent 120px), var(--c-surface) !important;

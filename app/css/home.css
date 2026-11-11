@@ -9,7 +9,6 @@
 .homeBrandName { display: block; font-size: 15px; font-weight: 700; }
 .homeBrandCaption { display: block; margin-top: 4px; font-size: 12px; color: var(--c-muted); }
 .homePage .homeIntro .heroTitle { font-family: var(--lato) !important; font-weight: 700 !important; font-size: clamp(38px, 4.2vw, 62px) !important; letter-spacing: -.055em; line-height: 1.08 !important; }
-.homePage .heroTitle span { color: var(--c-accent); -webkit-text-fill-color: var(--c-accent); }
 .homePage .homeIntro .heroSubtitle { margin: 22px 0 28px !important; font-size: 16px !important; max-width: 460px; opacity: 1; }
 .homePage .heroButtons { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; width: 100%; }
 .homePage .heroButtons a { text-decoration: none; max-width: 100%; }
@@ -53,8 +52,6 @@
 .homePage a.homeBrand img { transition: transform .25s cubic-bezier(.2,.7,.2,1); }
 .homePage a.homeBrand:hover img { transform: scale(1.05) rotate(-3deg); }
 .homePage .homeBrandName { color: var(--c-fg); }
-/* Mismo degradado que los títulos de tscomunity.es */
-.homePage .heroTitle span { background: linear-gradient(110deg, var(--c-accent) 20%, var(--c-leaf) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
 /* Cada fila enseña su XP respecto al primero: una línea fina bajo el nombre */
 .homePage #homeTopList li { position: relative; }
 .homePage #homeTopList li[style*="--p"]::after { content: ''; position: absolute; left: 82px; right: 10px; bottom: 5px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, rgb(45 212 191 / .55) var(--p), rgb(255 255 255 / .05) var(--p)); pointer-events: none; }

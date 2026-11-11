@@ -586,6 +586,7 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                 .brandBar:hover { opacity: 1; }
                 .brandBar img { width: 38px; height: 38px; border-radius: 11px; box-shadow: 0 0 0 1px rgb(255 255 255 / .14), 0 8px 24px -8px var(--a); }
                 .brandBar b { font: 400 19px/1 'Lilita One', sans-serif; letter-spacing: .02em; }
+                .brandAccent { color: var(--a); }
                 .brandBar small { display: block; margin-top: 3px; font: 600 10.5px 'Inter', sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--a); }
                 .card { transform: none !important; width: min(100%, 560px) !important; border-radius: 28px !important;
                     background: linear-gradient(180deg, rgb(255 255 255 / .06), rgb(255 255 255 / .02)), rgb(12 14 22 / .82) !important;
@@ -617,7 +618,7 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                 <div class="glow three"></div>
             </div>
 
-            <a class="brandBar" href="/"><img src="/assets/server-icon-128.webp" alt=""><span><b>TS Community Brawl</b><small>Sistema de niveles</small></span></a>
+            <a class="brandBar" href="/"><img src="/assets/server-icon-128.webp" alt=""><span><b>TS Community <span class="brandAccent">Brawl</span></b><small>Sistema de niveles</small></span></a>
             <main class="card">
                 <div class="cardGrid"></div>
                 <div class="cardSpot"></div>

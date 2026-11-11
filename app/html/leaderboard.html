@@ -31,10 +31,6 @@
         #serverName {
             font-family: var(--opensans);
             font-weight: 800;
-            background: linear-gradient(135deg, var(--polarisgreen), var(--emojiblue));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
         }
 
         #serverMembers {
@@ -166,7 +162,7 @@
             </button>
             <a class="topbarBrand" href="/">
                 <img src="/assets/server-icon-128.webp" alt="">
-                <span>TS Community Brawl</span>
+                <span>TS Community <span class="brandAccent">Brawl</span></span>
             </a>
         </div>
         <div class="rankIconOptions" role="group" aria-label="Vista de los rangos" style="visibility: hidden">
@@ -274,7 +270,7 @@
 
         <div class="lbContent">
         <div id="lbPageHeader">
-            <div class="lbHeadText"><h1 id="serverName"></h1>
+            <div class="lbHeadText"><h1 id="serverName" class="heading-gradient"></h1>
             <p id="serverMembers"></p></div>
             <h2 style="color: #ff5555; margin: 0px 0px 15px 0px; text-align: center; display: none" id="notInServerWarning">¡No estás en este servidor!</h2>
             <button id="bigLoginBtn" onclick="loginButton()" style="display: none; background: linear-gradient(135deg, var(--polarisgreen), var(--emojiblue)); color: #0b1210; width: 350px; margin-bottom: 30px; margin-top: 10px; font-size: 20px; height: 50px; border-radius: 999px;">Inicia sesión para ver tus estadísticas</button>
@@ -745,9 +741,12 @@ const tabInfo = {
 }
 const slugToBox = Object.fromEntries(Object.entries(tabInfo).map(([box, info]) => [info.slug, box]))
 
+const escapeHeaderText = (value) => String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
+const formatBrandName = (value) => escapeHeaderText(value).replace(/\bBrawl\b/g, '<span class="brandAccent">Brawl</span>')
+
 function updateHeaderTitle(box) {
     if (box == "leaderboard") {
-        $('#serverName').text(guildName)
+        $('#serverName').html(formatBrandName(guildName))
         $('#serverMembers').show()
     } else {
         $('#serverName').text(tabInfo[box].label)

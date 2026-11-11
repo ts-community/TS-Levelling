@@ -37,10 +37,7 @@
         }
 
         .pageHeader h1 span {
-            background: linear-gradient(135deg, var(--polarisgreen), var(--emojiblue));
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
+            -webkit-text-fill-color: currentColor;
         }
 
         .pageHeader p {
@@ -120,7 +117,7 @@
     <div class="topbar">
         <a class="topbarBrand" href="./">
             <img src="/assets/server-icon-128.webp" alt="">
-            <span>TS Community Brawl</span>
+            <span>TS Community <span class="brandAccent">Brawl</span></span>
         </a>
         <div class="userMenu" id="userMenu" style="display: none">
             <button class="userMenuButton" id="userMenuButton" type="button">
@@ -145,7 +142,7 @@
 
     <div id="everything" style="display: none">
         <div class="pageHeader">
-            <h1>Bienvenido de nuevo, <span id="usernameHeader"></span></h1>
+            <h1 class="heading-gradient">Bienvenido de nuevo, <span id="usernameHeader"></span></h1>
             <p>Selecciona un servidor para gestionar</p>
         </div>
 

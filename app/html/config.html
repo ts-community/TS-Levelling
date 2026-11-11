@@ -28,7 +28,7 @@
             </button>
             <a class="topbarBrand" href="/">
                 <img src="/assets/server-icon-128.webp" alt="">
-                <span>TS Community Brawl</span>
+                <span>TS Community <span class="brandAccent">Brawl</span></span>
             </a>
         </div>
     </div>
@@ -1200,7 +1200,7 @@
                 <img class="adminHeroIcon" src="${escH(data.guild.icon || "/assets/server-icon-128.webp")}" alt="" onerror="this.onerror=null;this.src='/assets/server-icon-128.webp'">
                 <div class="adminHeroText">
                     <span class="adminHeroEyebrow">Panel de administración</span>
-                    <h1>${escH(data.guild.name)}</h1>
+                    <h1>${escH(data.guild.name).replace(/\bBrawl\b/g, '<span class="brandAccent">Brawl</span>')}</h1>
                     <p><span class="adminHeroStatus ${st.enabled ? "on" : "off"}"><i></i>${st.enabled ? "XP activada" : "XP desactivada"}</span><span class="adminHeroSaved">Último guardado: ${escH(saved)}</span></p>
                 </div>
                 <dl class="adminHeroStats">${chips.map(([k, v]) => `<div><dt>${k}</dt><dd>${escH(v)}</dd></div>`).join("")}</dl>
