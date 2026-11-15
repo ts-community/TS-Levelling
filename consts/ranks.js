@@ -1,8 +1,8 @@
 const ranks = [
   {
     rank: 'bronze',
-    color: '#e08a45',
-    modernColor: '#e08a45',
+    color: '#e48a3a',
+    legacyColor: '#e48a3a',
     banner: {
       url: 'bronze.webp',
       alt: 'Bronze Rank Banner'
@@ -15,8 +15,8 @@ const ranks = [
   },
   {
     rank: 'silver',
-    color: '#979c9f',
-    modernColor: '#6f9cff',
+    color: '#659ee0',
+    legacyColor: '#659ee0',
     banner: {
       url: 'silver.webp',
       alt: 'Silver Rank Banner'
@@ -30,7 +30,7 @@ const ranks = [
   {
     rank: 'gold',
     color: '#f1c40f',
-    modernColor: '#f7c844',
+    legacyColor: '#f1c40f',
     banner: {
       url: 'gold.webp',
       alt: 'Gold Rank Banner'
@@ -43,8 +43,8 @@ const ranks = [
   },
   {
     rank: 'diamond',
-    color: '#3498db',
-    modernColor: '#4fd0f5',
+    color: '#22b8e6',
+    legacyColor: '#22b8e6',
     banner: {
       url: 'diamond.webp',
       alt: 'Diamond Rank Banner'
@@ -57,8 +57,8 @@ const ranks = [
   },
   {
     rank: 'mythic',
-    color: '#9b59b6',
-    modernColor: '#d45cff',
+    color: '#d563e3',
+    legacyColor: '#d563e3',
     banner: {
       url: 'mythic.webp',
       alt: 'Mythic Rank Banner'
@@ -71,8 +71,8 @@ const ranks = [
   },
   {
     rank: 'legendary',
-    color: '#e74c3c',
-    modernColor: '#ff4a3d',
+    color: '#e75757',
+    legacyColor: '#e75757',
     banner: {
       url: 'legendary.webp',
       alt: 'Legendary Rank Banner'
@@ -85,8 +85,8 @@ const ranks = [
   },
   {
     rank: 'masters',
-    color: '#f59e0b',
-    modernColor: '#62d64a',
+    color: '#62d64a',
+    legacyColor: '#f59e0b',
     banner: {
       url: 'masters.webp',
       alt: 'Masters Rank Banner'
@@ -99,8 +99,8 @@ const ranks = [
   },
   {
     rank: 'pro',
-    color: '#008f39',
-    modernColor: '#3A3A3A',
+    color: '#454545',
+    legacyColor: '#008f39',
     banner: {
       url: 'pro.webp',
       alt: 'Pro Rank Banner'

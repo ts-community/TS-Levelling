@@ -289,7 +289,7 @@ module.exports = {
             : `## <:top:1467967277251956887> #${userRank || "?"}`
 
         let container = new ContainerBuilder()
-            .setAccentColor(parseInt((modern ? rank?.modernColor : rank?.color)?.replace('#', ''), 16) || 3447003)
+            .setAccentColor(parseInt((modern ? rank?.color : rank?.legacyColor)?.replace('#', ''), 16) || 3447003)
         if (bannerAttachment) {
             container.addMediaGalleryComponents([
                 new MediaGalleryBuilder()

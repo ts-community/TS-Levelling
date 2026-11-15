@@ -25,7 +25,7 @@ module.exports = {
             const role = tier?.roles.find(role => text.content.includes(`<@&${role.id}>`))
             if (role) {
                 text.content = text.content.replace(/^## <a?:[^>]+>/, `## ${modern ? role.emoji : (role.legacyEmoji || role.emoji)}`)
-                container.accent_color = parseInt((modern ? tier.modernColor : tier.color).slice(1), 16)
+                container.accent_color = parseInt((modern ? tier.color : tier.legacyColor).slice(1), 16)
             }
             const row = container.components.find(c => c.type === 1 && c.components.some(b => b.custom_id?.startsWith('rank_style~')))
             const button = row?.components.find(b => b.custom_id?.startsWith('rank_style~'))

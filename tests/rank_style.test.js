@@ -75,3 +75,14 @@ test('cambia la tarjeta existente sin recalcular ni volver a subir adjuntos', as
     assert.equal(edited.components[0].components[1].components[0].label, 'Cambiar a Vista Predeterminada')
     assert.equal(edited.components[0].accent_color, 0x008f39)
 })
+
+test('solo Maestro y Pro cambian de color entre vista normal y legacy', () => {
+    const ranks = require('../consts/ranks')
+    const changed = new Set(['masters', 'pro'])
+    for (const tier of ranks) {
+        assert.ok(tier.color, `${tier.rank} no tiene color`)
+        assert.ok(tier.legacyColor, `${tier.rank} no tiene legacyColor`)
+        if (changed.has(tier.rank)) assert.notEqual(tier.legacyColor, tier.color, `${tier.rank} debería cambiar entre vistas`)
+        else assert.equal(tier.legacyColor, tier.color, `${tier.rank} no debería cambiar entre vistas`)
+    }
+})
