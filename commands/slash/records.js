@@ -13,6 +13,7 @@ const {
 const path = require("path")
 const fs = require("fs")
 const Tools = require("../../classes/Tools.js")
+const { getTenureTimestamp } = require("../../classes/Tenure.js")
 const ranks = require("../../consts/ranks.js")
 const records = require("../../config/records.js")
 const { estimateVisualWidth } = require("./top.js")
@@ -126,8 +127,9 @@ function getProgress(record, userData, member, commafy, info) {
         return progress
     }
     if (type === "member_tenure") {
-        if (!member?.joinedTimestamp) return null
-        const years = (Date.now() - member.joinedTimestamp) / MS_PER_YEAR
+        const since = getTenureTimestamp(userData, member)
+        if (!since) return null
+        const years = Math.max(0, Date.now() - since) / MS_PER_YEAR
         const fmt1 = v => String(Math.round(v * 10) / 10).replace(".", ",")
         return makeProgress(years, record.tiers, fmt1)
     }
@@ -491,7 +493,8 @@ function buildInfoTexts(userData, member, unlockedIds, tools, info) {
     const voiceMinutes = num(userData?.voiceMinutes) + getActiveVoiceMinutes(userData, member)
     const voice = formatVoiceTime(voiceMinutes)
     const voiceShort = formatVoiceTimeShort(voiceMinutes)
-    const tenure = member?.joinedTimestamp ? formatTenure(member.joinedTimestamp) : formatCount(0, "día")
+    const since = getTenureTimestamp(userData, member)
+    const tenure = since ? formatTenure(since) : formatCount(0, "día")
     // La etiqueta siempre lleva "Mensajes" (Mensajes totales / Mensajes
     // este mes / Mensajes diarios): lo que se acorta es la unidad
     // (mensajes → msgs → nada), nunca la etiqueta.

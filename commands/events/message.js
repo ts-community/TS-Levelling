@@ -4,6 +4,7 @@ const Tools = require("../../classes/Tools.js")
 const config = require("../../config.json")
 const recordsConfig = require("../../config/records.js")
 const tracker = require("../../classes/RecordTracker.js")
+const { getTenureTimestamp } = require("../../classes/Tenure.js")
 
 // Helpers compartidos (viven en RecordTracker para que grantRecord pueda
 // comprobar level-up/adelantamiento sin ciclos de require).
@@ -159,8 +160,9 @@ async runInner(client, message, tools) {
         const streakNow = streakUpdate.current
         const channelsNow = tracker.countDistinctChannels(userData.channels) +
             (userData.channels?.[message.channelId] ? 0 : 1)
-        const tenureNow = message.member?.joinedTimestamp
-            ? (Date.now() - message.member.joinedTimestamp) / MS_PER_YEAR
+        const tenureSince = getTenureTimestamp(userData, message.member)
+        const tenureNow = tenureSince
+            ? Math.max(0, Date.now() - tenureSince) / MS_PER_YEAR
             : 0
         const unlocked = tracker.unlockedIdSet(userData)
         const byId = Object.fromEntries(recordsConfig.allRecords().map(({ record }) => [record.id, record]))

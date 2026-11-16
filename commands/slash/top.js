@@ -14,6 +14,7 @@ const ranks = require("../../consts/ranks.js")
 const recordsConfig = require("../../config/records.js")
 
 const tenureCache = new Map()
+const { getTenureTimestamp } = require("../../classes/Tenure.js")
 
 function getCurrentSpanishMonth() {
     return new Intl.DateTimeFormat("es-ES", {
@@ -582,8 +583,9 @@ async run(client, int, tools) {
     const info = db.info || null
     const tenureMembers = new Map()
     let tenureLoadPromise = null
+    const tenureSinceFor = id => getTenureTimestamp(db.users?.[String(id)], tenureMembers.get(String(id)))
     const getTenureAge = member => {
-        const joined = Number(member?.joinedTimestamp)
+        const joined = tenureSinceFor(member?.id)
         if (!joined) return 0
         return Math.max(0, Date.now() - joined)
     }
@@ -639,7 +641,7 @@ async run(client, int, tools) {
         if (!mode) return []
         if (key === "antiguedad") {
             return [...tenureMembers.values()]
-                .filter(member => !member.user?.bot && member.joinedTimestamp)
+                .filter(member => !member.user?.bot && tenureSinceFor(member.id))
                 .map(member => ({
                     id: String(member.id),
                     xp: Number(db.users?.[String(member.id)]?.xp) || 0,
@@ -762,13 +764,13 @@ async run(client, int, tools) {
             const statValue = statMode ? statValueFor(viewKey, entry) : 0
             const member = resolvedMembers.get(userId)
             const statDisplayValue = viewKey === "antiguedad"
-                ? topTenureText(tenureMembers.get(userId)?.joinedTimestamp)
+                ? topTenureText(tenureSinceFor(userId))
                 : null
             const statDisplayValueShort = viewKey === "antiguedad"
-                ? topTenureTextShort(tenureMembers.get(userId)?.joinedTimestamp)
+                ? topTenureTextShort(tenureSinceFor(userId))
                 : null
             const statDisplayValueVariants = viewKey === "antiguedad"
-                ? topTenureVariants(tenureMembers.get(userId)?.joinedTimestamp)
+                ? topTenureVariants(tenureSinceFor(userId))
                 : null
             const user = member?.user || client.users.cache.get(userId)
             const displayName = member?.displayName || user?.globalName || user?.username

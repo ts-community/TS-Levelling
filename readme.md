@@ -14,6 +14,18 @@ Bot de niveles para Discord desarrollado y adaptado para **TS Community** a part
 * 🌐 Leaderboard web con estadísticas y records.
 * 🗄️ Persistencia de datos mediante MongoDB.
 
+## Gestión de antigüedad
+
+Con el permiso **Administrador**, usa:
+
+* `/gestion antiguedad miembro:@usuario accion:Consultar` para ver la fecha utilizada.
+* `/gestion antiguedad miembro:@usuario accion:Fijar fecha fecha:2020-06-15` para corregirla.
+* `/gestion antiguedad miembro:@usuario accion:Restaurar fecha de Discord` para quitar la corrección.
+
+La fecha debe tener formato `AAAA-MM-DD` y no ser futura. La corrección se guarda por servidor y miembro, se conserva aunque vuelva a entrar y se aplica en `/records`, su progreso y `/top`. Las respuestas son privadas. Los nuevos récords se comprueban en el siguiente mensaje del miembro; los ya desbloqueados y su XP se conservan.
+
+Tras actualizar y reiniciar el bot, registra el nuevo comando con `/deploy global:true` desde una cuenta de desarrollador.
+
 ## 🏆 Rangos
 
 🥉 **Bronce I, II y III**
