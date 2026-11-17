@@ -1,8 +1,8 @@
 // Shared secret: first touch reveals it; a second touch follows the link.
 function mountSecretEgg() {
- if (location.pathname === '/') return
+ if (location.pathname === '/' || /^\/(?:drops?|easteregg)(?:\/|$)/i.test(location.pathname) || document.querySelector('.badgeWrap') || document.getElementById('siteSecretEgg')) return
  const stylesheet = document.createElement('link')
- stylesheet.rel = 'stylesheet'; stylesheet.href = '/css/secret-egg.css'
+ stylesheet.rel = 'stylesheet'; stylesheet.href = '/css/secret-egg.css?v=2'
  document.head.append(stylesheet)
  const link = document.createElement('a')
  link.id = 'siteSecretEgg'

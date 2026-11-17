@@ -224,12 +224,13 @@
             <div class="sidebarWeb"><a class="lbNavItem webLink" href="https://tscomunity.es" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span>Web Principal</span><svg class="extIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div>
             <div class="lbSidebarUser">
                 <div class="userMenu" id="userMenu" style="display: none">
-                    <button class="sidebarUserButton" id="userMenuButton" type="button">
+                    <button class="sidebarUserButton" id="userMenuButton" type="button" aria-label="Abrir men? de cuenta y cerrar sesi?n">
                         <img id="userAvatar" src="" alt="">
                         <div class="sidebarUserInfo">
                             <span id="username"></span>
                             <span class="userRole" id="userRole"></span>
                         </div>
+                    <svg class="accountMenuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </button>
                     <div class="userDropdown sidebarUserDropdown" id="userDropdown">
                         <a href="/logout">
@@ -1519,7 +1520,7 @@ Fetch(lbURL(1)).then(async data => {
     const rankForLevel = lvl => { let found = null; for (const st of rankSteps) { if (st.level <= lvl) found = st; else break } return found }
 
     let shownLevels = 0
-    function appendLevels(count) {
+    function appendLevels(count, animate = true) {
         const to = Math.min(data.settings.maxLevel, shownLevels + count)
         for (let i = shownLevels + 1; i <= to; i++) {
             let lvlSlot = progressSlot.clone()
@@ -1541,6 +1542,7 @@ Fetch(lbURL(1)).then(async data => {
             lvlSlot.find("[lb=xp]").text(commafy(lvlXP) + " XP").css("color", lvlColor)
             lvlSlot.find("[lb=percent]").text(`${Number(Math.min(100, lvlProgress).toFixed(2))}%`)
             lvlSlot.find("[lb=progress]").css("width", Math.min(lvlProgress, 100) + "%")
+            if (animate) lvlSlot.addClass('levelReveal').css('--reveal-delay', Math.min(i - (to - count + 1), 9) * 25 + 'ms')
             $('#levelGrid').append(lvlSlot)
             shownLevels = i
         }
@@ -1552,7 +1554,7 @@ Fetch(lbURL(1)).then(async data => {
         if (shownLevels >= data.settings.maxLevel) return more.remove()
         if (!more.length) {
             $('<button id="moreLevels" box="levels" type="button">Mostrar más niveles</button>')
-                .on('click', () => appendLevels(40))
+                .on('click', () => appendLevels(10))
                 .insertAfter('#levelGrid')
         }
     }
@@ -1579,8 +1581,7 @@ Fetch(lbURL(1)).then(async data => {
         if (shownLevels > 1) {
             let earliest = viewLevel.level
             const controls = $('<div class="levelHistoryControls"></div>').prependTo('#levelGrid')
-            const more = $('<button type="button" aria-expanded="false">Mostrar 10 niveles anteriores</button>').appendTo(controls)
-            const collapse = $('<button type="button">Ocultar anteriores</button>').hide().appendTo(controls)
+            const more = $('<button id="earlierLevels" type="button" aria-expanded="false">Mostrar 10 niveles anteriores</button>').appendTo(controls)
             more.on('click', () => {
                 const end = shownLevels
                 const existing = $('#levelGrid .levelSlot').detach()
@@ -1592,18 +1593,11 @@ Fetch(lbURL(1)).then(async data => {
                 shownLevels = end
                 updateMoreLevels()
                 more.attr('aria-expanded', 'true').toggle(earliest > 1)
-                collapse.show()
-            })
-            collapse.on('click', () => {
-                $('#levelGrid .levelSlot.reached').remove()
-                earliest = viewLevel.level
-                more.attr('aria-expanded', 'false').show().trigger('focus')
-                collapse.hide()
             })
         }
-        appendLevels(15)
+        appendLevels(15, false)
     }
-    else appendLevels(20)
+    else appendLevels(20, false)
 
     // Visitantes: enseñar Recompensas y Niveles con los datos de ejemplo, marcados como tal
     if (!loggedIn) {
