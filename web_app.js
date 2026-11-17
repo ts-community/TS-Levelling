@@ -156,6 +156,7 @@ const staticOptions = {
 }
 app.use("/css", express.static(__dirname + '/app/css', staticOptions));
 app.use("/assets", express.static(__dirname + '/app/assets', staticOptions));
+app.use("/js/secret-egg.js", express.static(__dirname + "/app/js/secret-egg.js", staticOptions));
 app.use("/js/vendor", express.static(__dirname + '/app/js/vendor', staticOptions));
 app.use("/polaris.js", express.static(__dirname + '/app/js/extras.js', staticOptions));
 
@@ -334,9 +335,15 @@ async function handleDropClaim(req, res) {
     const code = String(req.params.code || "").toUpperCase()
     const validPath = /^\d{10,30}$/.test(guildId) && /^[A-Z0-9]{6,12}$/.test(code)
 
+    const timings = []
+    const timed = async (name, operation) => {
+        const start = performance.now()
+        try { return await operation() }
+        finally { timings.push(name + ';dur=' + (performance.now() - start).toFixed(1)); res.set('Server-Timing', timings.join(', ')) }
+    }
     const [user, doc] = await Promise.all([
-        validPath ? getDiscordInfo(req, true) : null,
-        validPath ? client.db.fetch(guildId, ["drops"]).exec().catch(() => null) : null,
+        validPath ? timed("identity", () => getDiscordInfo(req, true)) : null,
+        validPath ? timed("drop_read", () => client.db.fetch(guildId, [`drops.${code}`]).exec().catch(() => null)) : null,
     ])
     const drop = (doc?.drops || {})[code] || null
     const guildName = escapeDropHtml(client.guilds.cache.get(guildId)?.name || guildId || "el servidor")
@@ -545,7 +552,7 @@ async function handleDropClaim(req, res) {
         }))
     }
 
-    const claimed = await Drops.claimDrop(client, guildId, code, String(user.id))
+    const claimed = await timed("claim", () => Drops.claimDrop(client, guildId, code, String(user.id)))
     if (!claimed.ok) {
         const current = claimed.drop || drop
         const currentLeft = Drops.claimsLeft(current)
@@ -1623,6 +1630,7 @@ async function getDiscordToken(token) {
 /* STEP 5
 Now we can make requests to Discord to get the client's stuff! */
 let discordCache = {} // cache data to prevent rate limits
+const discordUserCache = require('./classes/AsyncCache')({ ttl: 60000 })
 let discordPending = {} // sesión -> consulta a Discord en curso
 
 // Limpieza: ninguna de las dos cachés se vaciaba nunca y crecían sin parar.
@@ -1641,6 +1649,8 @@ async function getDiscordInfo(req, userOnly, singleGuildLookup = false) {
     let cacheKey = token.access_token
     let foundData = discordCache[cacheKey] // check for cached data
     if (foundData && Date.now() <= foundData.expires) return userOnly ? foundData.data[0] : foundData.data
+    // Identity-only requests must not wait for guild pagination.
+    if (userOnly) return discordUserCache.get(cacheKey, () => fetchDiscordInfo(token, false, true))
     // Si ya hay una consulta a Discord en marcha para esta sesión, se espera a esa en vez de repetirla
     if (!singleGuildLookup && discordPending[cacheKey]) {
         let shared = await discordPending[cacheKey]
@@ -1702,6 +1712,7 @@ app.get("/logout", async function(req, res) {
     // La sesión deja de valer también en el servidor, no solo en el navegador.
     delete tokenCache[sessionID]
     delete discordCache[token.access_token]
+    discordUserCache.delete(token.access_token)
     authDB.delete({ _id: sessionID }).catch(() => {})
 
     fetch(discordAPI + "oauth2/token/revoke", {

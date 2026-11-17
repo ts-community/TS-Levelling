@@ -2592,3 +2592,14 @@ a.lbNavItem:hover, a.category:hover { color: var(--c-fg) !important; }
     .topbar .rankIconOptions button:hover, .topbar .rankIconOptions button:focus-visible, .topbar .rankIconOptions button:active { padding: 0 10px 0 7px; gap: 6px; color: var(--c-fg); }
     .topbar .rankIconOptions button:hover span, .topbar .rankIconOptions button:focus-visible span, .topbar .rankIconOptions button:active span { max-width: 150px; opacity: 1; }
 }
+
+/* Consistent page alignment and persistent mobile selection. */
+.brandAccent { font-family: inherit; font-weight: inherit; }
+#roleList { max-width: none !important; margin-inline: 0 !important; padding-inline: 0 !important; }
+#levelGrid { max-width: none; margin-inline: 0; }
+.levelHistoryControls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 8px 0; }
+.levelHistoryControls button { border: 1px solid var(--c-line-strong); border-radius: 12px; padding: 12px 18px; }
+@media(max-width: 600px) {
+ .topbar .rankIconOptions button[aria-pressed="true"] { padding: 0 10px 0 7px; gap: 6px; }
+ .topbar .rankIconOptions button[aria-pressed="true"] span { max-width: 150px; opacity: 1; }
+}

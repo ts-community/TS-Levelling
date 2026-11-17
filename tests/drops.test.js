@@ -1283,3 +1283,16 @@ test("isDropWebPath reconoce rutas completas y cortas del drop", () => {
     assert.equal(Drops.isDropWebPath("/discord?next=/ABCD2345"), false)
     assert.equal(Drops.isDropWebPath("/drop/123/abc"), false)
 })
+
+test('a burst of twenty claims queues all waiters and awards each user only once', async () => {
+    const doc = { _id: 'g', users: {}, drops: {}, settings: {} }
+    const client = fakeClient(doc)
+    const created = await Drops.createDrop(client, 'g', {
+        amount: 5000, maxClaims: 3, durationMin: 60, name: 'Burst', createdBy: 's',
+    })
+    const results = await Promise.all(Array.from({ length: 20 }, (_, i) =>
+        Drops.claimDrop(client, 'g', created.code, 'u' + (i % 5))))
+    assert.equal(results.filter(r => r.ok).length, 3)
+    assert.equal(doc.drops[created.code].claims.length, 3)
+    assert.equal(Object.values(doc.users).reduce((sum, u) => sum + u.xp, 0), 15000)
+})

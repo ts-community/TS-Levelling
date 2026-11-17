@@ -724,11 +724,12 @@ async function claimDrop(client, guildId, code, userId, now = Date.now(), deps =
     const addItem = deps.addItem || addBoatItem
     const removeItem = deps.removeItem || removeBoatItem
 
+    const queuedAt = Date.now()
     return withDropLock(guildId, code, async () => {
         const doc = await fetchDoc(client, guildId, [`drops.${code}`])
         if (!doc) return { ok: false, reason: "missing" }
         const drop = (doc.drops || {})[code]
-        const check = validateClaim(drop, userId, now)
+        const check = validateClaim(drop, userId, now + Math.max(0, Date.now() - queuedAt))
         if (!check.ok) return { ok: false, reason: check.reason, drop: drop || null }
 
         const amount = Math.round(Number(drop.amount) || 0)
