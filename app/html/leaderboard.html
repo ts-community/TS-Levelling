@@ -224,12 +224,13 @@
             <div class="sidebarWeb"><a class="lbNavItem webLink" href="https://tscomunity.es" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span>Web Principal</span><svg class="extIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg></a></div>
             <div class="lbSidebarUser">
                 <div class="userMenu" id="userMenu" style="display: none">
-                    <button class="sidebarUserButton" id="userMenuButton" type="button">
+                    <button class="sidebarUserButton" id="userMenuButton" type="button" aria-label="Abrir men? de cuenta y cerrar sesi?n">
                         <img id="userAvatar" src="" alt="">
                         <div class="sidebarUserInfo">
                             <span id="username"></span>
                             <span class="userRole" id="userRole"></span>
                         </div>
+                    <svg class="accountMenuIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4H4v16h5M14 8l4 4-4 4M8 12h10" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </button>
                     <div class="userDropdown sidebarUserDropdown" id="userDropdown">
                         <a href="/logout">
@@ -259,11 +260,7 @@
     <div id="leaderboard" box="leaderboard" class="leaderboardBox lbBox"></div>
     <h2 id="noXPYet" box="leaderboard" style="text-align: center; display: none" class="lbBox">¡Nadie en este servidor tiene XP todavía!</h2>
 
-    <div id="pageInfo" box="leaderboard" class="middleflex lbBox" style="flex-direction: row; margin-top: 20px">
-        <button id="pageDown" onclick="setPage(page - 1)" disabled style="width: 44px; min-width: 44px; height: 44px; padding: 0px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); margin-right: 20px;" aria-label="Página anterior">&lsaquo;</button>
-        <p style="font-weight: bold; font-size: 22px">Página <input id="pageNumber" min="1" onchange="setPage(+$(this).val())" type="number" value="1" style="font-size: 22px; margin: 0px 5px; font-weight: bold; width: 50px; height: 32px; text-align: center"> de <span id="totalPages">1</span></p>
-        <button id="pageUp" onclick="setPage(page + 1)" style="width: 44px; min-width: 44px; height: 44px; padding: 0px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); margin-left: 20px;" aria-label="Página siguiente">&rsaquo;</button>
-    </div>
+    <div id="pageInfo" box="leaderboard" class="middleflex lbBox"><button id="moreLeaderboard" type="button" onclick="setPage(page + 1)">Mostrar 10 más</button></div>
 
     <div id="statPickerWrap" style="display: none">
         <div id="statMenu"></div>
@@ -820,7 +817,7 @@ function statDisplayText(view, value) {
 // ?sort= en la URL comparte el enlace con la categoría ya elegida
 const requestedSort = new URLSearchParams(window.location.search).get("sort")
 let statSort = TOP_VIEWS.some(v => v.key === requestedSort) ? requestedSort : "xp"
-const lbURL = pg => `/api/leaderboard?page=${pg}&sort=${statSort}`
+const lbURL = pg => `/api/leaderboard?pageSize=10&page=${pg}&sort=${statSort}`
 
 function buildStatPicker() {
     if (!$('#lbPageHeader #statChips').length) $('#statChips').appendTo('#lbPageHeader')
@@ -980,11 +977,7 @@ Fetch(lbURL(1)).then(async data => {
 
     pageCache[`${statSort}|${data.pageInfo.page}`] = data
     totalPages = data.pageInfo.pageCount
-    if (totalPages <= 1) $('#pageInfo').remove()
-    else {
-        $('#totalPages').text(totalPages)
-        $('#pageNumber').attr("max", totalPages)
-    }
+    $('#moreLeaderboard').toggle(totalPages > 1)
 
     buildStatPicker()
     $('#statPickerWrap').toggle(currentBox === "leaderboard")
@@ -1072,7 +1065,7 @@ Fetch(lbURL(1)).then(async data => {
     }
 
     // leaderboard, function so that this supports multiple pages
-    function appendLeaderboard(leaderboard) {
+    function appendLeaderboard(leaderboard, append = false) {
         let esc2 = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))
         // Emblema de rango por nivel (mismos iconos que Recompensas)
         const PFILES = { bronce: "bronze", plata: "silver", oro: "gold", diamante: "diamond", "mítico": "mythic", mitico: "mythic", legendario: "legendary", maestro: "masters", pro: "pro" }
@@ -1146,7 +1139,9 @@ Fetch(lbURL(1)).then(async data => {
 
             rows.appendChild(userSlot[0])
         })
-        $('#leaderboard').empty().append(rows)
+        if (!append) $('#leaderboard').empty()
+        $('#leaderboard').append(rows)
+        if (append) return
 
         // Podio: los tres primeros en tarjetas grandes (2º · 1º · 3º)
         let top3 = leaderboard.filter(x => x.rank <= 3).sort((a, b) => a.rank - b.rank)
@@ -1198,7 +1193,7 @@ Fetch(lbURL(1)).then(async data => {
         for (const view of TOP_VIEWS) {
             if (pageCache[`${view.key}|1`]) continue
             try {
-                const r = await Fetch(`/api/leaderboard?page=1&sort=${view.key}`)
+                const r = await Fetch(`/api/leaderboard?pageSize=10&page=1&sort=${view.key}`)
                 if (r && r.leaderboard && !pageCache[`${view.key}|1`]) pageCache[`${view.key}|1`] = { leaderboard: r.leaderboard, pageInfo: r.pageInfo }
             } catch (e) {}
         }
@@ -1519,7 +1514,7 @@ Fetch(lbURL(1)).then(async data => {
     const rankForLevel = lvl => { let found = null; for (const st of rankSteps) { if (st.level <= lvl) found = st; else break } return found }
 
     let shownLevels = 0
-    function appendLevels(count) {
+    function appendLevels(count, animate = true) {
         const to = Math.min(data.settings.maxLevel, shownLevels + count)
         for (let i = shownLevels + 1; i <= to; i++) {
             let lvlSlot = progressSlot.clone()
@@ -1541,6 +1536,7 @@ Fetch(lbURL(1)).then(async data => {
             lvlSlot.find("[lb=xp]").text(commafy(lvlXP) + " XP").css("color", lvlColor)
             lvlSlot.find("[lb=percent]").text(`${Number(Math.min(100, lvlProgress).toFixed(2))}%`)
             lvlSlot.find("[lb=progress]").css("width", Math.min(lvlProgress, 100) + "%")
+            if (animate) lvlSlot.addClass('levelReveal').css('--reveal-delay', Math.min(i - (to - count + 1), 9) * 25 + 'ms')
             $('#levelGrid').append(lvlSlot)
             shownLevels = i
         }
@@ -1551,8 +1547,8 @@ Fetch(lbURL(1)).then(async data => {
         const more = $('#moreLevels')
         if (shownLevels >= data.settings.maxLevel) return more.remove()
         if (!more.length) {
-            $('<button id="moreLevels" box="levels" type="button">Mostrar más niveles</button>')
-                .on('click', () => appendLevels(40))
+            $('<button id="moreLevels" box="levels" type="button">Mostrar 10 niveles posteriores</button>')
+                .on('click', () => appendLevels(10))
                 .insertAfter('#levelGrid')
         }
     }
@@ -1579,8 +1575,7 @@ Fetch(lbURL(1)).then(async data => {
         if (shownLevels > 1) {
             let earliest = viewLevel.level
             const controls = $('<div class="levelHistoryControls"></div>').prependTo('#levelGrid')
-            const more = $('<button type="button" aria-expanded="false">Mostrar 10 niveles anteriores</button>').appendTo(controls)
-            const collapse = $('<button type="button">Ocultar anteriores</button>').hide().appendTo(controls)
+            const more = $('<button id="earlierLevels" type="button" aria-expanded="false">Mostrar 10 niveles anteriores</button>').appendTo(controls)
             more.on('click', () => {
                 const end = shownLevels
                 const existing = $('#levelGrid .levelSlot').detach()
@@ -1592,18 +1587,11 @@ Fetch(lbURL(1)).then(async data => {
                 shownLevels = end
                 updateMoreLevels()
                 more.attr('aria-expanded', 'true').toggle(earliest > 1)
-                collapse.show()
-            })
-            collapse.on('click', () => {
-                $('#levelGrid .levelSlot.reached').remove()
-                earliest = viewLevel.level
-                more.attr('aria-expanded', 'false').show().trigger('focus')
-                collapse.hide()
             })
         }
-        appendLevels(15)
+        appendLevels(15, false)
     }
-    else appendLevels(20)
+    else appendLevels(20, false)
 
     // Visitantes: enseñar Recompensas y Niveles con los datos de ejemplo, marcados como tal
     if (!loggedIn) {
@@ -1712,6 +1700,7 @@ Fetch(lbURL(1)).then(async data => {
     setPage = async function(pg, force) {
         if (!force && loadingPage) return
         let oldPage = page
+        const append = !force && pg > page
         let savedScroll = 0
         if (page == pg && $('#leaderboard').is(":visible")) savedScroll = $('html').scrollTop()   // keep scroll
         page = (pg || 1)
@@ -1721,6 +1710,7 @@ Fetch(lbURL(1)).then(async data => {
         loadingPage = true
         const requestId = ++loadSequence
         const requestedSort = statSort
+        $('#moreLeaderboard').prop('disabled', true).text('Cargando…')
         $('#pageNumber').val(page)
         $('#pageDown').prop('disabled', page <= 1)
         $('#pageUp').prop('disabled', page >= totalPages)
@@ -1729,21 +1719,24 @@ Fetch(lbURL(1)).then(async data => {
         try {
             let cachedPage = pageCache[`${requestedSort}|${page}`]
             let res = (cachedPage && (!force || force === "sort")) ? cachedPage
-                : await Fetch(`/api/leaderboard?page=${page}&sort=${requestedSort}`)
+                : await Fetch(`/api/leaderboard?pageSize=10&page=${page}&sort=${requestedSort}`)
             if (requestId !== loadSequence || requestedSort !== statSort) return
             pageCache[`${requestedSort}|${res.pageInfo.page}`] = { leaderboard: res.leaderboard, pageInfo: res.pageInfo }
-            $('html').scrollTop(savedScroll)
-            appendLeaderboard(res.leaderboard)
+            if (!append) $('html').scrollTop(savedScroll)
+            totalPages = res.pageInfo.pageCount
+            appendLeaderboard(res.leaderboard, append)
 
             if (res.guild) updateRankedCount(res)
         } catch (e) {
             if (requestId === loadSequence) {
+                page = oldPage
                 console.error(e)
                 alert("¡Error al cargar la clasificación!")
             }
         } finally {
             if (requestId === loadSequence) {
                 loadingPage = false
+                $('#moreLeaderboard').prop('disabled', false).text('Mostrar 10 más').toggle(page < totalPages)
                 setSortPending(false)
             }
         }
@@ -1757,7 +1750,7 @@ Fetch(lbURL(1)).then(async data => {
     $(document).on('click', '.leaderboardSlot.canManage', function() {
         if (!data.moderator) return
         $('.popup').hide()
-        let foundUser = pageCache[`${statSort}|${page}`].leaderboard.find(x => x.id == $(this).attr('userID'))
+        let foundUser = Object.entries(pageCache).filter(([key]) => key.startsWith(statSort + '|')).flatMap(([, value]) => value.leaderboard).find(x => x.id == $(this).attr('userID'))
         if (!foundUser) return
 
         let defaultAdd = data.settings.gain.max * 10
