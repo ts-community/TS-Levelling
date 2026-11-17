@@ -560,6 +560,8 @@ function rankIconPalette(style) {
 }
 function updateRankIconButtons() {
     rankIconButtons.forEach(button => {
+        const label = button.querySelector('span')
+        if (label) button.style.setProperty('--label-width', Math.ceil(label.scrollWidth) + 'px')
         const style = button.dataset.rankStyle
         button.setAttribute('aria-pressed', String(style === rankIconStyle))
         button.style.setProperty('--icon-color', rankIconTier ? rankIconPalette(style)[rankIconTier] : '#59616c')
@@ -574,6 +576,7 @@ function updateRankIconButtons() {
         if (img.getAttribute('src') !== src) img.setAttribute('src', src)
     })
 }
+if (document.fonts) document.fonts.ready.then(updateRankIconButtons)
 function setRankIconForUser(user, rewards, roles) {
     const ownedRoles = new Set(Array.isArray(user?.roles) ? user.roles : [])
     const files = { bronce: 'bronze', plata: 'silver', oro: 'gold', diamante: 'diamond', 'mítico': 'mythic', mitico: 'mythic', legendario: 'legendary', maestro: 'masters', pro: 'pro' }
@@ -817,7 +820,7 @@ function statDisplayText(view, value) {
 // ?sort= en la URL comparte el enlace con la categoría ya elegida
 const requestedSort = new URLSearchParams(window.location.search).get("sort")
 let statSort = TOP_VIEWS.some(v => v.key === requestedSort) ? requestedSort : "xp"
-const lbURL = pg => `/api/leaderboard?pageSize=10&page=${pg}&sort=${statSort}`
+const lbURL = pg => `/api/leaderboard?pageSize=10&initialSize=100&page=${pg}&sort=${statSort}`
 
 function buildStatPicker() {
     if (!$('#lbPageHeader #statChips').length) $('#statChips').appendTo('#lbPageHeader')
@@ -1190,10 +1193,12 @@ Fetch(lbURL(1)).then(async data => {
     // Precarga en segundo plano la primera página de cada orden: cambiar de "XP total"
     // a "XP este mes" (o cualquier otro) pasa a ser instantáneo
     ;(window.requestIdleCallback || (f => setTimeout(f, 300)))(async () => {
+        if (currentBox !== "leaderboard" || document.hidden || navigator.connection?.saveData) return
         for (const view of TOP_VIEWS) {
+            if (currentBox !== "leaderboard" || document.hidden) break
             if (pageCache[`${view.key}|1`]) continue
             try {
-                const r = await Fetch(`/api/leaderboard?pageSize=10&page=1&sort=${view.key}`)
+                const r = await Fetch(`/api/leaderboard?pageSize=10&initialSize=100&page=1&sort=${view.key}`)
                 if (r && r.leaderboard && !pageCache[`${view.key}|1`]) pageCache[`${view.key}|1`] = { leaderboard: r.leaderboard, pageInfo: r.pageInfo }
             } catch (e) {}
         }
@@ -1719,7 +1724,7 @@ Fetch(lbURL(1)).then(async data => {
         try {
             let cachedPage = pageCache[`${requestedSort}|${page}`]
             let res = (cachedPage && (!force || force === "sort")) ? cachedPage
-                : await Fetch(`/api/leaderboard?pageSize=10&page=${page}&sort=${requestedSort}`)
+                : await Fetch(`/api/leaderboard?pageSize=10&initialSize=100&page=${page}&sort=${requestedSort}`)
             if (requestId !== loadSequence || requestedSort !== statSort) return
             pageCache[`${requestedSort}|${res.pageInfo.page}`] = { leaderboard: res.leaderboard, pageInfo: res.pageInfo }
             if (!append) $('html').scrollTop(savedScroll)

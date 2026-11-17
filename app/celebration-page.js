@@ -577,6 +577,11 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                     .badge svg { width: 2.1rem; height: 2.1rem; }
                     .card { padding-top: 1.1rem; }
                 }
+                /* A narrow highlight with a softly diffused edge, retaining the original card. */
+                .card::before { mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); }
+                .card::after { content: ''; position: absolute; top: -3px; left: 12%; right: 12%; height: 9px; pointer-events: none; background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent); filter: blur(7px); opacity: .6; }
+                .badge svg { stroke-linecap: round; stroke-linejoin: round; }
+                .actions a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
             </style>
         </head>
         <body class="status-${escapeHtml(statusKey)}">
@@ -606,27 +611,32 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                     if (!card) return;
                     if (!window.matchMedia('(pointer: fine)').matches) return;
                     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-                    var raf = null;
+                    var raf = null, bounds = null, point = null;
                     function update(e) {
-                        var r = card.getBoundingClientRect();
-                        var x = e.clientX - r.left;
-                        var y = e.clientY - r.top;
-                        card.style.setProperty('--mx', x + 'px');
-                        card.style.setProperty('--my', y + 'px');
-                        var px = (x - r.width / 2) / r.width;
-                        var py = (y - r.height / 2) / r.height;
-                        if (raf) cancelAnimationFrame(raf);
+                        point = { x: e.clientX, y: e.clientY };
+                        if (raf) return;
                         raf = requestAnimationFrame(function() {
+                            raf = null;
+                            var r = bounds || (bounds = card.getBoundingClientRect());
+                            var x = point.x - r.left, y = point.y - r.top;
+                            card.style.setProperty('--mx', x + 'px');
+                            card.style.setProperty('--my', y + 'px');
+                            var px = (x - r.width / 2) / r.width;
+                            var py = (y - r.height / 2) / r.height;
                             card.style.transform = 'perspective(950px) rotateX(' + (-py * 6).toFixed(2) + 'deg) rotateY(' + (px * 9).toFixed(2) + 'deg)';
                         });
                     }
-                    card.addEventListener('mouseenter', update);
-                    card.addEventListener('mousemove', update, { passive: true });
-                    card.addEventListener('mouseleave', function() {
+                    function reset() {
                         if (raf) cancelAnimationFrame(raf);
+                        raf = null; bounds = null;
                         card.style.transform = '';
-                    });
-                    window.addEventListener('blur', function() { card.style.transform = ''; });
+                    }
+                    card.addEventListener('mouseenter', function(e) { bounds = card.getBoundingClientRect(); update(e); });
+                    card.addEventListener('mousemove', update, { passive: true });
+                    card.addEventListener('mouseleave', reset);
+                    window.addEventListener('blur', reset);
+                    window.addEventListener('resize', reset, { passive: true });
+                    window.addEventListener('scroll', reset, { passive: true });
                 })();
                 // Cuenta atrás (solo si la página la incluye y no ha cerrado).
                 (function() {
@@ -654,7 +664,8 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                         }
                     }
                     tick();
-                    setInterval(tick, 1000);
+                    setInterval(function() { if (!document.hidden) tick(); }, 1000);
+                    document.addEventListener('visibilitychange', function() { if (!document.hidden) tick(); });
                 })();
             </script>
             ${mode !== "none" ? `

@@ -2639,3 +2639,16 @@ a.lbNavItem:hover, a.category:hover { color: var(--c-fg) !important; }
 }
 #moreLeaderboard { display: block; margin: 18px auto; height: 42px; padding: 0 20px; background: var(--c-surface-2); color: var(--c-fg); border: 1px solid var(--c-line-strong); border-radius: 12px; box-shadow: none; }
 @media(prefers-reduced-motion:reduce) { .topbar .rankIconOptions button { transition: none; } }
+
+/* Intrinsic labels: animate the real width, without reserving empty space. */
+@media(max-width:600px) {
+ .topbar .rankIconOptions { width: auto; max-width: calc(100% - 54px); }
+ .topbar .rankIconOptions button, .topbar .rankIconOptions button:hover, .topbar .rankIconOptions button:active, .topbar .rankIconOptions button[aria-pressed="true"] { flex: 0 0 auto; width: 38px; transition: width .22s ease, background .18s, color .18s; }
+ .topbar .rankIconOptions button[aria-pressed="true"] { width: calc(43px + var(--label-width, 105px)); }
+ .topbar .rankIconOptions button span { flex: 0 0 auto; }
+ .topbar .rankIconOptions button[aria-pressed="true"] span { flex: 0 0 auto; }
+}
+.recordIcon svg { stroke-linecap: round; stroke-linejoin: round; }
+.recordsCategory .recordIcon { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone, var(--c-accent)) 24%, transparent); }
+.recordCard { content-visibility: auto; contain-intrinsic-size: auto 220px; }
+@media(prefers-reduced-motion:reduce) { .topbar .rankIconOptions button { transition: none; } }

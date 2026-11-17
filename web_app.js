@@ -1275,11 +1275,8 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
     if (minLeaderboardXP > 0) xpArray = xpArray.filter(x => x.xp > minLeaderboardXP)
     if (settings.leaderboard.maxEntries > 0) xpArray = xpArray.slice(0, settings.leaderboard.maxEntries)
 
-    let pageSize = tools.clamp(parseInt(req.query.pageSize || 100), 1, 100)
-    let pageCount = Math.ceil(xpArray.length / pageSize)
-    let page = Math.max(1, parseInt(req.query.page)) || 1
-    
-    let paginated = xpArray.slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize)
+    const { pageSize, pageCount, page, start, end } = require("./classes/LeaderboardPage")(xpArray.length, req.query)
+    let paginated = xpArray.slice(start, end)
     let memberList = paginated.map(x => x.id)
     if (loggedIn && !memberList.includes(userInfo.id)) memberList.push(userInfo.id)
     
