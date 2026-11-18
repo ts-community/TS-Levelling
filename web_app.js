@@ -440,6 +440,39 @@ async function handleDropClaim(req, res) {
         }))
     }
 
+    if (req.query.view === 'staff') {
+        if (!user) return res.send(renderCelebrationPage({ title: 'Panel del staff', message: 'Inicia sesi&oacute;n para consultar este drop.', badge: 'lock', actionsHtml: '<a class="btn-primary" href="/discord?next=' + encodeURIComponent(req.originalUrl) + '">Iniciar sesi&oacute;n</a>' }))
+        const claims = Array.isArray(drop.claims) ? drop.claims : []
+        const pages = Math.max(1, Math.ceil(claims.length / 50))
+        const page = Math.min(pages, Math.max(1, parseInt(req.query.claimsPage, 10) || 1))
+        const ids = claims.slice((page - 1) * 50, page * 50).map(String)
+        const settingsDoc = await client.db.fetch(guildId, ['settings.dropRoles']).exec()
+        const staff = await client.shard.broadcastEval(async (cl, ctx) => {
+            const guild = cl.guilds.cache.get(ctx.guildId)
+            if (!guild) return null
+            const member = await guild.members.fetch({ user: ctx.userId, force: true }).catch(() => null)
+            if (!member) return null
+            const manager = guild.ownerId === member.id || member.permissions.has('Administrator') || member.permissions.has('ManageGuild')
+            if (!manager && !ctx.roles.some(id => member.roles.cache.has(id))) return null
+            return { allowed: true, names: Object.fromEntries(ctx.ids.map(id => {
+                const claimant = guild.members.cache.get(id)
+                return [id, claimant?.displayName || cl.users.cache.get(id)?.username || id]
+            })) }
+        }, { context: { guildId, userId: String(user.id), ids, roles: (settingsDoc?.settings?.dropRoles || []).map(r => String(r.id)) } })
+        if (!staff.some(s => s?.allowed)) return res.status(403).send(renderCelebrationPage({ title: 'Acceso restringido', message: 'Este panel requiere permisos para gestionar drops.', badge: 'shield', celebration: false }))
+        const names = staff.filter(s => s?.allowed).map(s => s.names)
+        const label = id => escapeDropHtml(names.map(n => n?.[id]).find(n => n && n !== id) || id)
+        const elapsed = Math.max(0, Math.floor((Date.now() - Number(drop.createdAt || Date.now())) / 60000))
+        const status = expiredDrop(drop) ? 'Caducado' : Drops.claimsLeft(drop) === 0 ? 'Agotado' : 'Activo'
+        const rows = ids.map(id => '<tr><td>' + label(id) + '<br><small>' + escapeDropHtml(id) + '</small></td><td>' + (drop.claimTimes?.[id] ? fmtDate(drop.claimTimes[id]) : 'Hora no registrada') + '</td></tr>').join('')
+        const base = req.path + '?view=staff'
+        return res.send(renderCelebrationPage({ title: drop.name, kicker: 'Panel del staff', badge: 'shield', celebration: false,
+            message: '<strong>' + status + '</strong> &middot; ' + claims.length + ' de ' + Number(drop.maxClaims) + ' reclamaciones',
+            detailsHtml: '<div class="detail"><span>C&oacute;digo</span><strong>' + escapeDropHtml(code) + '</strong><small>Creador: ' + escapeDropHtml(drop.createdBy) + '</small><small>Creado: ' + fmtDate(drop.createdAt) + '</small><small>Transcurrido: ' + Math.floor(elapsed / 60) + ' h ' + elapsed % 60 + ' min</small></div>' + rewardsDetail(drop) + reserveDetail(drop) + expiryDetail(drop, expiredDrop(drop)) + '<div class="detail"><span>Reclamaciones &middot; p&aacute;gina ' + page + ' / ' + pages + '</span><table class="staffTable"><thead><tr><th>Miembro</th><th>Fecha</th></tr></thead><tbody>' + (rows || '<tr><td colspan="2">Nadie ha reclamado todav&iacute;a.</td></tr>') + '</tbody></table></div>',
+            actionsHtml: '<a class="btn-primary" href="' + escapeDropHtml(base + '&claimsPage=' + page) + '">Actualizar</a>' + (page > 1 ? '<a class="secondary" href="' + escapeDropHtml(base + '&claimsPage=' + (page - 1)) + '">Anteriores</a>' : '') + (page < pages ? '<a class="secondary" href="' + escapeDropHtml(base + '&claimsPage=' + (page + 1)) + '">Siguientes</a>' : '') + '<a class="secondary" href="' + escapeDropHtml(req.path) + '">Vista normal (reclamar)</a>'
+        }))
+    }
+
     const check = Drops.validateClaim(drop, user?.id || "", Date.now())
     const left = Drops.claimsLeft(drop)
     const dropDetails = (d, l, ended = expiredDrop(d)) => rewardsDetail(d) + reserveDetail(d) + claimsDetail(d, l) + expiryDetail(d, ended)
@@ -1273,7 +1306,7 @@ app.get("/api/leaderboard/:id", cors(), async function(req, res) {
     }
     if (singleUser) xpArray = xpArray.filter(x => x.id == singleUser)
     if (minLeaderboardXP > 0) xpArray = xpArray.filter(x => x.xp > minLeaderboardXP)
-    if (settings.leaderboard.maxEntries > 0) xpArray = xpArray.slice(0, settings.leaderboard.maxEntries)
+    if (req.query.expand !== "1" && settings.leaderboard.maxEntries > 0) xpArray = xpArray.slice(0, settings.leaderboard.maxEntries)
 
     const { pageSize, pageCount, page, start, end } = require("./classes/LeaderboardPage")(xpArray.length, req.query)
     let paginated = xpArray.slice(start, end)

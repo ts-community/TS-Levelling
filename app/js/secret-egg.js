@@ -2,7 +2,7 @@
 function mountSecretEgg() {
  if (location.pathname === '/' || /^\/(?:drops?|easteregg)(?:\/|$)/i.test(location.pathname) || document.querySelector('.badgeWrap') || document.getElementById('siteSecretEgg')) return
  const stylesheet = document.createElement('link')
- stylesheet.rel = 'stylesheet'; stylesheet.href = '/css/secret-egg.css?v=3'
+ stylesheet.rel = 'stylesheet'; stylesheet.href = '/css/secret-egg.css?v=4'
  document.head.append(stylesheet)
  const link = document.createElement('a')
  link.id = 'siteSecretEgg'
@@ -19,7 +19,7 @@ function mountSecretEgg() {
   opening = true
   link.classList.add('revealed', 'opening')
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
-  setTimeout(() => location.assign(link.href), reduce ? 0 : 650)
+  setTimeout(() => location.assign(link.href), reduce ? 0 : 850)
  })
  document.body.append(link)
 }

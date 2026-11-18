@@ -482,6 +482,7 @@ function buildCreatedContainer(drop, code, url, tools = { commafy: fmtInt }, all
     const prizes = Drops.normalizePrizes(drop.prizes || { xp: drop.xp, coins: drop.coins, roles: [], items: drop.items || [] })
     addPrizesBlock(container, prizeLines(prizes, tools))
     container.addTextDisplayComponents(textBuilder(`🔗 **Enlace:** ${url}`))
+    container.addTextDisplayComponents(textBuilder(`Panel del staff: ${url}?view=staff`))
     return container
 }
 
@@ -703,6 +704,7 @@ module.exports = {
         collector.on("collect", async i => {
             if (i.user.id !== authorId) return tools.denyButton(i, "drops")
             const id = i.customId
+            if (busy) return i.deferUpdate().catch(() => {})
 
             // ── Menú "Añadir premio": cambia a la vista del premio ──
             if (i.isStringSelectMenu() && id === MK.MENU) {
@@ -819,8 +821,11 @@ module.exports = {
                 }
                 if (busy) return
                 busy = true
+                let createdResult = null
                 try {
-                    await i.deferUpdate()
+                    await i.update(V2.components(new ContainerBuilder().setAccentColor(ACCENT)
+                        .addTextDisplayComponents(textBuilder("## Creando drop..."))
+                        .addTextDisplayComponents(textBuilder("Guardando las recompensas y preparando los enlaces. Espera un momento."))))
                     syncUses(draft)
                     const res = await Drops.createDrop(client, guildId, {
                         maxClaims: draft.maxClaims,
@@ -832,6 +837,7 @@ module.exports = {
                         allowedUsers: draft.allow,
                     })
                     if (!res.ok) throw new Error((res.errors || []).join("; "))
+                    createdResult = res
                     const code = res.code
                     if (dropSeq > 0) {
                         client.db.update(guildId, { $set: { "settings.dropSeq": dropSeq } }).exec().catch(() => {})
@@ -841,6 +847,12 @@ module.exports = {
                     await i.editReply(V2.components(buildCreatedContainer(res.drop, code, url, tools, draft.allow)))
                 } catch (e) {
                     console.error("[drops:crear]", e?.message)
+                    if (createdResult) {
+                        collector.stop("created")
+                        await i.followUp(V2.components(buildCreatedContainer(createdResult.drop, createdResult.code, Drops.dropUrl(guildId, createdResult.code, tools.WEBSITE), tools, draft.allow))).catch(() => {})
+                        return
+                    }
+                    if (!collector.ended) await i.editReply(V2.components(render())).catch(() => {})
                     await i.followUp({ content: "No se pudo crear el drop: revisa los premios e inténtalo de nuevo.", ephemeral: true }).catch(() => {})
                 } finally { busy = false }
                 return

@@ -748,6 +748,7 @@ async function claimDrop(client, guildId, code, userId, now = Date.now(), deps =
             }
             await client.db.update(guildId, {
                 $addToSet: { [`drops.${code}.claims`]: userId },
+                $set: { [`drops.${code}.claimTimes.${userId}`]: Date.now() },
             }).exec()
         } else if (isRole) {
             try {
@@ -757,6 +758,7 @@ async function claimDrop(client, guildId, code, userId, now = Date.now(), deps =
             }
             await client.db.update(guildId, {
                 $addToSet: { [`drops.${code}.claims`]: userId },
+                $set: { [`drops.${code}.claimTimes.${userId}`]: Date.now() },
             }).exec()
         } else if (isItem) {
             try {
@@ -766,6 +768,7 @@ async function claimDrop(client, guildId, code, userId, now = Date.now(), deps =
             }
             await client.db.update(guildId, {
                 $addToSet: { [`drops.${code}.claims`]: userId },
+                $set: { [`drops.${code}.claimTimes.${userId}`]: Date.now() },
             }).exec()
         } else if (isBundle) {
             const prizes = normalizePrizes(drop.prizes)
@@ -778,6 +781,7 @@ async function claimDrop(client, guildId, code, userId, now = Date.now(), deps =
             } } : {}
             await client.db.update(guildId, {
                 $addToSet: { [`drops.${code}.claims`]: userId },
+                $set: { [`drops.${code}.claimTimes.${userId}`]: Date.now() },
                 ...inc,
             }).exec()
             bundleGiven = granted.given
@@ -785,6 +789,7 @@ async function claimDrop(client, guildId, code, userId, now = Date.now(), deps =
         } else {
             await client.db.update(guildId, {
                 $addToSet: { [`drops.${code}.claims`]: userId },
+                $set: { [`drops.${code}.claimTimes.${userId}`]: Date.now() },
                 $inc: {
                     [`users.${userId}.xp`]: amount,
                     [`users.${userId}.monthlyXP`]: amount,
@@ -802,7 +807,7 @@ async function claimDrop(client, guildId, code, userId, now = Date.now(), deps =
         if (!fresh || freshClaims.length > Number(fresh.maxClaims) || !freshClaims.includes(userId)) {
             const xpToRevert = isBundle ? (bundlePrizes?.xp || 0)
                 : (!isCoins && !isRole && !isItem) ? amount : 0
-            const revert = { $pull: { [`drops.${code}.claims`]: userId } }
+            const revert = { $pull: { [`drops.${code}.claims`]: userId }, $unset: { [`drops.${code}.claimTimes.${userId}`]: "" } }
             if (xpToRevert > 0) {
                 revert.$inc = {
                     [`users.${userId}.xp`]: -xpToRevert,

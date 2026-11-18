@@ -57,8 +57,9 @@ test('reintenta un guardado pendiente después de recargar', async () => {
 test('sin rol de rango no muestra el icono de Maestros', () => {
     const page = load(new Map())
     vm.runInContext('setRankIconForUser({ roles: [] }, [{ id: "maestro", level: 100 }], [{ id: "maestro", name: "Maestro I" }])', page.context)
-    assert.equal(page.buttons[0].image.hidden, true)
-    assert.equal(page.buttons[1].image.src, '')
+    assert.equal(page.buttons[0].image.hidden, false)
+    assert.match(page.buttons[0].image.src, /classic\/bronze_I\.webp/)
+    assert.match(page.buttons[1].image.src, /ranks\/bronze_I\.webp/)
 })
 
 test('el selector usa el rango que tiene el usuario', () => {

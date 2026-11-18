@@ -566,12 +566,8 @@ function updateRankIconButtons() {
         button.setAttribute('aria-pressed', String(style === rankIconStyle))
         button.style.setProperty('--icon-color', rankIconTier ? rankIconPalette(style)[rankIconTier] : '#59616c')
         const img = button.querySelector('img')
-        img.hidden = !rankIconTier
-        if (!rankIconTier) {
-            img.removeAttribute('src')
-            return
-        }
-        const file = rankIconTier === 'pro' ? 'pro' : `${rankIconTier}_${rankIconDivision}`
+        img.hidden = false
+        const file = !rankIconTier ? 'bronze_I' : rankIconTier === 'pro' ? 'pro' : `${rankIconTier}_${rankIconDivision}`
         const src = `/assets/ranks/${style === 'old' ? 'classic/' : ''}${file}.webp?v=4`
         if (img.getAttribute('src') !== src) img.setAttribute('src', src)
     })
@@ -820,7 +816,7 @@ function statDisplayText(view, value) {
 // ?sort= en la URL comparte el enlace con la categoría ya elegida
 const requestedSort = new URLSearchParams(window.location.search).get("sort")
 let statSort = TOP_VIEWS.some(v => v.key === requestedSort) ? requestedSort : "xp"
-const lbURL = pg => `/api/leaderboard?pageSize=10&initialSize=100&page=${pg}&sort=${statSort}`
+const lbURL = pg => `/api/leaderboard?pageSize=10&initialSize=100&expand=1&page=${pg}&sort=${statSort}`
 
 function buildStatPicker() {
     if (!$('#lbPageHeader #statChips').length) $('#statChips').appendTo('#lbPageHeader')
@@ -1198,7 +1194,7 @@ Fetch(lbURL(1)).then(async data => {
             if (currentBox !== "leaderboard" || document.hidden) break
             if (pageCache[`${view.key}|1`]) continue
             try {
-                const r = await Fetch(`/api/leaderboard?pageSize=10&initialSize=100&page=1&sort=${view.key}`)
+                const r = await Fetch(`/api/leaderboard?pageSize=10&initialSize=100&expand=1&page=1&sort=${view.key}`)
                 if (r && r.leaderboard && !pageCache[`${view.key}|1`]) pageCache[`${view.key}|1`] = { leaderboard: r.leaderboard, pageInfo: r.pageInfo }
             } catch (e) {}
         }
@@ -1612,7 +1608,16 @@ Fetch(lbURL(1)).then(async data => {
         if (currentBox !== 'levels') $('#earlierLevels').hide()
     }
 
-    if (loggedIn && data.user.xp) {
+    if (!loggedIn) {
+        const demoRoles = data.settings.rewards.filter(r => r.level <= DEMO_LEVEL).map(r => r.id)
+        data.user = { ...data.user, id: 'demo', xp: demoXP, roles: demoRoles, avatar: '/assets/avatar.png', displayName: 'Usuario de ejemplo', messages: 9876, monthlyMessages: 1430, dailyMessages: 64, rank: 128 }
+        userLevel = getLevel(demoXP, data.settings)
+        userMultiplier = getMultiplier(demoRoles, data.settings, data.roles)
+        $('.rankDemoNote').first().attr('box', 'rank').addClass('lbBox').insertBefore('#accountInfo')
+        $('.rankDemo').remove()
+        $('#accountInfo').removeClass('guestHide').addClass('isDemo').toggle(currentBox === 'rank')
+    }
+    if (data.user.xp) {
         if (data.user.partial) {
             $('#accountPartial').show()
             $('.statBox[stat="roles"]').hide()
@@ -1724,7 +1729,7 @@ Fetch(lbURL(1)).then(async data => {
         try {
             let cachedPage = pageCache[`${requestedSort}|${page}`]
             let res = (cachedPage && (!force || force === "sort")) ? cachedPage
-                : await Fetch(`/api/leaderboard?pageSize=10&initialSize=100&page=${page}&sort=${requestedSort}`)
+                : await Fetch(`/api/leaderboard?pageSize=10&initialSize=100&expand=1&page=${page}&sort=${requestedSort}`)
             if (requestId !== loadSequence || requestedSort !== statSort) return
             pageCache[`${requestedSort}|${res.pageInfo.page}`] = { leaderboard: res.leaderboard, pageInfo: res.pageInfo }
             if (!append) $('html').scrollTop(savedScroll)

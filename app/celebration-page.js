@@ -17,6 +17,10 @@ function escapeHtml(s) {
 const GIFT_FILL = '<rect x="2.7" y="7.3" width="18.6" height="4" rx="1.3"/><path d="M4.4 11.3h15.2v8a2.4 2.4 0 0 1-2.4 2.4H6.8a2.4 2.4 0 0 1-2.4-2.4z"/>'
 const GIFT_STROKE = '<rect x="2.7" y="7.3" width="18.6" height="4" rx="1.3"/><path d="M4.4 11.3v8a2.4 2.4 0 0 0 2.4 2.4h10.4a2.4 2.4 0 0 0 2.4-2.4v-8"/><path d="M12 7.3v14.4"/><path d="M12 7.3c-1.3 0-4.7-.3-4.7-2.2 0-1.2.9-1.9 2-1.9 1.9 0 2.7 1.8 2.7 4.1zm0 0c1.3 0 4.7-.3 4.7-2.2 0-1.2-.9-1.9-2-1.9-1.9 0-2.7 1.8-2.7 4.1z"/>'
 const ICONS = {
+    claimed: {
+        f: '<path d="m12 2 3 2 3.6.4.4 3.6 2 4-2 3-.4 3.6-3.6.4-3 2-3-2-3.6-.4L4 15l-2-3 2-4 .4-3.6L8 4z"/>',
+        s: '<path d="m12 2 3 2 3.6.4.4 3.6 2 4-2 3-.4 3.6-3.6.4-3 2-3-2-3.6-.4L4 15l-2-3 2-4 .4-3.6L8 4z"/><path d="m7.5 11.8 3 3 6-6" stroke-width="2.2"/>',
+    },
     // f = relleno suave (duotono, del color del estado) · s = trazo
     egg: {
         f: '<path d="M12 2.9c-3.7 0-6.6 5.1-6.6 10 0 4.9 2.9 8.2 6.6 8.2s6.6-3.3 6.6-8.2c0-4.9-2.9-10-6.6-10z"/>',
@@ -582,6 +586,10 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                 .card::after { content: ''; position: absolute; top: -3px; left: 12%; right: 12%; height: 9px; pointer-events: none; background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent); filter: blur(7px); opacity: .6; }
                 .badge svg { stroke-linecap: round; stroke-linejoin: round; }
                 .actions a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+                .communityLink { display: inline-flex; align-items: center; gap: 9px; margin-top: 20px; padding: 6px 10px; min-height: 0; background: transparent; box-shadow: none; color: var(--muted); font-size: .85rem; text-decoration: none; }
+                .communityLink img { width: 30px; height: 30px; border-radius: 9px; }
+                .staffTable { table-layout: fixed; width: 100%; border-collapse: collapse; font-size: .85rem; }
+                .staffTable td, .staffTable th { text-align: left; padding: 9px 4px; border-bottom: 1px solid #ffffff18; overflow-wrap: anywhere; }
             </style>
         </head>
         <body class="status-${escapeHtml(statusKey)}">
@@ -596,12 +604,13 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                 <div class="cardSpot"></div>
                 <div class="content">
                     ${kickerHtml}
-                    <div class="badgeWrap"><div class="badge">${badgeIcon(badge)}</div></div>
+                    <div class="badgeWrap"><div class="badge">${badgeIcon(statusKey === "claimed" && badge !== "egg" ? "claimed" : badge)}</div></div>
                     <h1>${escapeHtml(title)}</h1>
                     <p>${message}</p>
                     ${detailsHtml ? `<div class="details">${detailsHtml}</div>` : ""}
                     ${actionsHtml ? `<div class="actions">${actionsHtml}</div>` : ""}
                 </div>
+                <a class="communityLink" href="https://tscomunity.es/discord" target="_blank" rel="noopener"><img src="/assets/server-icon-128.webp" width="30" height="30" alt="">TS Community Brawl &middot; Entrar al servidor</a>
             </main>
 
             <script>
