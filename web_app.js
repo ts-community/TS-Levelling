@@ -396,7 +396,7 @@ async function handleDropClaim(req, res) {
     const claimsDetail = (d, left) => {
         const claimed = Math.max(0, (d.maxClaims || 0) - Math.max(0, left))
         const pct = d.maxClaims > 0 ? Math.min(100, Math.round((claimed / d.maxClaims) * 100)) : 100
-        return `<div class="detail"><span>Reclamados</span><strong>${claimed} de ${d.maxClaims}</strong><div class="claimBar"><i style="width:${pct}%"></i></div><small>${left > 0 ? `Quedan ${left} usos.` : "No quedan usos."}</small></div>`
+        return `<div class="detail dropMetric"><span>Reclamados</span><strong>${claimed} de ${d.maxClaims}</strong><div class="claimBar" role="progressbar" aria-label="Reclamaciones" aria-valuenow="${pct}" aria-valuetext="${claimed} de ${d.maxClaims}"><i style="width:${pct}%"></i></div><small>${left > 0 ? `Quedan ${left} usos.` : "No quedan usos."}</small></div>`
     }
 
     // Apartado 3: cuenta atrás viva si sigue abierto; fecha de cierre si no.
@@ -404,7 +404,7 @@ async function handleDropClaim(req, res) {
         if (ended) {
             return `<div class="detail"><span>Cerró el</span><strong class="countdownPast">${escapeDropHtml(fmtDate(d.expiresAt))}</strong><small>El enlace ya no otorga premios.</small></div>`
         }
-        return `<div class="detail"><span>Caduca en</span><strong class="countdown" id="dropCountdown" data-expires="${Number(d.expiresAt) || 0}">…</strong><small>Después el enlace deja de funcionar.</small></div>`
+        return `<div class="detail dropMetric"><span>Caduca en</span><strong class="countdown" id="dropCountdown" data-expires="${Number(d.expiresAt) || 0}">…</strong><small>Después el enlace deja de funcionar.</small></div>`
     }
     const expiredDrop = d => Number(d.expiresAt) <= Date.now()
 
@@ -466,7 +466,7 @@ async function handleDropClaim(req, res) {
         const status = expiredDrop(drop) ? 'Caducado' : Drops.claimsLeft(drop) === 0 ? 'Agotado' : 'Activo'
         const rows = ids.map(id => '<tr><td>' + label(id) + '<br><small>' + escapeDropHtml(id) + '</small></td><td>' + (drop.claimTimes?.[id] ? fmtDate(drop.claimTimes[id]) : 'Hora no registrada') + '</td></tr>').join('')
         const base = req.path + '?view=staff'
-        return res.send(renderCelebrationPage({ title: drop.name, kicker: 'Panel del staff', badge: 'shield', celebration: false,
+        return res.send(renderCelebrationPage({ title: drop.name, kicker: 'Panel del staff', badge: 'shield', layout: 'staff', celebration: false,
             message: '<strong>' + status + '</strong> &middot; ' + claims.length + ' de ' + Number(drop.maxClaims) + ' reclamaciones',
             detailsHtml: '<div class="detail"><span>C&oacute;digo</span><strong>' + escapeDropHtml(code) + '</strong><small>Creador: ' + escapeDropHtml(drop.createdBy) + '</small><small>Creado: ' + fmtDate(drop.createdAt) + '</small><small>Transcurrido: ' + Math.floor(elapsed / 60) + ' h ' + elapsed % 60 + ' min</small></div>' + rewardsDetail(drop) + reserveDetail(drop) + expiryDetail(drop, expiredDrop(drop)) + '<div class="detail"><span>Reclamaciones &middot; p&aacute;gina ' + page + ' / ' + pages + '</span><table class="staffTable"><thead><tr><th>Miembro</th><th>Fecha</th></tr></thead><tbody>' + (rows || '<tr><td colspan="2">Nadie ha reclamado todav&iacute;a.</td></tr>') + '</tbody></table></div>',
             actionsHtml: '<a class="btn-primary" href="' + escapeDropHtml(base + '&claimsPage=' + page) + '">Actualizar</a>' + (page > 1 ? '<a class="secondary" href="' + escapeDropHtml(base + '&claimsPage=' + (page - 1)) + '">Anteriores</a>' : '') + (page < pages ? '<a class="secondary" href="' + escapeDropHtml(base + '&claimsPage=' + (page + 1)) + '">Siguientes</a>' : '') + '<a class="secondary" href="' + escapeDropHtml(req.path) + '">Vista normal (reclamar)</a>'

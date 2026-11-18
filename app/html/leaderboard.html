@@ -260,7 +260,7 @@
     <div id="leaderboard" box="leaderboard" class="leaderboardBox lbBox"></div>
     <h2 id="noXPYet" box="leaderboard" style="text-align: center; display: none" class="lbBox">¡Nadie en este servidor tiene XP todavía!</h2>
 
-    <div id="pageInfo" box="leaderboard" class="middleflex lbBox"><button id="moreLeaderboard" type="button" onclick="setPage(page + 1)">Mostrar 10 más</button></div>
+    <div id="pageInfo" box="leaderboard" class="middleflex lbBox"><button id="moreLeaderboard" type="button" onclick="setPage(page + 1)">Mostrar 10 usuarios más</button><button id="leaderboardTop" type="button" aria-label="Volver al inicio de la clasificación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 13 6-6 6 6M12 7v12" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Volver arriba</span></button></div>
 
     <div id="statPickerWrap" style="display: none">
         <div id="statMenu"></div>
@@ -816,6 +816,9 @@ function statDisplayText(view, value) {
 // ?sort= en la URL comparte el enlace con la categoría ya elegida
 const requestedSort = new URLSearchParams(window.location.search).get("sort")
 let statSort = TOP_VIEWS.some(v => v.key === requestedSort) ? requestedSort : "xp"
+$('#leaderboardTop').on('click', () => {
+    window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
+})
 const lbURL = pg => `/api/leaderboard?pageSize=10&initialSize=100&expand=1&page=${pg}&sort=${statSort}`
 
 function buildStatPicker() {
@@ -1016,7 +1019,7 @@ Fetch(lbURL(1)).then(async data => {
 
     if (loggedIn) $('.plsLogIn, .rankDemo').remove()
     else {
-        $('#accountInfo').remove()
+        // Keep the real card mounted: guest preview uses the same markup.
         const loginIcon = $('#topbarLogin svg').first().prop('outerHTML')
         $('.plsLogIn').each(function() {
             $(this).attr({ role: 'button', tabindex: '0' })
@@ -1746,7 +1749,7 @@ Fetch(lbURL(1)).then(async data => {
         } finally {
             if (requestId === loadSequence) {
                 loadingPage = false
-                $('#moreLeaderboard').prop('disabled', false).text('Mostrar 10 más').toggle(page < totalPages)
+                $('#moreLeaderboard').prop('disabled', false).text('Mostrar 10 usuarios más').toggle(page < totalPages)
                 setSortPending(false)
             }
         }
