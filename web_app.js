@@ -91,6 +91,21 @@ function assetVersion(urlPath) {
 const FONT_PRELOADS = ["inter-latin-wght-normal", "lilita-one-latin-400-normal"]
     .map(f => `<link rel="preload" href="/assets/fonts/${f}.woff2" as="font" type="font/woff2" crossorigin>`).join("\n    ")
 const pageCache = new Map() // nombre -> { html, mtime, at }
+const { applyPageMeta } = require('./app/page-meta')
+const routeMeta = {
+    '/': ['Sistema de niveles', 'Sube de nivel, gana experiencia y descubre tu progreso en TS Community Brawl.', true],
+    '/clasificacion': ['Clasificación', 'Consulta la clasificación de XP, mensajes y actividad de la comunidad.', true],
+    '/rango': ['Tu rango', 'Consulta tu nivel, posición y progreso de XP en el servidor de Discord.', true],
+    '/recompensas': ['Recompensas', 'Descubre los roles que puedes desbloquear al subir de nivel en Discord.', true],
+    '/niveles': ['Todos los niveles', 'Explora los niveles del servidor y cuánta experiencia necesitas para alcanzarlos.', true],
+    '/records': ['Tus récords', 'Consulta tus mejores marcas y los retos que puedes completar en la comunidad.', true],
+    '/ajustes': ['Ajustes', 'Panel de gestión del sistema de niveles de TS Community Brawl.'],
+    '/404': ['Página no encontrada', 'La página solicitada no está disponible.'],
+}
+function withPageMeta(html, route) {
+    const [title, description, index] = routeMeta[route]
+    return applyPageMeta(html, { title, description, index, url: new URL(route, siteURL).href })
+}
 function renderPage(name) {
     let file = path.join(__dirname, `app/html/${name}.html`)
     let mtime = fs.statSync(file).mtimeMs
@@ -103,9 +118,10 @@ function renderPage(name) {
     return html
 }
 
-function sendPage(res, name) {
+function sendPage(res, name, route) {
     res.set("Cache-Control", "no-cache") // el HTML se revalida siempre (ETag); lo pesado va versionado
-    return res.type("html").send(renderPage(name))
+    const html = renderPage(name)
+    return res.type("html").send(route ? withPageMeta(html, route) : html)
 }
 
 function sendRedirect(res, name) {
@@ -189,8 +205,8 @@ app.use(function(req, res, next) {
 app.get("/servers", (req, res) => res.redirect("/clasificacion"))
 // La web ya es solo de TS Community Brawl: las rutas no llevan el ID del servidor y van en español.
 const LB_PAGES = ["clasificacion", "rango", "recompensas", "niveles", "records"]
-app.get(LB_PAGES.map(p => "/" + p), (req, res) => sendPage(res, "leaderboard"))
-app.get("/ajustes", (req, res) => sendPage(res, "config"))
+app.get(LB_PAGES.map(p => "/" + p), (req, res) => sendPage(res, "leaderboard", req.path.toLowerCase().replace(/\/$/, "")))
+app.get("/ajustes", (req, res) => sendPage(res, "config", "/ajustes"))
 // Rutas antiguas (en inglés y/o con ID del servidor): redirección permanente a la nueva
 const OLD_ROUTES = { leaderboard: "clasificacion", top: "clasificacion", rank: "rango", roles: "recompensas", levels: "niveles", records: "records", settings: "ajustes" }
 const OLD_ROUTE_PATHS = Object.keys(OLD_ROUTES).flatMap(p => [`/${p}`, `/${p}/:id(\\d{10,30})`])
@@ -229,7 +245,7 @@ function refreshHomeTop() {
 app.get("/", (req, res) => {
     if (Date.now() - homeTop.at > 60 * 1000) refreshHomeTop()
     res.set("Cache-Control", "no-cache")
-    let html = renderPage("home")
+    let html = withPageMeta(renderPage("home"), "/")
     if (homeTop.json) html = html.replace("</head>", `<script>window.__HOME_TOP__=${homeTop.json}</script>\n</head>`)
     return res.type("html").send(html)
 })
@@ -258,7 +274,7 @@ app.get("/easteregg", async function(req, res) {
     if (!user) {
         // Sin sesión: celebra el hallazgo, pero el CTA es iniciar sesión.
         const anonGuild = escapeHtml((guildId && client.guilds.cache.get(guildId)?.name) || guildId || "el servidor")
-        return res.status(401).send(renderCelebrationPage({
+        return res.send(renderCelebrationPage({
             title: "¡Easter egg encontrado!",
             message: `Has descubierto el logro oculto <strong>${eggName}</strong> en ${anonGuild}. <strong>Inicia sesión con Discord</strong> para reclamarlo.`,
             badge: "egg",
@@ -328,7 +344,7 @@ app.get("/easteregg", async function(req, res) {
 // persona, hasta agotar usos o que caduque).
 async function handleDropClaim(req, res) {
     res.set("Cache-Control", "no-store")
-    const { renderCelebrationPage, escapeHtml: escapeDropHtml } = require("./app/celebration-page.js")
+    const { renderCelebrationPage: renderCelebration, escapeHtml: escapeDropHtml } = require("./app/celebration-page.js")
     const Drops = require("./classes/Drops.js")
 
     const guildId = String(req.params.guild || "")
@@ -346,6 +362,16 @@ async function handleDropClaim(req, res) {
         validPath ? timed("drop_read", () => client.db.fetch(guildId, [`drops.${code}`]).exec().catch(() => null)) : null,
     ])
     const drop = (doc?.drops || {})[code] || null
+    const staffView = req.query.view === 'staff'
+    const canonicalDropPath = `/drop/${encodeURIComponent(guildId)}/${encodeURIComponent(code)}`
+    const renderCelebrationPage = options => renderCelebration({
+        ...options,
+        meta: {
+            title: staffView ? 'Panel del staff' : drop?.name || options.title,
+            description: staffView ? 'Panel privado de seguimiento de drops.' : 'Consulta los premios y el estado de este reparto de TS Community Brawl.',
+            url: new URL(validPath ? canonicalDropPath : '/', siteURL).href,
+        },
+    })
     const guildName = escapeDropHtml(client.guilds.cache.get(guildId)?.name || guildId || "el servidor")
 
     // Fechas siempre en hora de Madrid (el VPS suele estar en UTC).
@@ -441,7 +467,7 @@ async function handleDropClaim(req, res) {
     }
 
     if (req.query.view === 'staff') {
-        if (!user) return res.send(renderCelebrationPage({ title: 'Panel del staff', message: 'Inicia sesi&oacute;n para consultar este drop.', badge: 'lock', actionsHtml: '<a class="btn-primary" href="/discord?next=' + encodeURIComponent(req.originalUrl) + '">Iniciar sesi&oacute;n</a>' }))
+        if (!user) return res.send(renderCelebrationPage({ title: 'Panel del staff', message: 'Inicia sesi&oacute;n para consultar este drop.', badge: 'lock', actionsHtml: '<a class="btn-primary" href="/discord?next=' + encodeURIComponent(canonicalDropPath + '?view=staff') + '">Iniciar sesi&oacute;n</a>' }))
         const claims = Array.isArray(drop.claims) ? drop.claims : []
         const pages = Math.max(1, Math.ceil(claims.length / 50))
         const page = Math.min(pages, Math.max(1, parseInt(req.query.claimsPage, 10) || 1))
@@ -457,19 +483,28 @@ async function handleDropClaim(req, res) {
             return { allowed: true, names: Object.fromEntries(ctx.ids.map(id => {
                 const claimant = guild.members.cache.get(id)
                 return [id, claimant?.displayName || cl.users.cache.get(id)?.username || id]
+            })), avatars: Object.fromEntries(ctx.ids.map(id => {
+                const claimant = guild.members.cache.get(id) || cl.users.cache.get(id)
+                return [id, claimant?.displayAvatarURL?.({ size: 64 }) || '']
             })) }
         }, { context: { guildId, userId: String(user.id), ids, roles: (settingsDoc?.settings?.dropRoles || []).map(r => String(r.id)) } })
         if (!staff.some(s => s?.allowed)) return res.status(403).send(renderCelebrationPage({ title: 'Acceso restringido', message: 'Este panel requiere permisos para gestionar drops.', badge: 'shield', celebration: false }))
-        const names = staff.filter(s => s?.allowed).map(s => s.names)
-        const label = id => escapeDropHtml(names.map(n => n?.[id]).find(n => n && n !== id) || id)
+        const staffData = staff.find(result => result?.allowed)
         const elapsed = Math.max(0, Math.floor((Date.now() - Number(drop.createdAt || Date.now())) / 60000))
         const status = expiredDrop(drop) ? 'Caducado' : Drops.claimsLeft(drop) === 0 ? 'Agotado' : 'Activo'
-        const rows = ids.map(id => '<tr><td>' + label(id) + '<br><small>' + escapeDropHtml(id) + '</small></td><td>' + (drop.claimTimes?.[id] ? fmtDate(drop.claimTimes[id]) : 'Hora no registrada') + '</td></tr>').join('')
-        const base = req.path + '?view=staff'
-        return res.send(renderCelebrationPage({ title: drop.name, kicker: 'Panel del staff', badge: 'shield', layout: 'staff', celebration: false,
-            message: '<strong>' + status + '</strong> &middot; ' + claims.length + ' de ' + Number(drop.maxClaims) + ' reclamaciones',
-            detailsHtml: '<div class="detail"><span>C&oacute;digo</span><strong>' + escapeDropHtml(code) + '</strong><small>Creador: ' + escapeDropHtml(drop.createdBy) + '</small><small>Creado: ' + fmtDate(drop.createdAt) + '</small><small>Transcurrido: ' + Math.floor(elapsed / 60) + ' h ' + elapsed % 60 + ' min</small></div>' + rewardsDetail(drop) + reserveDetail(drop) + expiryDetail(drop, expiredDrop(drop)) + '<div class="detail"><span>Reclamaciones &middot; p&aacute;gina ' + page + ' / ' + pages + '</span><table class="staffTable"><thead><tr><th>Miembro</th><th>Fecha</th></tr></thead><tbody>' + (rows || '<tr><td colspan="2">Nadie ha reclamado todav&iacute;a.</td></tr>') + '</tbody></table></div>',
-            actionsHtml: '<a class="btn-primary" href="' + escapeDropHtml(base + '&claimsPage=' + page) + '">Actualizar</a>' + (page > 1 ? '<a class="secondary" href="' + escapeDropHtml(base + '&claimsPage=' + (page - 1)) + '">Anteriores</a>' : '') + (page < pages ? '<a class="secondary" href="' + escapeDropHtml(base + '&claimsPage=' + (page + 1)) + '">Siguientes</a>' : '') + '<a class="secondary" href="' + escapeDropHtml(req.path) + '">Vista normal (reclamar)</a>'
+        const renderDropStaffPage = require('./app/drop-staff-page')
+        return res.send(renderDropStaffPage({
+            title: drop.name, status, code, created: fmtDate(drop.createdAt),
+            creator: drop.createdBy || 'Sin registrar',
+            elapsed: Math.floor(elapsed / 60) + ' h ' + elapsed % 60 + ' min',
+            claimed: claims.length, capacity: Number(drop.maxClaims), page, pages,
+            members: ids.map(id => ({
+                id, name: staffData.names[id], avatar: staffData.avatars?.[id],
+                date: drop.claimTimes?.[id] ? fmtDate(drop.claimTimes[id]) : null,
+            })),
+            details: rewardsDetail(drop) + reserveDetail(drop) + expiryDetail(drop, expiredDrop(drop)),
+            publicUrl: canonicalDropPath,
+            staffUrl: canonicalDropPath + '?view=staff',
         }))
     }
 
@@ -508,7 +543,7 @@ async function handleDropClaim(req, res) {
         const reservedNote = reserved.length
             ? ` Es un drop <strong>reservado</strong>: solo pueden reclamarlo ${reserved.slice(0, 12).join(", ")}${reserved.length > 12 ? ` y ${reserved.length - 12} más` : ""}.`
             : ""
-        return res.status(401).send(renderCelebrationPage({
+        return res.send(renderCelebrationPage({
             title: drop.name,
             message: `El staff de ${guildName} está repartiendo <strong>${dropPrize(drop)}</strong>.${reservedNote} <strong>Inicia sesión con Discord</strong> para reclamar el tuyo antes de que se agote o caduque.`,
             kicker: "Sesión necesaria",
@@ -1776,7 +1811,7 @@ app.get("/:code([A-Za-z0-9]{6,12})", function(req, res, next) {
     return dropRateLimit(req, res, () => handleDropClaim(req, res))
 })
 
-app.get("*", function(req, res) { res.status(404); sendPage(res, "404") })
+app.get("*", function(req, res) { res.status(404); sendPage(res, "404", "/404") })
 
 app.use(function (err, req, res, next) {
     if (err && err.message == "Response timeout") res.status(500).send({ apiError: true, internalError: true, message: 'Internal server error! (Timed out)'})

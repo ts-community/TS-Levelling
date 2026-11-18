@@ -184,7 +184,8 @@ function createDropRateLimiter({ max = 120, windowMs = 60 * 1000 } = {}) {
     }
 }
 
-function renderCelebrationPage({ title, message, badge = "gift", kicker = "", status = "info", celebration = false, detailsHtml = "", actionsHtml = "", layout = "default" }) {
+function renderCelebrationPage({ title, message, badge = "gift", kicker = "", status = "info", celebration = false, detailsHtml = "", actionsHtml = "", meta }) {
+    const { base, renderPageMeta } = require('./page-meta')
     const mode = celebration === "soft" ? "soft" : celebration ? "full" : "none"
     const statusKey = PALETTES[status] ? status : "info"
     const pal = PALETTES[statusKey]
@@ -197,12 +198,15 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
             <meta name="theme-color" content="${pal.bg[0]}">
-            <meta name="robots" content="noindex, nofollow">
             <meta name="referrer" content="no-referrer">
             <link rel="icon" href="/assets/favicon.ico" sizes="32x32">
             <link rel="icon" href="/assets/favicon-48.png" type="image/png" sizes="48x48">
             <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-            <title>${escapeHtml(title)}</title>
+            ${renderPageMeta(meta || {
+                title: badge === 'egg' ? 'Easteregg' : title,
+                description: badge === 'egg' ? 'Descubre el logro oculto del sistema de niveles de TS Community Brawl.' : 'Consulta el estado y las recompensas de este drop de TS Community Brawl.',
+                url: base + (badge === 'egg' ? '/easteregg' : '/'),
+            })}
             <style>
                 :root {${paletteVars(pal)}
                     --text: #f2fbff;
@@ -629,22 +633,12 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                 .dropMetric { align-content: start; }
                 .details:not(:has(.dropMetric ~ .dropMetric)) > .dropMetric { grid-column: 1 / -1; }
                 .dropMetric > strong { font-variant-numeric: tabular-nums; }
-                .staffPage .card { width: min(100%, 780px); }
-                .staffPage .badgeWrap { width: 76px; height: 76px; }
-                .staffPage .badge svg { width: 2.1rem; height: 2.1rem; }
-                .staffPage .actions a { flex: 0 1 auto; min-height: 44px; padding: .65rem 1.15rem; font-size: .92rem; }
-                .staffTable th { color: var(--muted); font-weight: 600; }
-                .staffTable th:first-child { width: 60%; }
-                .staffTable small { color: var(--muted); font-variant-numeric: tabular-nums; }
                 @media (max-width: 460px) {
                     .details { grid-template-columns: minmax(0, 1fr); }
-                    .staffPage .actions a { width: auto; flex: 1 1 40%; }
                 }
-                .staffTable { table-layout: fixed; width: 100%; border-collapse: collapse; font-size: .85rem; }
-                .staffTable td, .staffTable th { text-align: left; padding: 9px 4px; border-bottom: 1px solid #ffffff18; overflow-wrap: anywhere; }
             </style>
         </head>
-        <body class="status-${escapeHtml(statusKey)}${layout === "staff" ? " staffPage" : ""}">
+        <body class="status-${escapeHtml(statusKey)}">
             <div class="bg" aria-hidden="true">
                 <div class="glow one"></div>
                 <div class="glow two"></div>
@@ -679,7 +673,7 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                 // Tilt + rejilla: solo mientras el cursor está sobre la tarjeta.
                 (function() {
                     var card = document.querySelector('.card');
-                    if (!card || document.body.classList.contains('staffPage')) return;
+                    if (!card) return;
                     if (!window.matchMedia('(pointer: fine)').matches) return;
                     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
                     var raf = null, bounds = null, point = null;

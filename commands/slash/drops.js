@@ -482,7 +482,7 @@ function buildCreatedContainer(drop, code, url, tools = { commafy: fmtInt }, all
     const prizes = Drops.normalizePrizes(drop.prizes || { xp: drop.xp, coins: drop.coins, roles: [], items: drop.items || [] })
     addPrizesBlock(container, prizeLines(prizes, tools))
     container.addTextDisplayComponents(textBuilder(`🔗 **Enlace:** ${url}`))
-    container.addTextDisplayComponents(textBuilder(`Panel del staff: ${url}?view=staff`))
+    container.addTextDisplayComponents(textBuilder(`🛡️ **Panel del staff:** ${url}?view=staff`))
     return container
 }
 
