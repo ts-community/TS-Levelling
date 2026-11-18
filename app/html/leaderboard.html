@@ -260,7 +260,8 @@
     <div id="leaderboard" box="leaderboard" class="leaderboardBox lbBox"></div>
     <h2 id="noXPYet" box="leaderboard" style="text-align: center; display: none" class="lbBox">¡Nadie en este servidor tiene XP todavía!</h2>
 
-    <div id="pageInfo" box="leaderboard" class="middleflex lbBox"><button id="moreLeaderboard" type="button" onclick="setPage(page + 1)">Mostrar 10 usuarios más</button><button id="leaderboardTop" type="button" aria-label="Volver al inicio de la clasificación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 13 6-6 6 6M12 7v12" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Volver arriba</span></button></div>
+    <div id="pageInfo" box="leaderboard" class="middleflex lbBox"><button id="moreLeaderboard" type="button" onclick="setPage(page + 1)">Mostrar 10 usuarios más</button></div>
+    <button id="leaderboardTop" type="button" tabindex="-1" aria-hidden="true" title="Volver arriba" aria-label="Volver al inicio de la clasificación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 13 6-6 6 6M12 7v12" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
     <div id="statPickerWrap" style="display: none">
         <div id="statMenu"></div>
@@ -564,10 +565,10 @@ function updateRankIconButtons() {
         if (label) button.style.setProperty('--label-width', Math.ceil(label.scrollWidth) + 'px')
         const style = button.dataset.rankStyle
         button.setAttribute('aria-pressed', String(style === rankIconStyle))
-        button.style.setProperty('--icon-color', rankIconTier ? rankIconPalette(style)[rankIconTier] : '#59616c')
+        button.style.setProperty('--icon-color', rankIconPalette(style)[rankIconTier || 'pro'])
         const img = button.querySelector('img')
         img.hidden = false
-        const file = !rankIconTier ? 'bronze_I' : rankIconTier === 'pro' ? 'pro' : `${rankIconTier}_${rankIconDivision}`
+        const file = !rankIconTier || rankIconTier === 'pro' ? 'pro' : `${rankIconTier}_${rankIconDivision}`
         const src = `/assets/ranks/${style === 'old' ? 'classic/' : ''}${file}.webp?v=4`
         if (img.getAttribute('src') !== src) img.setAttribute('src', src)
     })
@@ -816,6 +817,15 @@ function statDisplayText(view, value) {
 // ?sort= en la URL comparte el enlace con la categoría ya elegida
 const requestedSort = new URLSearchParams(window.location.search).get("sort")
 let statSort = TOP_VIEWS.some(v => v.key === requestedSort) ? requestedSort : "xp"
+const leaderboardTop = document.getElementById('leaderboardTop')
+function updateLeaderboardTop() {
+    const visible = currentBox === 'leaderboard' && window.scrollY > window.innerHeight
+    leaderboardTop.classList.toggle('isVisible', visible)
+    leaderboardTop.tabIndex = visible ? 0 : -1
+    leaderboardTop.setAttribute('aria-hidden', String(!visible))
+}
+window.addEventListener('scroll', updateLeaderboardTop, { passive: true })
+window.addEventListener('pageshow', updateLeaderboardTop)
 $('#leaderboardTop').on('click', () => {
     window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
 })
@@ -1359,11 +1369,12 @@ Fetch(lbURL(1)).then(async data => {
     }
     renderUserStats()
 
+    const note = text => `<div class="rankDemoNote demoNote lbBox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg> <span class="demoNoteText">${text}</span><button type="button" class="demoLoginBtn">Iniciar sesión</button></div>`
     if (loggedIn) renderRecords(data.records, data.user.records)
     else {
         renderRecords(data.records, demoUnlocked(data.records))
         $('#recordsBox').removeClass('guestHide').addClass('isDemo')
-            .prepend('<div class="rankDemoNote demoNote"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg> <span class="demoNoteText">Vista previa con datos de prueba. Inicia sesión para ver tus récords y mejores marcas.</span><button type="button" class="demoLoginBtn">Iniciar sesión</button></div>')
+            .before($(note('Vista previa con datos de prueba. Inicia sesión para ver tus récords y mejores marcas.')).attr('box', 'records'))
         if (currentBox === "records") $('#recordsBox').show()
         $('#recordsBox').after($('.plsLogIn[box=records]')) // el aviso de login, debajo de la vista previa
     }
@@ -1371,7 +1382,7 @@ Fetch(lbURL(1)).then(async data => {
     // reward roles (tarjetas, de menor a mayor nivel para que coincida con
     // el orden de "Todos los Niveles"; el último es el rol final y se ensancha)
     // Visitantes: Recompensas y Todos los Niveles se pintan con un usuario de ejemplo (nivel 42 y 68%)
-    const DEMO_LEVEL = 42
+    const DEMO_LEVEL = Math.min(42, data.settings.maxLevel)
     const demoXP = Math.round(xpForLevel(DEMO_LEVEL, data.settings) + 0.68 * (xpForLevel(DEMO_LEVEL + 1, data.settings) - xpForLevel(DEMO_LEVEL, data.settings)))
     const viewUser = loggedIn ? data.user : { id: "demo", xp: demoXP, roles: [] }
     const viewLevel = loggedIn ? userLevel : getLevel(demoXP, data.settings)
@@ -1599,16 +1610,15 @@ Fetch(lbURL(1)).then(async data => {
 
     // Visitantes: enseñar Recompensas y Niveles con los datos de ejemplo, marcados como tal
     if (!loggedIn) {
-        const note = text => `<div class="rankDemoNote demoNote lbBox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg> <span class="demoNoteText">${text}</span><button type="button" class="demoLoginBtn">Iniciar sesión</button></div>`
+
         $('#roleList').removeClass('guestHide').addClass('isDemo')
-            .before($(note("Vista previa con datos de prueba (nivel 42). Inicia sesión para ver tus recompensas.")).attr('box', 'roles'))
+            .before($(note("Vista previa con datos de prueba. Inicia sesión para ver tus recompensas.")).attr('box', 'roles'))
             .after($('.plsLogIn[box=roles]').addClass('compact'))
         $('#levelSummary').removeClass('guestHide').addClass('isDemo')
-            .before($(note("Vista previa con datos de prueba (nivel 42). Inicia sesión para ver tu progreso real.")).attr('box', 'levels'))
+            .before($(note("Vista previa con datos de prueba. Inicia sesión para ver tu progreso real.")).attr('box', 'levels'))
         $('#progress').removeClass('guestHide').addClass('isDemo')
         $('#progress').after($('.plsLogIn[box=levels]').addClass('compact'))
         $('.lbBox').hide(); $(`[box=${currentBox}]`).show()
-        if (currentBox !== 'levels') $('#earlierLevels').hide()
     }
 
     if (!loggedIn) {
@@ -1616,7 +1626,7 @@ Fetch(lbURL(1)).then(async data => {
         data.user = { ...data.user, id: 'demo', xp: demoXP, roles: demoRoles, avatar: '/assets/avatar.png', displayName: 'Usuario de ejemplo', messages: 9876, monthlyMessages: 1430, dailyMessages: 64, rank: 128 }
         userLevel = getLevel(demoXP, data.settings)
         userMultiplier = getMultiplier(demoRoles, data.settings, data.roles)
-        $('.rankDemoNote').first().attr('box', 'rank').addClass('lbBox').insertBefore('#accountInfo')
+        $('.rankDemo > .rankDemoNote').attr('box', 'rank').addClass('demoNote lbBox').insertBefore('#accountInfo').toggle(currentBox === 'rank')
         $('.rankDemo').remove()
         $('#accountInfo').removeClass('guestHide').addClass('isDemo').toggle(currentBox === 'rank')
     }
@@ -1941,6 +1951,7 @@ $(document).on('click', '.statMenuBtn', function() {
 $('.lbNavItem:not(.adminLink):not(.webLink)').click(function() {
     let box = $(this).attr('box')
     currentBox = box
+    updateLeaderboardTop()
     syncStatPicker()
     $('.selectedlb').removeClass('selectedlb')
     $(this).addClass('selectedlb')
@@ -1959,6 +1970,7 @@ window.addEventListener('popstate', function() {
     let pathParts = window.location.pathname.split("/").filter(Boolean)
     let box = slugToBox[pathParts[0]] || "leaderboard"
     currentBox = box
+    updateLeaderboardTop()
     syncStatPicker()
     $('.selectedlb').removeClass('selectedlb')
     $(`.lbNavItem[box=${box}]`).addClass('selectedlb')

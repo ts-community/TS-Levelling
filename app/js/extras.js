@@ -66,5 +66,5 @@ function loginButton() {
 
 let mobile = ( /Android|webOS|iPhone|iPad|iPod|BlackBerry/i.test(navigator.userAgent) )
 const secretEggScript = document.createElement('script')
-secretEggScript.src = '/js/secret-egg.js?v=5'
+secretEggScript.src = '/js/secret-egg.js?v=7'
 document.head.append(secretEggScript)
