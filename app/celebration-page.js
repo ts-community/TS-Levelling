@@ -184,7 +184,7 @@ function createDropRateLimiter({ max = 120, windowMs = 60 * 1000 } = {}) {
     }
 }
 
-function renderCelebrationPage({ title, message, badge = "gift", kicker = "", status = "info", celebration = false, detailsHtml = "", actionsHtml = "" }) {
+function renderCelebrationPage({ title, message, badge = "gift", kicker = "", status = "info", celebration = false, detailsHtml = "", actionsHtml = "", layout = "default" }) {
     const mode = celebration === "soft" ? "soft" : celebration ? "full" : "none"
     const statusKey = PALETTES[status] ? status : "info"
     const pal = PALETTES[statusKey]
@@ -588,11 +588,33 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                 .actions a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
                 .communityLink { display: inline-flex; align-items: center; gap: 9px; margin-top: 20px; padding: 6px 10px; min-height: 0; background: transparent; box-shadow: none; color: var(--muted); font-size: .85rem; text-decoration: none; }
                 .communityLink img { width: 30px; height: 30px; border-radius: 9px; }
+                .communityLink { color: var(--text); border: 1px solid rgba(var(--accent-rgb), .2); border-radius: 13px; padding: 8px 11px; text-align: left; transition: border-color .18s, background .18s; }
+                .communityLink:hover { border-color: var(--accent); background: rgba(var(--accent-rgb), .08); }
+                .communityLink img { flex: none; }
+                .communityLink strong, .communityLink small { display: block; }
+                .communityLink small { color: var(--muted); margin-top: 2px; }
+                .communityLink svg { width: 16px; height: 16px; margin-inline-start: 4px; color: var(--accent); }
+                .details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                .detail { min-width: 0; overflow-wrap: anywhere; }
+                .detail:not(.dropMetric) { grid-column: 1 / -1; }
+                .dropMetric { align-content: start; }
+                .dropMetric > strong { font-variant-numeric: tabular-nums; }
+                .staffPage .card { width: min(100%, 780px); }
+                .staffPage .badgeWrap { width: 76px; height: 76px; }
+                .staffPage .badge svg { width: 2.1rem; height: 2.1rem; }
+                .staffPage .actions a { flex: 0 1 auto; min-height: 44px; padding: .65rem 1.15rem; font-size: .92rem; }
+                .staffTable th { color: var(--muted); font-weight: 600; }
+                .staffTable th:first-child { width: 60%; }
+                .staffTable small { color: var(--muted); font-variant-numeric: tabular-nums; }
+                @media (max-width: 460px) {
+                    .details { grid-template-columns: minmax(0, 1fr); }
+                    .staffPage .actions a { width: auto; flex: 1 1 40%; }
+                }
                 .staffTable { table-layout: fixed; width: 100%; border-collapse: collapse; font-size: .85rem; }
                 .staffTable td, .staffTable th { text-align: left; padding: 9px 4px; border-bottom: 1px solid #ffffff18; overflow-wrap: anywhere; }
             </style>
         </head>
-        <body class="status-${escapeHtml(statusKey)}">
+        <body class="status-${escapeHtml(statusKey)}${layout === "staff" ? " staffPage" : ""}">
             <div class="bg" aria-hidden="true">
                 <div class="glow one"></div>
                 <div class="glow two"></div>
@@ -610,14 +632,14 @@ function renderCelebrationPage({ title, message, badge = "gift", kicker = "", st
                     ${detailsHtml ? `<div class="details">${detailsHtml}</div>` : ""}
                     ${actionsHtml ? `<div class="actions">${actionsHtml}</div>` : ""}
                 </div>
-                <a class="communityLink" href="https://tscomunity.es/discord" target="_blank" rel="noopener"><img src="/assets/server-icon-128.webp" width="30" height="30" alt="">TS Community Brawl &middot; Entrar al servidor</a>
+                <a class="communityLink" href="https://tscomunity.es/discord" target="_blank" rel="noopener"><img src="/assets/server-icon-128.webp" width="30" height="30" alt=""><span><strong>TS Community Brawl</strong><small>Entrar al servidor</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
             </main>
 
             <script>
                 // Tilt + rejilla: solo mientras el cursor está sobre la tarjeta.
                 (function() {
                     var card = document.querySelector('.card');
-                    if (!card) return;
+                    if (!card || document.body.classList.contains('staffPage')) return;
                     if (!window.matchMedia('(pointer: fine)').matches) return;
                     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
                     var raf = null, bounds = null, point = null;

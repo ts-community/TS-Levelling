@@ -2,7 +2,7 @@
 function mountSecretEgg() {
  if (location.pathname === '/' || /^\/(?:drops?|easteregg)(?:\/|$)/i.test(location.pathname) || document.querySelector('.badgeWrap') || document.getElementById('siteSecretEgg')) return
  const stylesheet = document.createElement('link')
- stylesheet.rel = 'stylesheet'; stylesheet.href = '/css/secret-egg.css?v=4'
+ stylesheet.rel = 'stylesheet'; stylesheet.href = '/css/secret-egg.css?v=5'
  document.head.append(stylesheet)
  const link = document.createElement('a')
  link.id = 'siteSecretEgg'
@@ -19,7 +19,24 @@ function mountSecretEgg() {
   opening = true
   link.classList.add('revealed', 'opening')
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
-  setTimeout(() => location.assign(link.href), reduce ? 0 : 850)
+  if (!reduce) {
+   const rect = link.getBoundingClientRect()
+   const burst = document.createElement('div')
+   burst.className = 'eggBurst'
+   burst.style.setProperty('--x', (rect.left + rect.width / 2) + 'px')
+   burst.style.setProperty('--y', (rect.top + rect.height / 2) + 'px')
+   for (let i = 0; i < 22; i++) {
+    const spark = document.createElement('i')
+    const angle = Math.PI * 2 * i / 22
+    spark.style.setProperty('--dx', Math.cos(angle) * (70 + i % 4 * 22) + 'px')
+    spark.style.setProperty('--dy', Math.sin(angle) * (70 + i % 4 * 22) + 'px')
+    spark.style.setProperty('--delay', (i % 3 * 35) + 'ms')
+    burst.append(spark)
+   }
+   document.body.append(burst)
+   setTimeout(() => burst.remove(), 1400)
+  }
+  setTimeout(() => location.assign(link.href), reduce ? 0 : 1150)
  })
  document.body.append(link)
 }
