@@ -351,6 +351,10 @@ async function handleDropClaim(req, res) {
     const code = String(req.params.code || "").toUpperCase()
     const validPath = /^\d{10,30}$/.test(guildId) && /^[A-Z0-9]{6,12}$/.test(code)
 
+    if (validPath && req.query.view === 'staff' && guildId === Drops.MAIN_GUILD_ID) {
+        return res.redirect(302, Drops.managementUrl(guildId, code))
+    }
+
     const timings = []
     const timed = async (name, operation) => {
         const start = performance.now()

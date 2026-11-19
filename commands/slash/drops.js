@@ -468,7 +468,7 @@ function buildCancelledContainer() {
 
 // Drop creado: misma estructura que el asistente (sin menús ni botones) y,
 // al final, el enlace.
-function buildCreatedContainer(drop, code, url, tools = { commafy: fmtInt }, allow = null) {
+function buildCreatedContainer(drop, code, url, tools = { commafy: fmtInt }, allow = null, guildId = Drops.MAIN_GUILD_ID) {
     const people = Array.isArray(allow) && allow.length ? allow : (Array.isArray(drop?.allow) ? drop.allow : [])
     const container = new ContainerBuilder().setAccentColor(ACCENT)
     container.addTextDisplayComponents(textBuilder(`## ✅ Drop creado: ${drop.name || "Drop"}`))
@@ -482,7 +482,7 @@ function buildCreatedContainer(drop, code, url, tools = { commafy: fmtInt }, all
     const prizes = Drops.normalizePrizes(drop.prizes || { xp: drop.xp, coins: drop.coins, roles: [], items: drop.items || [] })
     addPrizesBlock(container, prizeLines(prizes, tools))
     container.addTextDisplayComponents(textBuilder(`🔗 **Enlace:** ${url}`))
-    container.addTextDisplayComponents(textBuilder(`📊 **Gestionar drop:** ${url}?view=staff`))
+    container.addTextDisplayComponents(textBuilder(`📊 **Gestionar drop:** ${Drops.managementUrl(guildId, code, tools.WEBSITE)}`))
     return container
 }
 
@@ -844,12 +844,12 @@ module.exports = {
                     }
                     const url = Drops.dropUrl(guildId, code, tools.WEBSITE)
                     collector.stop("created")
-                    await i.editReply(V2.components(buildCreatedContainer(res.drop, code, url, tools, draft.allow)))
+                    await i.editReply(V2.components(buildCreatedContainer(res.drop, code, url, tools, draft.allow, guildId)))
                 } catch (e) {
                     console.error("[drops:crear]", e?.message)
                     if (createdResult) {
                         collector.stop("created")
-                        await i.followUp(V2.components(buildCreatedContainer(createdResult.drop, createdResult.code, Drops.dropUrl(guildId, createdResult.code, tools.WEBSITE), tools, draft.allow))).catch(() => {})
+                        await i.followUp(V2.components(buildCreatedContainer(createdResult.drop, createdResult.code, Drops.dropUrl(guildId, createdResult.code, tools.WEBSITE), tools, draft.allow, guildId))).catch(() => {})
                         return
                     }
                     if (!collector.ended) await i.editReply(V2.components(render())).catch(() => {})

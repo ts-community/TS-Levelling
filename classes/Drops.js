@@ -247,6 +247,11 @@ function dropUrl(guildId, code, fallback = "") {
     return `${base}${dropPath(guildId, code)}`
 }
 
+function managementUrl(guildId, code, fallback = '') {
+    if (String(guildId) === MAIN_GUILD_ID) return 'https://panel.tscomunity.es/drops?code=' + encodeURIComponent(code)
+    return dropUrl(guildId, code, fallback) + '?view=staff'
+}
+
 function genCode(existing = {}, rand = null) {
     // crypto por defecto (impredecible); rand inyectable para tests.
     const crypto = require("crypto")
@@ -858,6 +863,7 @@ module.exports = {
     CODE_LENGTH,
     CODE_ALPHABET,
     MAIN_GUILD_ID,
+    managementUrl,
     isDropWebPath,
     AMOUNT_PRESETS,
     CUSTOM_AMOUNT,

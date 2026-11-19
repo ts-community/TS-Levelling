@@ -20,3 +20,11 @@ test('staff panel denies ordinary members, removed roles, missing members and lo
 test('staff panel resolves cached names without individual claimant API requests',async()=>{
  const result=await access({perm:'ManageGuild'});assert.equal(result.names.claimant,'Player');assert.equal(result.names.unknown,'unknown');
 });
+
+test('the TS management link opens the panel while other guilds retain their private view', () => {
+    const drops = require('../classes/Drops')
+    const code = 'EXAMPLE2'
+    assert.equal(drops.managementUrl(drops.MAIN_GUILD_ID, code), 'https://panel.tscomunity.es/drops?code=EXAMPLE2')
+    const guild = '100000000000000000'
+    assert.equal(drops.managementUrl(guild, code), drops.dropUrl(guild, code) + '?view=staff')
+})
